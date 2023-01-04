@@ -6,6 +6,7 @@ import (
 	"crypto/rand"
 	"fmt"
 	"io"
+	"log"
 
 	"github.com/monnand/dhkx"
 	"go.dedis.ch/cs438/peer"
@@ -39,7 +40,7 @@ func (t *TLSManager) GetSymmKey(peerIP string) []byte {
 }
 
 func (t *TLSManager) SetSymmKey(peerIP string, key []byte) {
-	t.symmKeyStore.Set(peerIP, key)
+	t.symmKeyStore.Set(peerIP, key[:32])
 }
 
 func (t *TLSManager) GetAsymmetricKey(peerIP string) []byte {
@@ -66,6 +67,7 @@ func (n *node) DecryptSymmetric(peerIP string, message *types.TLSMessage) (trans
 
 func (t *TLSManager) EncryptSymmetric(peerIP string, message transport.Message) (types.TLSMessage, error) {
 	symmetricKey := t.GetSymmKey(peerIP)
+	log.Default().Printf("[%s]: Encrypting message for %s with key %v", t.addr, peerIP, symmetricKey)
 	if symmetricKey == nil {
 		return types.TLSMessage{}, fmt.Errorf("no symmetric key found for peer %s", peerIP)
 	}

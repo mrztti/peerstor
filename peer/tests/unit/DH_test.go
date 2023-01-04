@@ -1,6 +1,7 @@
 package unit
 
 import (
+	"log"
 	"testing"
 	"time"
 
@@ -86,7 +87,7 @@ func Test_DH_ThreeNodeSetup(t *testing.T) {
 
 }
 
-func SymmetricEncryption(t *testing.T) {
+func Test_TLS_SymmetricEncryption(t *testing.T) {
 	transp := channel.NewTransport()
 	fake := z.NewFakeMessage(t)
 	handler1, _ := fake.GetHandler(t)
@@ -107,7 +108,10 @@ func SymmetricEncryption(t *testing.T) {
 	require.Equal(t, node1.GetSymKey(node2.GetAddr()), node2.GetSymKey(node1.GetAddr()))
 
 	messageToEncrypt := []byte("Hello World")
-	encrypted, _ := node1.EncryptSymmetric(node2.GetAddr(), transport.Message{Payload: messageToEncrypt})
-	decrypted, _ := node2.DecryptSymmetric(node1.GetAddr(), encrypted)
+	encrypted, err := node1.EncryptSymmetric(node2.GetAddr(), transport.Message{Payload: messageToEncrypt})
+	log.Default().Println(err)
+	log.Default().Println(encrypted)
+	decrypted, err := node2.DecryptSymmetric(node1.GetAddr(), &encrypted)
+	require.Equal(t, messageToEncrypt, decrypted.Payload)
 
 }
