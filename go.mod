@@ -13,6 +13,8 @@ require (
 	golang.org/x/xerrors v0.0.0-20200804184101-5ec99f83aff1
 )
 
+require github.com/monnand/dhkx v0.0.0-20180522003156-9e5b033f1ac4 // indirect
+
 require (
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/cespare/xxhash/v2 v2.1.2 // indirect

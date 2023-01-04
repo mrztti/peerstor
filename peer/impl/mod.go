@@ -59,6 +59,7 @@ type node struct {
 	paxosInnerMessageChannel chan PaxosMessage
 	broadcastLock            sync.Mutex
 	attemptedRumoursSent     *AtomicCounter
+	tlsManager               *TLSManager
 }
 
 // Start implements peer.Service

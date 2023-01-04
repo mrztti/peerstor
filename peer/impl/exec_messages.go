@@ -47,6 +47,11 @@ func (n *node) registerRegistryCallbacks() {
 		n.execPaxosAcceptMessage,
 	)
 	n.conf.MessageRegistry.RegisterMessageCallback(types.TLCMessage{}, n.execTLCMessage)
+	// TLS Messages
+	n.conf.MessageRegistry.RegisterMessageCallback(types.TLSMessage{}, n.execTLSMessage)
+	n.conf.MessageRegistry.RegisterMessageCallback(types.TLSMessageHello{}, n.execTLSMessageHello)
+	n.conf.MessageRegistry.RegisterMessageCallback(types.TLSClientHello{}, n.execTLSClientHello)
+	n.conf.MessageRegistry.RegisterMessageCallback(types.TLSServerHello{}, n.execTLSServerHello)
 }
 
 func (n *node) execChatMessage(msg types.Message, pkt transport.Packet) error {
