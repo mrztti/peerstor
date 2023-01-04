@@ -2,6 +2,7 @@ package impl
 
 import (
 	"fmt"
+	"log"
 
 	"github.com/monnand/dhkx"
 	"go.dedis.ch/cs438/logr"
@@ -79,21 +80,51 @@ func (n *node) execTLSMessageHello(msg types.Message, pkt transport.Packet) erro
 	return n.processDecryptedTLSMessage(decryptedMessage, pkt)
 }
 
-func (n *node) dummyAliceSendstoBob(bobAddr string) error {
+func (n *node) AliceSendBob(bobIP string) error {
+	// logr.Logger.Info().Msgf("[%s]: Sending TLSClientHello to %s", n.addr, bobIP)
+	log.Default().Println("Sending TLSClientHello to ", bobIP)
 	dh, err := dhkx.GetGroup(0)
 	if err != nil {
 		return err
 	}
-	n.tlsManager.dhGroup.Set(bobAddr, dh)
+	log.Default().Println("dh created")
 	priv, err := dh.GeneratePrivateKey(nil)
+	log.Default().Println("priv created")
+	log.Default().Println("priv: ", priv)
 	if err != nil {
 		return err
 	}
+	dhManager := DHManager{
+		dhGroup: dh,
+		dhKey:   priv,
+	}
+	log.Default().Println("dhManager created")
+	// Log the DHManager created
+	log.Default().Println("dhManager: ", dhManager)
+	n.tlsManager.SetDHManagerEntry(bobIP, &dhManager)
+	log.Default().Println("dhManager set")
 	pub := priv.Bytes()
-	// Send("Bob", pub) ClientHello
+	// Log the public key
+	log.Default().Println("pub: ", pub)
+	msg := types.TLSClientHello{
+		GroupDH:           dh.G(),
+		PrimeDH:           dh.P(),
+		ClientPresecretDH: pub,
+	}
+	transportMessage, err := n.conf.MessageRegistry.MarshalMessage(&msg)
+	if err != nil {
+		return err
+	}
+	logr.Logger.Info().Msgf("[%s]: Sending TLSClientHello to %s", n.addr, transportMessage)
+	err = n.Unicast(bobIP, transportMessage)
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 func (n *node) execTLSClientHello(msg types.Message, pkt transport.Packet) error {
+	log.Default().Println("execTLSClientHello")
 	var err error
 	TLSClientHello, ok := msg.(*types.TLSClientHello)
 	if !ok {
@@ -101,25 +132,49 @@ func (n *node) execTLSClientHello(msg types.Message, pkt transport.Packet) error
 		logr.Logger.Err(err).Msgf("[%s]: execTLSClientHello failed", n.addr)
 		return err
 	}
-	dh := dhkx.CreateGroup(&TLSClientHello.PrimeDH, &TLSClientHello.GroupDH)
+	dh := dhkx.CreateGroup(TLSClientHello.PrimeDH, TLSClientHello.GroupDH)
+	log.Default().Println("dh created")
 	priv, _ := dh.GeneratePrivateKey(nil)
+	log.Default().Println("priv created")
+	dhManager := DHManager{
+		dhGroup: dh,
+		dhKey:   priv,
+	}
+	log.Default().Println("dhManager created")
+	n.tlsManager.dhManager.Set(pkt.Header.Source, &dhManager)
+	log.Default().Println("dhManager set")
 	pub := priv.Bytes()
+	log.Default().Println("pub: ", pub)
+	sm := types.TLSServerHello{
+		ServerPresecretDH: pub,
+	}
+	transportMessage, err := n.conf.MessageRegistry.MarshalMessage(&sm)
+	if err != nil {
+		return err
+	}
+
+	err = n.Unicast(pkt.Header.Source, transportMessage)
+	log.Default().Println("Unicast sent")
+	if err != nil {
+		log.Default().Println("Unicast failed")
+		return err
+	}
+	// ToDo(Aamir): send pub to alice
 
 	a := TLSClientHello.ClientPresecretDH
-
-	key, err := dh.GeneratePrivateKey(nil)
+	log.Println("a: ", a)
+	aPubKey := dhkx.NewPublicKey(a)
+	ck, err := dh.ComputeKey(aPubKey, priv)
+	log.Default().Println("ck: ", ck)
 	if err != nil {
 		return err
 	}
-	sk, err := dh.ComputeKey(&ck, key)
-	if err != nil {
-		return err
-	}
-	fmt.Printf(sk.String())
+	n.tlsManager.SetSymmKey(pkt.Header.Source, ck.Bytes())
 	return nil
 }
 
 func (n *node) execTLSServerHello(msg types.Message, pkt transport.Packet) error {
+	log.Default().Println("execTLSServerHello")
 	var err error
 	TLSServerHello, ok := msg.(*types.TLSServerHello)
 	if !ok {
@@ -127,8 +182,19 @@ func (n *node) execTLSServerHello(msg types.Message, pkt transport.Packet) error
 		logr.Logger.Err(err).Msgf("[%s]: execTLSServerHello failed", n.addr)
 		return err
 	}
-	sk := TLSServerHello.ServerPresecretDH
-	fmt.Printf(sk.String())
+	dhManager, ok := n.tlsManager.dhManager.Get(pkt.Header.Source)
+	if !ok {
+		err = fmt.Errorf("no dhManager for %s", pkt.Header.Source)
+		logr.Logger.Err(err).Msgf("[%s]: execTLSServerHello failed", n.addr)
+		return err
+	}
+	a := TLSServerHello.ServerPresecretDH
+	aPubKey := dhkx.NewPublicKey(a)
+	ck, err := dhManager.dhGroup.ComputeKey(aPubKey, dhManager.dhKey)
+	if err != nil {
+		return err
+	}
+	log.Default().Println("ck: ", ck)
+	n.tlsManager.SetSymmKey(pkt.Header.Source, ck.Bytes())
 	return nil
-
 }

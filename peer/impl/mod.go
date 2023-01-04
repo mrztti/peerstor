@@ -32,6 +32,7 @@ func NewPeer(conf peer.Configuration) peer.Peer {
 		paxosInnerMessageChannel: make(chan PaxosMessage),
 		broadcastLock:            sync.Mutex{},
 		attemptedRumoursSent:     &AtomicCounter{count: 0},
+		tlsManager:               CreateTLSManager(),
 	}
 	newPeer.paxos.node = newPeer
 	newPeer.routingTable.Set(myAddr, myAddr)

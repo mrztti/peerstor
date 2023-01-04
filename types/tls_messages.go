@@ -4,8 +4,6 @@ import (
 	"fmt"
 	"math/big"
 	"strings"
-
-	"github.com/monnand/dhkx"
 )
 
 type TLSMessage struct {
@@ -21,13 +19,13 @@ type TLSMessageHello struct {
 }
 
 type TLSClientHello struct {
-	GroupDH           big.Int
-	PrimeDH           big.Int
-	ClientPresecretDH dhkx.DHKey
+	GroupDH           *big.Int
+	PrimeDH           *big.Int
+	ClientPresecretDH []byte
 }
 
 type TLSServerHello struct {
-	ServerPresecretDH dhkx.DHKey
+	ServerPresecretDH []byte
 	//SeshkeyDH         uint
 }
 

@@ -6,17 +6,21 @@ import (
 	"go.dedis.ch/cs438/types"
 )
 
+type DHManager struct {
+	dhGroup *dhkx.DHGroup
+	dhKey   *dhkx.DHKey
+}
 type TLSManager struct {
 	symmKeyStore       peer.ConcurrentMap[[]byte]
 	asymmetricKeyStore peer.ConcurrentMap[[]byte]
-	dhGroup            peer.ConcurrentMap[*dhkx.DHGroup]
+	dhManager          peer.ConcurrentMap[*DHManager]
 }
 
 func CreateTLSManager() *TLSManager {
 	return &TLSManager{
 		symmKeyStore:       peer.CreateConcurrentMap[[]byte](),
 		asymmetricKeyStore: peer.CreateConcurrentMap[[]byte](),
-		dhGroup:            peer.CreateConcurrentMap[*dhkx.DHGroup](),
+		dhManager:          peer.CreateConcurrentMap[*DHManager](),
 	}
 }
 
@@ -51,4 +55,17 @@ func (t *TLSManager) DecryptSymmetric(peerIP string, message []byte) (types.Mess
 func (t *TLSManager) DecryptPublic(peerIP string, message []byte) (types.Message, error) {
 	// TODO: Implement
 	return types.EmptyMessage{}, nil
+}
+
+func (t *TLSManager) GetDHManagerEntry(peerIP string) *DHManager {
+	val, _ := t.dhManager.Get(peerIP)
+	return val
+}
+
+func (t *TLSManager) SetDHManagerEntry(peerIP string, dhManager *DHManager) {
+	t.dhManager.Set(peerIP, dhManager)
+}
+
+func (n *node) GetSymKey(addr string) []byte {
+	return n.tlsManager.GetSymmKey(addr)
 }
