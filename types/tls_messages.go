@@ -7,9 +7,10 @@ import (
 )
 
 type TLSMessage struct {
-	Source    string
-	Content   []byte // Uses symmetric key
-	Signature []byte // Uses symmetric key
+	Source      string
+	ContentType string
+	Content     []byte // Uses symmetric key
+	Signature   []byte // Uses symmetric key
 }
 
 type TLSMessageHello struct {

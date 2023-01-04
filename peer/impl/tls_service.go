@@ -9,11 +9,7 @@ import (
 	"go.dedis.ch/cs438/types"
 )
 
-func (n *node) processDecryptedTLSMessage(decryptedMessage types.Message, pkt transport.Packet) error {
-	transportMessage, err := n.conf.MessageRegistry.MarshalMessage(decryptedMessage)
-	if err != nil {
-		return err
-	}
+func (n *node) processDecryptedTLSMessage(transportMessage transport.Message, pkt transport.Packet) error {
 	newPkt := transport.Packet{
 		Header: pkt.Header,
 		Msg:    &transportMessage,
@@ -46,7 +42,7 @@ func (n *node) execTLSMessage(msg types.Message, pkt transport.Packet) error {
 		err = fmt.Errorf("[%s]: integrity check failed for message from %s", n.addr, pkt.Header.Source)
 		return err
 	}
-	decryptedMessage, err := n.tlsManager.DecryptSymmetric(pkt.Header.Source, TLSMessage.Content)
+	decryptedMessage, err := n.tlsManager.DecryptSymmetric(pkt.Header.Source, TLSMessage)
 	if err != nil {
 		return err
 	}
@@ -72,7 +68,7 @@ func (n *node) execTLSMessageHello(msg types.Message, pkt transport.Packet) erro
 		err = fmt.Errorf("[%s]: integrity check failed for message from %s", n.addr, pkt.Header.Source)
 		return err
 	}
-	decryptedMessage, err := n.tlsManager.DecryptPublic(pkt.Header.Source, TLSMessageHello.Content)
+	decryptedMessage, err := n.tlsManager.DecryptPublic(pkt.Header.Source, TLSMessageHello)
 	if err != nil {
 		return err
 	}

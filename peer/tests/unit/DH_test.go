@@ -6,6 +6,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 	z "go.dedis.ch/cs438/internal/testing"
+	"go.dedis.ch/cs438/transport"
 	"go.dedis.ch/cs438/transport/channel"
 )
 
@@ -82,5 +83,31 @@ func Test_DH_ThreeNodeSetup(t *testing.T) {
 	require.NotEqual(t, node1.GetSymKey(node2.GetAddr()), node2.GetSymKey(node3.GetAddr()))
 	require.NotEqual(t, node1.GetSymKey(node3.GetAddr()), node3.GetSymKey(node2.GetAddr()))
 	require.NotEqual(t, node1.GetSymKey(node2.GetAddr()), node1.GetSymKey(node3.GetAddr()))
+
+}
+
+func SymmetricEncryption(t *testing.T) {
+	transp := channel.NewTransport()
+	fake := z.NewFakeMessage(t)
+	handler1, _ := fake.GetHandler(t)
+	handler2, _ := fake.GetHandler(t)
+
+	node1 := z.NewTestNode(t, peerFac, transp, "127.0.0.1:0", z.WithMessage(fake, handler1), z.WithAntiEntropy(time.Millisecond*50))
+	defer node1.Stop()
+	node2 := z.NewTestNode(t, peerFac, transp, "127.0.0.1:0", z.WithMessage(fake, handler2), z.WithAntiEntropy(time.Millisecond*50))
+	defer node2.Stop()
+
+	//node1 <-> node2
+
+	node2.AddPeer(node1.GetAddr())
+	node1.AddPeer(node2.GetAddr())
+	node1.CreateDHSymmetricKey(node2.GetAddr())
+
+	time.Sleep(time.Second)
+	require.Equal(t, node1.GetSymKey(node2.GetAddr()), node2.GetSymKey(node1.GetAddr()))
+
+	messageToEncrypt := []byte("Hello World")
+	encrypted, _ := node1.EncryptSymmetric(node2.GetAddr(), transport.Message{Payload: messageToEncrypt})
+	decrypted, _ := node2.DecryptSymmetric(node1.GetAddr(), encrypted)
 
 }
