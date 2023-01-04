@@ -1,6 +1,6 @@
 package peer
 
 type TLSServices interface {
-	AliceSendBob(bobIP string) error
+	CreateDHSymmetricKey(addr string) error
 	GetSymKey(addr string) []byte
 }
