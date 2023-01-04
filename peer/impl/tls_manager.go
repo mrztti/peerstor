@@ -9,14 +9,14 @@ import (
 type TLSManager struct {
 	symmKeyStore       peer.ConcurrentMap[[]byte]
 	asymmetricKeyStore peer.ConcurrentMap[[]byte]
-	dhGroup            *dhkx.DHGroup
+	dhGroup            peer.ConcurrentMap[*dhkx.DHGroup]
 }
 
 func CreateTLSManager() *TLSManager {
 	return &TLSManager{
 		symmKeyStore:       peer.CreateConcurrentMap[[]byte](),
 		asymmetricKeyStore: peer.CreateConcurrentMap[[]byte](),
-		dhGroup:            &dhkx.DHGroup{},
+		dhGroup:            peer.CreateConcurrentMap[*dhkx.DHGroup](),
 	}
 }
 

@@ -47,6 +47,9 @@ func (n *node) execTLSMessage(msg types.Message, pkt transport.Packet) error {
 		return err
 	}
 	decryptedMessage, err := n.tlsManager.DecryptSymmetric(pkt.Header.Source, TLSMessage.Content)
+	if err != nil {
+		return err
+	}
 	return n.processDecryptedTLSMessage(decryptedMessage, pkt)
 }
 
@@ -70,7 +73,24 @@ func (n *node) execTLSMessageHello(msg types.Message, pkt transport.Packet) erro
 		return err
 	}
 	decryptedMessage, err := n.tlsManager.DecryptPublic(pkt.Header.Source, TLSMessageHello.Content)
+	if err != nil {
+		return err
+	}
 	return n.processDecryptedTLSMessage(decryptedMessage, pkt)
+}
+
+func (n *node) dummyAliceSendstoBob(bobAddr string) error {
+	dh, err := dhkx.GetGroup(0)
+	if err != nil {
+		return err
+	}
+	n.tlsManager.dhGroup.Set(bobAddr, dh)
+	priv, err := dh.GeneratePrivateKey(nil)
+	if err != nil {
+		return err
+	}
+	pub := priv.Bytes()
+	// Send("Bob", pub) ClientHello
 }
 
 func (n *node) execTLSClientHello(msg types.Message, pkt transport.Packet) error {
@@ -82,7 +102,11 @@ func (n *node) execTLSClientHello(msg types.Message, pkt transport.Packet) error
 		return err
 	}
 	dh := dhkx.CreateGroup(&TLSClientHello.PrimeDH, &TLSClientHello.GroupDH)
-	ck := TLSClientHello.ClientPresecretDH
+	priv, _ := dh.GeneratePrivateKey(nil)
+	pub := priv.Bytes()
+
+	a := TLSClientHello.ClientPresecretDH
+
 	key, err := dh.GeneratePrivateKey(nil)
 	if err != nil {
 		return err
