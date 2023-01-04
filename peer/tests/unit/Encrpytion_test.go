@@ -26,7 +26,7 @@ func GenerateKeyPair() (rsa.PublicKey, rsa.PrivateKey) {
 	return key.PublicKey, *key
 }
 
-func Test_Encryption_KeyConfig(t *testing.T) {
+func Test_Encryption_Asym_KeyConfig(t *testing.T) {
 	transp := channel.NewTransport()
 	fake := z.NewFakeMessage(t)
 	handler1, _ := fake.GetHandler(t)
@@ -80,7 +80,7 @@ func TTest_Encryption_Asym_Encryption_Decryption(t *testing.T) {
 	require.Equal(t, msg.Payload, decMsg.Payload)
 }
 
-func Test_Encryption_Encryption_Two_Nodes(t *testing.T) {
+func Test_Encryption_Asym_Encryption_Two_Nodes(t *testing.T) {
 	transp := channel.NewTransport()
 	fake := z.NewFakeMessage(t)
 	handler1, _ := fake.GetHandler(t)

@@ -3,6 +3,7 @@ package impl
 import (
 	"crypto"
 	"fmt"
+	"math/rand"
 
 	"github.com/monnand/dhkx"
 	"go.dedis.ch/cs438/logr"
@@ -84,7 +85,13 @@ func (n *node) execTLSMessageHello(msg types.Message, pkt transport.Packet) erro
 
 func (n *node) CreateDHSymmetricKey(addr string) error {
 	logr.Logger.Info().Msgf("[%s]: Sending TLSClientHello to %s", n.addr, addr)
-	dh, err := dhkx.GetGroup(0)
+
+	// Random Group selection
+	in := []int{0, 1, 2}
+	randomIndex := rand.Intn(len(in))
+	pick := in[randomIndex]
+
+	dh, err := dhkx.GetGroup(pick)
 	if err != nil {
 		return err
 	}
