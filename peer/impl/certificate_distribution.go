@@ -13,9 +13,11 @@ import (
 	"crypto/x509"
 	"encoding/pem"
 	"errors"
+	"fmt"
 	"sync"
 
 	"github.com/rs/zerolog/log"
+	"go.dedis.ch/cs438/types"
 )
 
 // CertificateStore: Read-only memory store for storing the long lasting public and private certificate keys
@@ -92,7 +94,7 @@ func (c *CertificateStore) GetPublicKeyPEM() []byte {
 	return pem
 }
 
-// CertificateCatalog: A thread safe map between a name and a rsa.PublicKey. We do not allow changes to a certificate once it is inscribed.
+// CertificateCatalog: A thread safe map between a name and a rsa.PublicKey. We allow changes to a certificate once it is inscribed to prevent certificate forgery
 type CertificateCatalog struct {
 	catalog map[string]rsa.PublicKey
 	lock    sync.Mutex
@@ -125,7 +127,7 @@ func (c *CertificateCatalog) Get(name string) (rsa.PublicKey, error) {
 	return publicKeyCopy, nil
 }
 
-// AddCertificate: Adds a new certificate to the catalog. PModifications are prevented once the certificate is added.
+// AddCertificate: Adds a new certificate to the catalog.
 func (c *CertificateCatalog) AddCertificate(name string, pemBytes []byte) error {
 	c.lock.Lock()
 	defer c.lock.Unlock()
@@ -133,7 +135,7 @@ func (c *CertificateCatalog) AddCertificate(name string, pemBytes []byte) error 
 	// Check if the name is already in use
 	_, ok := c.catalog[name]
 	if ok {
-		return errors.New("name " + name + " already in use")
+		log.Warn().Msg("detected probable certificate forgery attempt for " + name)
 	}
 
 	// Decode the PEM
@@ -150,6 +152,62 @@ func (c *CertificateCatalog) AddCertificate(name string, pemBytes []byte) error 
 
 	// Add the new certificate
 	c.catalog[name] = *publicKey
+
+	return nil
+}
+
+// CertificateBroadcastMessage: a message containing the name of the peer and its public key in PEM format
+//
+// - implements types.Message
+type CertificateBroadcastMessage struct {
+	Addr string
+	PEM  []byte
+}
+
+// -----------------------------------------------------------------------------
+// CertificateBroadcastMessage
+
+// NewEmpty implements types.Message.
+func (d CertificateBroadcastMessage) NewEmpty() types.Message {
+	return &CertificateBroadcastMessage{}
+}
+
+// Name implements types.Message.
+func (d CertificateBroadcastMessage) Name() string {
+	return "certificate_broadcast"
+}
+
+// String implements types.Message.
+func (d CertificateBroadcastMessage) String() string {
+	return fmt.Sprintf("certificate{name:%s, PEM:%s}", d.Addr, string(d.PEM))
+}
+
+// HTML implements types.Message.
+func (d CertificateBroadcastMessage) HTML() string {
+	return d.String()
+}
+
+// -----------------------------------------------------------------------------
+
+// BroadcastCertificate: Broadcasts the certificate to all the peers
+// Pack the CertificateBroadcastMessage inside a RumorsMessage and broadcast it across the network
+func (n *node) BroadcastCertificate() error {
+	// Create the CertificateBroadcastMessage
+	certificateBroadcastMessage := CertificateBroadcastMessage{
+		Addr: n.conf.Socket.GetAddress(),
+		PEM:  n.certificateStore.GetPublicKeyPEM(),
+	}
+
+	// Marshall the CertificateBroadcastMessage
+	msg, err := n.conf.MessageRegistry.MarshalMessage(&certificateBroadcastMessage)
+	if err != nil {
+		return err
+	}
+
+	err = n.Broadcast(msg)
+	if err != nil {
+		return err
+	}
 
 	return nil
 }
