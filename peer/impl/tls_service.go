@@ -1,6 +1,7 @@
 package impl
 
 import (
+	"crypto"
 	"fmt"
 
 	"github.com/monnand/dhkx"
@@ -183,4 +184,20 @@ func (n *node) execTLSServerHello(msg types.Message, pkt transport.Packet) error
 	}
 	n.tlsManager.SetSymmKey(pkt.Header.Source, ck.Bytes())
 	return nil
+}
+
+func (n *node) GetPublicKey() crypto.PublicKey {
+	return n.tlsManager.keyManager.publicKey
+}
+
+func (n *node) GetPrivateKey() crypto.PrivateKey {
+	return n.tlsManager.keyManager.privateKey
+}
+
+func (n *node) SetAsmKey(addr string, publicKey crypto.PublicKey) {
+	n.tlsManager.SetAsymmetricKey(addr, publicKey)
+}
+
+func (n *node) GetPublicKeyFromAddr(addr string) crypto.PublicKey {
+	return n.tlsManager.GetAsymmetricKey(addr)
 }

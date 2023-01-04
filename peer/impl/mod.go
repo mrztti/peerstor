@@ -32,7 +32,7 @@ func NewPeer(conf peer.Configuration) peer.Peer {
 		paxosInnerMessageChannel: make(chan PaxosMessage),
 		broadcastLock:            sync.Mutex{},
 		attemptedRumoursSent:     &AtomicCounter{count: 0},
-		tlsManager:               CreateTLSManager(),
+		tlsManager:               CreateTLSManager(myAddr),
 	}
 	newPeer.paxos.node = newPeer
 	newPeer.routingTable.Set(myAddr, myAddr)
@@ -68,6 +68,10 @@ func (n *node) Start() error {
 	logr.Logger.Info().Msgf("[%s]: Starting peer", n.addr)
 	myAddr := n.conf.Socket.GetAddress()
 	n.routingTable.Set(myAddr, myAddr)
+
+	if n.conf.PrivateKey != nil && n.conf.PublicKey != nil {
+		n.tlsManager.SetOwnKeys(n.conf.PublicKey, n.conf.PrivateKey)
+	}
 	go n.startListeningService()
 	// go n.startTickingService()
 	go n.startPaxosService()
