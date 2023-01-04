@@ -42,7 +42,7 @@ func (n *node) execTLSMessage(msg types.Message, pkt transport.Packet) error {
 		3. Decrypt content
 		4. Call handler
 	*/
-	integrityOk := n.tlsManager.IntegrityOk(pkt.Header.Source, TLSMessage.Content, TLSMessage.Signature)
+	integrityOk := n.tlsManager.VerifySignature(TLSMessage.Content, TLSMessage.Signature, pkt.Header.Source)
 	if !integrityOk {
 		err = fmt.Errorf("[%s]: integrity check failed for message from %s", n.addr, pkt.Header.Source)
 		return err
@@ -55,29 +55,31 @@ func (n *node) execTLSMessage(msg types.Message, pkt transport.Packet) error {
 }
 
 func (n *node) execTLSMessageHello(msg types.Message, pkt transport.Packet) error {
-	var err error
-	TLSMessageHello, ok := msg.(*types.TLSMessageHello)
-	if !ok {
-		err = fmt.Errorf("wrong type: %T", msg)
-		logr.Logger.Err(err).Msgf("[%s]: execTLSMessageHello failed", n.addr)
-		return err
-	}
+	// var err error
+	// TLSMessageHello, ok := msg.(*types.TLSMessageHello)
+	// if !ok {
+	// 	err = fmt.Errorf("wrong type: %T", msg)
+	// 	logr.Logger.Err(err).Msgf("[%s]: execTLSMessageHello failed", n.addr)
+	// 	return err
+	// }
 	/*
 		1. Use asymmetric Key pk
 		2. Check if encrypt(pk, content) == signature
 		3. Decrypt content
 		4. Call handler
 	*/
-	integrityOk := n.tlsManager.IntegrityOk(pkt.Header.Source, TLSMessageHello.Content, TLSMessageHello.Signature)
-	if !integrityOk {
-		err = fmt.Errorf("[%s]: integrity check failed for message from %s", n.addr, pkt.Header.Source)
-		return err
-	}
-	decryptedMessage, err := n.tlsManager.DecryptPublic(pkt.Header.Source, TLSMessageHello.Content)
-	if err != nil {
-		return err
-	}
-	return n.processDecryptedTLSMessage(decryptedMessage, pkt)
+
+	// integrityOk := n.tlsManager.IntegrityOk(pkt.Header.Source, TLSMessageHello.Content, TLSMessageHello.Signature)
+	// if !integrityOk {
+	// 	err = fmt.Errorf("[%s]: integrity check failed for message from %s", n.addr, pkt.Header.Source)
+	// 	return err
+	// }
+	// decryptedMessage, err := n.tlsManager.DecryptPublic(pkt.Header.Source, TLSMessageHello.Content)
+	// if err != nil {
+	// 	return err
+	// }
+	// return n.processDecryptedTLSMessage(decryptedMessage, pkt)
+	return nil
 }
 
 func (n *node) CreateDHSymmetricKey(addr string) error {

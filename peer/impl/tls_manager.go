@@ -6,9 +6,9 @@ import (
 	"crypto/rsa"
 	"crypto/sha256"
 	"fmt"
-	"log"
 
 	"github.com/monnand/dhkx"
+	"go.dedis.ch/cs438/logr"
 	"go.dedis.ch/cs438/peer"
 	"go.dedis.ch/cs438/transport"
 	"go.dedis.ch/cs438/types"
@@ -64,17 +64,7 @@ func (t *TLSManager) SetAsymmetricKey(peerIP string, key crypto.PublicKey) {
 	t.asymmetricKeyStore.Set(peerIP, key)
 }
 
-func (t *TLSManager) IntegrityOk(peerIP string, message []byte, signature []byte) bool {
-	// TODO: Implement
-	return true
-}
-
 func (t *TLSManager) DecryptSymmetric(peerIP string, message []byte) (types.Message, error) {
-	// TODO: Implement
-	return types.EmptyMessage{}, nil
-}
-
-func (t *TLSManager) DecryptPublic(peerIP string, message []byte) (types.Message, error) {
 	// TODO: Implement
 	return types.EmptyMessage{}, nil
 }
@@ -92,40 +82,45 @@ func (n *node) GetSymKey(addr string) []byte {
 	return n.tlsManager.GetSymmKey(addr)
 }
 
-func (t *TLSManager) EncryptAsymmetric(peerIP string, message transport.Message) (types.TLSMessage, error) {
-	publicKey := t.GetAsymmetricKey(peerIP).(rsa.PublicKey)
-
-	if &publicKey == nil {
+func (t *TLSManager) EncryptPublic(peerIP string, message transport.Message) (types.TLSMessage, error) {
+	publicKey, ok := t.GetAsymmetricKey(peerIP).(rsa.PublicKey)
+	if !ok || publicKey == (rsa.PublicKey{}) {
 		return types.TLSMessage{}, fmt.Errorf("no public key found for peer %s", peerIP)
 	}
 
 	plaintext := []byte(message.Payload)
-	log.Println("Encrypting message for peer", plaintext)
 	encryption, err := rsa.EncryptOAEP(sha256.New(), rand.Reader, &publicKey, plaintext, nil)
-	log.Printf("Encrypted message for peer %s", encryption)
+
 	if err != nil {
-		return types.TLSMessage{}, fmt.Errorf("Encryption failed %s", peerIP)
+		return types.TLSMessage{}, fmt.Errorf("encryption failed %s", peerIP)
+	}
+	signature, err := t.SignMessage(plaintext)
+	if err != nil {
+		return types.TLSMessage{}, fmt.Errorf("signing failed %s", peerIP)
 	}
 	tlsMessage := types.TLSMessage{
 		Source:      t.addr,
 		Content:     encryption,
-		Signature:   nil,
+		Signature:   signature,
 		ContentType: message.Type}
 
 	return tlsMessage, nil
 }
 
-func (t *TLSManager) DecryptAsymmetric(peerIP string, message *types.TLSMessage) (transport.Message, error) {
-	privateKey := t.keyManager.privateKey.(rsa.PrivateKey)
-	if &privateKey == nil {
-		return transport.Message{}, fmt.Errorf("no private key found for peer %s", peerIP)
+func (t *TLSManager) DecryptPublic(message *types.TLSMessage) (transport.Message, error) {
+	privateKey, ok := t.keyManager.privateKey.(rsa.PrivateKey)
+	if !ok || privateKey.Size() == 0 {
+		return transport.Message{}, fmt.Errorf("no private key found for peer %s", t.addr)
 	}
 	ciphertext := message.Content
 	decryptedMessage, err := rsa.DecryptOAEP(sha256.New(), rand.Reader, &privateKey, ciphertext, nil)
 	if err != nil {
-		return transport.Message{}, fmt.Errorf("Decryption failed %s", peerIP)
+		return transport.Message{}, fmt.Errorf("decryption failed %s", t.addr)
 	}
-	log.Printf("Decrypted message for peer %s", decryptedMessage)
+	verified := t.VerifySignature(decryptedMessage, message.Signature, message.Source)
+	if !verified {
+		return transport.Message{}, fmt.Errorf("signature verification failed %s", t.addr)
+	}
 	transportMessage := transport.Message{
 		Type:    message.ContentType,
 		Payload: decryptedMessage,
@@ -133,10 +128,35 @@ func (t *TLSManager) DecryptAsymmetric(peerIP string, message *types.TLSMessage)
 	return transportMessage, nil
 }
 
-func (n *node) EncryptAsymmetric(peerIP string, message transport.Message) (types.TLSMessage, error) {
-	return n.tlsManager.EncryptAsymmetric(peerIP, message)
+func (t *TLSManager) SignMessage(message []byte) ([]byte, error) {
+	hashed := sha256.Sum256(message)
+	privateKey, ok := t.keyManager.privateKey.(rsa.PrivateKey)
+	if !ok || privateKey.Size() == 0 {
+		return nil, fmt.Errorf("no private key found for peer %s", t.addr)
+	}
+	signature, err := rsa.SignPKCS1v15(rand.Reader, &privateKey, crypto.SHA256, hashed[:])
+
+	if err != nil {
+		return nil, fmt.Errorf("encryption failed %s", t.addr)
+	}
+	return signature, nil
 }
 
-func (n *node) DecryptAsymmetric(peerIP string, message *types.TLSMessage) (transport.Message, error) {
-	return n.tlsManager.DecryptAsymmetric(peerIP, message)
+func (t *TLSManager) VerifySignature(message, signature []byte, peerIP string) bool {
+	hashed := sha256.Sum256(message)
+	publicKey, ok := t.GetAsymmetricKey(peerIP).(rsa.PublicKey)
+	if !ok || publicKey == (rsa.PublicKey{}) {
+		logr.Logger.Warn().Msgf("[%s]: No public key found for %s", t.addr, peerIP)
+		return false
+	}
+	err := rsa.VerifyPKCS1v15(&publicKey, crypto.SHA256, hashed[:], signature)
+	return err == nil
+}
+
+func (n *node) EncryptPublic(peerIP string, message transport.Message) (types.TLSMessage, error) {
+	return n.tlsManager.EncryptPublic(peerIP, message)
+}
+
+func (n *node) DecryptPublic(message *types.TLSMessage) (transport.Message, error) {
+	return n.tlsManager.DecryptPublic(message)
 }
