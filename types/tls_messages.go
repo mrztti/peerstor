@@ -45,7 +45,8 @@ func (t TLSMessage) Name() string {
 
 // String implements types.Message.
 func (t TLSMessage) String() string {
-	return fmt.Sprintf("tlsMessage{source:%s, Signature: %v}", t.Source, t.Signature)
+	return fmt.Sprintf("tlsMessage{source:%s, ContentType:%s, Content:%v Signature: %v}",
+		t.Source, t.ContentType, t.Content, t.Signature)
 }
 
 // HTML implements types.Message.

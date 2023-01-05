@@ -21,7 +21,7 @@ import (
 // level.
 const EnvLogLevel = "LLVL"
 
-const defaultLevel = zerolog.WarnLevel
+const defaultLevel = zerolog.InfoLevel
 
 func init() {
 	// This is necessary to get the stack trace when an error is logged.

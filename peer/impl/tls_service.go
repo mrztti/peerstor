@@ -1,7 +1,9 @@
 package impl
 
 import (
+	"crypto"
 	"fmt"
+	"math/rand"
 
 	"github.com/monnand/dhkx"
 	"go.dedis.ch/cs438/logr"
@@ -37,7 +39,7 @@ func (n *node) execTLSMessage(msg types.Message, pkt transport.Packet) error {
 		3. Decrypt content
 		4. Call handler
 	*/
-	integrityOk := n.tlsManager.IntegrityOk(pkt.Header.Source, TLSMessage.Content, TLSMessage.Signature)
+	integrityOk := n.tlsManager.VerifySignature(TLSMessage.Content, TLSMessage.Signature, pkt.Header.Source)
 	if !integrityOk {
 		err = fmt.Errorf("[%s]: integrity check failed for message from %s", n.addr, pkt.Header.Source)
 		return err
@@ -50,34 +52,42 @@ func (n *node) execTLSMessage(msg types.Message, pkt transport.Packet) error {
 }
 
 func (n *node) execTLSMessageHello(msg types.Message, pkt transport.Packet) error {
-	var err error
-	TLSMessageHello, ok := msg.(*types.TLSMessageHello)
-	if !ok {
-		err = fmt.Errorf("wrong type: %T", msg)
-		logr.Logger.Err(err).Msgf("[%s]: execTLSMessageHello failed", n.addr)
-		return err
-	}
+	// var err error
+	// TLSMessageHello, ok := msg.(*types.TLSMessageHello)
+	// if !ok {
+	// 	err = fmt.Errorf("wrong type: %T", msg)
+	// 	logr.Logger.Err(err).Msgf("[%s]: execTLSMessageHello failed", n.addr)
+	// 	return err
+	// }
 	/*
 		1. Use asymmetric Key pk
 		2. Check if encrypt(pk, content) == signature
 		3. Decrypt content
 		4. Call handler
 	*/
-	integrityOk := n.tlsManager.IntegrityOk(pkt.Header.Source, TLSMessageHello.Content, TLSMessageHello.Signature)
-	if !integrityOk {
-		err = fmt.Errorf("[%s]: integrity check failed for message from %s", n.addr, pkt.Header.Source)
-		return err
-	}
-	decryptedMessage, err := n.tlsManager.DecryptPublic(pkt.Header.Source, TLSMessageHello)
-	if err != nil {
-		return err
-	}
-	return n.processDecryptedTLSMessage(decryptedMessage, pkt)
+
+	// integrityOk := n.tlsManager.IntegrityOk(pkt.Header.Source, TLSMessageHello.Content, TLSMessageHello.Signature)
+	// if !integrityOk {
+	// 	err = fmt.Errorf("[%s]: integrity check failed for message from %s", n.addr, pkt.Header.Source)
+	// 	return err
+	// }
+	// decryptedMessage, err := n.tlsManager.DecryptPublic(pkt.Header.Source, TLSMessageHello.Content)
+	// if err != nil {
+	// 	return err
+	// }
+	// return n.processDecryptedTLSMessage(decryptedMessage, pkt)
+	return nil
 }
 
 func (n *node) CreateDHSymmetricKey(addr string) error {
 	logr.Logger.Info().Msgf("[%s]: Sending TLSClientHello to %s", n.addr, addr)
-	dh, err := dhkx.GetGroup(0)
+
+	// Random Group selection
+	in := []int{0, 1, 2}
+	randomIndex := rand.Intn(len(in))
+	pick := in[randomIndex]
+
+	dh, err := dhkx.GetGroup(pick)
 	if err != nil {
 		return err
 	}
@@ -179,4 +189,20 @@ func (n *node) execTLSServerHello(msg types.Message, pkt transport.Packet) error
 	}
 	n.tlsManager.SetSymmKey(pkt.Header.Source, ck.Bytes())
 	return nil
+}
+
+func (n *node) GetPublicKey() crypto.PublicKey {
+	return n.tlsManager.keyManager.publicKey
+}
+
+func (n *node) GetPrivateKey() crypto.PrivateKey {
+	return n.tlsManager.keyManager.privateKey
+}
+
+func (n *node) SetAsmKey(addr string, publicKey crypto.PublicKey) {
+	n.tlsManager.SetAsymmetricKey(addr, publicKey)
+}
+
+func (n *node) GetPublicKeyFromAddr(addr string) crypto.PublicKey {
+	return n.tlsManager.GetAsymmetricKey(addr)
 }

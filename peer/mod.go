@@ -1,6 +1,7 @@
 package peer
 
 import (
+	"crypto"
 	"time"
 
 	"go.dedis.ch/cs438/registry"
@@ -81,6 +82,9 @@ type Configuration struct {
 	// retries to send a prepare when it doesn't get enough promises or accepts.
 	// Default: 5s.
 	PaxosProposerRetry time.Duration
+
+	PublicKey  crypto.PublicKey
+	PrivateKey crypto.PrivateKey
 }
 
 // Backoff describes parameters for a backoff algorithm. The initial time must

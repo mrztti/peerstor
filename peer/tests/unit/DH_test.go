@@ -1,6 +1,7 @@
 package unit
 
 import (
+	"log"
 	"testing"
 	"time"
 
@@ -31,6 +32,9 @@ func Test_DH_TwoNodeSetup(t *testing.T) {
 
 	n1key := node1.GetSymKey(addr)
 	n2key := node2.GetSymKey(node1.GetAddr())
+
+	log.Printf("n1key: %v", n1key)
+	log.Printf("n2key: %v", n2key)
 
 	require.Greater(t, len(n1key), 0)
 	require.Greater(t, len(n2key), 0)
@@ -69,10 +73,9 @@ func Test_DH_ThreeNodeSetup(t *testing.T) {
 	time.Sleep(time.Second)
 
 	require.Greater(t, len(node1.GetSymKey(node2.GetAddr())), 0)
+	require.Greater(t, len(node1.GetSymKey(node3.GetAddr())), 0)
 	require.Greater(t, len(node2.GetSymKey(node3.GetAddr())), 0)
 	require.Greater(t, len(node2.GetSymKey(node1.GetAddr())), 0)
-	require.Greater(t, len(node1.GetSymKey(node3.GetAddr())), 0)
-
 	require.Greater(t, len(node3.GetSymKey(node1.GetAddr())), 0)
 	require.Greater(t, len(node3.GetSymKey(node2.GetAddr())), 0)
 
