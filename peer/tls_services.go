@@ -18,4 +18,5 @@ type TLSServices interface {
 	GetPublicKeyFromAddr(addr string) crypto.PublicKey
 	EncryptPublic(peerIP string, message transport.Message) (types.TLSMessage, error)
 	DecryptPublic(message *types.TLSMessage) (transport.Message, error)
+	SendTLSMessage(peerIP string, message types.Message) error
 }

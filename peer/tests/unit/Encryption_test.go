@@ -185,3 +185,106 @@ func Test_DH_Asym_BreakSign_TwoNodes(t *testing.T) {
 	require.Error(t, err)
 	require.NotEqual(t, msg.Payload, decMsg.Payload)
 }
+func Test_TLS_Message_Is_Received(t *testing.T) {
+	transp := channel.NewTransport()
+	fake := z.NewFakeMessage(t)
+	handler1, _ := fake.GetHandler(t)
+	handler2, _ := fake.GetHandler(t)
+	handler3, _ := fake.GetHandler(t)
+
+	node1 := z.NewTestNode(t, peerFac, transp, "127.0.0.1:0", z.WithMessage(fake, handler1), z.WithAntiEntropy(time.Millisecond*50))
+	defer node1.Stop()
+	node2 := z.NewTestNode(t, peerFac, transp, "127.0.0.1:0", z.WithMessage(fake, handler2), z.WithAntiEntropy(time.Millisecond*50))
+	defer node2.Stop()
+	node3 := z.NewTestNode(t, peerFac, transp, "127.0.0.1:0", z.WithMessage(fake, handler3), z.WithAntiEntropy(time.Millisecond*50))
+	defer node3.Stop()
+
+	//node1 <-> node2 <-> node3
+
+	node2.AddPeer(node1.GetAddr())
+	node1.AddPeer(node2.GetAddr())
+	node2.AddPeer(node3.GetAddr())
+	node3.AddPeer(node2.GetAddr())
+
+	node1.SetRoutingEntry(node3.GetAddr(), node2.GetAddr())
+	node3.SetRoutingEntry(node1.GetAddr(), node2.GetAddr())
+
+	node1.CreateDHSymmetricKey(node2.GetAddr())
+	node3.CreateDHSymmetricKey(node2.GetAddr())
+	node1.CreateDHSymmetricKey(node3.GetAddr())
+
+	time.Sleep(time.Second)
+
+	require.Equal(t, node1.GetSymKey(node2.GetAddr()), node2.GetSymKey(node1.GetAddr()))
+	require.Equal(t, node2.GetSymKey(node3.GetAddr()), node3.GetSymKey(node2.GetAddr()))
+	require.Equal(t, node1.GetSymKey(node3.GetAddr()), node3.GetSymKey(node1.GetAddr()))
+
+	// Simply try that a message sent via TLS is received by the other node
+	chat := types.ChatMessage{
+		Message: "this is my chat message",
+	}
+
+	node1.SendTLSMessage(node3.GetAddr(), chat)
+	time.Sleep(time.Second)
+
+	node3ins := node3.GetIns()
+
+	lastMessage := node3ins[len(node3ins)-1]
+	require.Equal(t, chat.Name(), lastMessage.Msg.Type)
+}
+
+func Test_TLS_Message_Is_Reliably_Delivered(t *testing.T) {
+	transp := channel.NewTransport()
+	fake := z.NewFakeMessage(t)
+	handler1, _ := fake.GetHandler(t)
+	handler2, _ := fake.GetHandler(t)
+	handler3, _ := fake.GetHandler(t)
+
+	node1 := z.NewTestNode(t, peerFac, transp, "127.0.0.1:0", z.WithMessage(fake, handler1), z.WithAntiEntropy(time.Millisecond*50))
+	defer node1.Stop()
+	node2 := z.NewTestNode(t, peerFac, transp, "127.0.0.1:0", z.WithMessage(fake, handler2), z.WithAntiEntropy(time.Millisecond*50))
+	defer node2.Stop()
+	node3 := z.NewTestNode(t, peerFac, transp, "127.0.0.1:0", z.WithMessage(fake, handler3), z.WithAntiEntropy(time.Millisecond*50))
+	defer node3.Stop()
+
+	//node1 <-> node2 <-> node3
+
+	node2.AddPeer(node1.GetAddr())
+	node1.AddPeer(node2.GetAddr())
+	node2.AddPeer(node3.GetAddr())
+	node3.AddPeer(node2.GetAddr())
+
+	node1.SetRoutingEntry(node3.GetAddr(), node2.GetAddr())
+	node3.SetRoutingEntry(node1.GetAddr(), node2.GetAddr())
+
+	node1.CreateDHSymmetricKey(node2.GetAddr())
+	node3.CreateDHSymmetricKey(node2.GetAddr())
+	node1.CreateDHSymmetricKey(node3.GetAddr())
+
+	time.Sleep(time.Second)
+
+	require.Equal(t, node1.GetSymKey(node2.GetAddr()), node2.GetSymKey(node1.GetAddr()))
+	require.Equal(t, node2.GetSymKey(node3.GetAddr()), node3.GetSymKey(node2.GetAddr()))
+	require.Equal(t, node1.GetSymKey(node3.GetAddr()), node3.GetSymKey(node1.GetAddr()))
+
+	// Ensure that TLS message is reliably delivered even when intermediate node is down while it is sent
+	chat := types.ChatMessage{
+		Message: "this is my chat message",
+	}
+
+	// Send while node2 is down
+	node2.Stop()
+	node1.SendTLSMessage(node3.GetAddr(), chat)
+	time.Sleep(time.Second)
+
+	// Start node2
+	node2.Start()
+	node2.AddPeer(node1.GetAddr())
+	node2.AddPeer(node3.GetAddr())
+	time.Sleep(time.Second)
+
+	// Check node3 received the message
+	node3ins := node3.GetIns()
+	lastMessage := node3ins[len(node3ins)-1]
+	require.Equal(t, chat.Name(), lastMessage.Msg.Type)
+}
