@@ -1,7 +1,6 @@
 package unit
 
 import (
-	"log"
 	"testing"
 	"time"
 
@@ -107,11 +106,19 @@ func Test_TLS_SymmetricEncryption(t *testing.T) {
 	time.Sleep(time.Second)
 	require.Equal(t, node1.GetSymKey(node2.GetAddr()), node2.GetSymKey(node1.GetAddr()))
 
+	// Test Node1 -> Node2
 	messageToEncrypt := []byte("Hello World")
 	encrypted, err := node1.EncryptSymmetric(node2.GetAddr(), transport.Message{Payload: messageToEncrypt})
-	log.Default().Println(err)
-	log.Default().Println(encrypted)
+	require.NoError(t, err)
 	decrypted, err := node2.DecryptSymmetric(node1.GetAddr(), &encrypted)
-	require.Equal(t, messageToEncrypt, decrypted.Payload)
+	require.NoError(t, err)
+	require.Equal(t, messageToEncrypt, []byte(decrypted.Payload))
 
+	// Test Node2 -> Node1
+	messageToEncrypt = []byte("Yellow World")
+	encrypted, err = node2.EncryptSymmetric(node1.GetAddr(), transport.Message{Payload: messageToEncrypt})
+	require.NoError(t, err)
+	decrypted, err = node1.DecryptSymmetric(node2.GetAddr(), &encrypted)
+	require.NoError(t, err)
+	require.Equal(t, messageToEncrypt, []byte(decrypted.Payload))
 }
