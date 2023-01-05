@@ -10,6 +10,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 	z "go.dedis.ch/cs438/internal/testing"
+	"go.dedis.ch/cs438/logr"
 	"go.dedis.ch/cs438/transport"
 	"go.dedis.ch/cs438/transport/channel"
 	"go.dedis.ch/cs438/types"
@@ -228,6 +229,15 @@ func Test_TLS_Message_Is_Received(t *testing.T) {
 	time.Sleep(time.Second)
 
 	node3ins := node3.GetIns()
+	node3insNoStatus := make([]transport.Packet, 0)
+
+	for _, msg := range node3ins {
+		if msg.Msg.Type != "status" {
+			node3insNoStatus = append(node3insNoStatus, msg)
+		}
+	}
+
+	logr.Logger.Warn().Msgf("node3ins: %v", node3insNoStatus)
 
 	lastMessage := node3ins[len(node3ins)-1]
 	require.Equal(t, chat.Name(), lastMessage.Msg.Type)

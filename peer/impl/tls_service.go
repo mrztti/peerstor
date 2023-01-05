@@ -206,3 +206,18 @@ func (n *node) SetAsmKey(addr string, publicKey crypto.PublicKey) {
 func (n *node) GetPublicKeyFromAddr(addr string) crypto.PublicKey {
 	return n.tlsManager.GetAsymmetricKey(addr)
 }
+
+func (n *node) SendTLSMessage(peerIP string, message types.Message) error {
+	transportMessage, err := n.conf.MessageRegistry.MarshalMessage(message)
+	if err != nil {
+		logr.Logger.Err(err).Msgf("[%s]: Error marshaling TLSMessage to %s", n.addr, peerIP)
+		return err
+	}
+	encryptedMessage, err := n.tlsManager.EncryptSymmetric(peerIP, transportMessage)
+	if err != nil {
+		logr.Logger.Err(err).Msgf("[%s]: Error encrypting TLSMessage to %s", n.addr, peerIP)
+		return err
+	}
+	n.BroadcastPrivatelyInParallel(peerIP, encryptedMessage)
+	return err
+}

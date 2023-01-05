@@ -105,6 +105,7 @@ func (t *TLSManager) EncryptSymmetric(peerIP string, message transport.Message) 
 	stream.XORKeyStream(ciphertext[aes.BlockSize:], plaintext)
 
 	// TODO(jl): Unify what we sign with public encryption. I think we should sign the source and the contenttype, too.
+	// TODO: This fails right now, investigate why
 	signature, err := t.SignMessage(plaintext)
 	if err != nil {
 		return types.TLSMessage{}, fmt.Errorf("signing failed %s", peerIP)
