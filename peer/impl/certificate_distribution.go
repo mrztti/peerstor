@@ -8,6 +8,7 @@
 package impl
 
 import (
+	"bytes"
 	"crypto/rand"
 	"crypto/rsa"
 	"crypto/x509"
@@ -219,6 +220,25 @@ func (n *node) HandleCertificateBroadcastMessage(msg types.Message, pkt transpor
 	certificateBroadcastMessage, ok := msg.(*CertificateBroadcastMessage)
 	if !ok {
 		return errors.New("failed to cast message to CertificateBroadcastMessage")
+	}
+
+	// SECURITY MECHANISM: Check if this is a certificate forgery attempt
+	// Message and packet address must match
+	rule1 := certificateBroadcastMessage.Addr == pkt.Header.Source
+	// If the message address is this nodes address, then the certificate must be the same as the local one
+	rule2_1 := certificateBroadcastMessage.Addr == n.conf.Socket.GetAddress()
+	rule2_2 := bytes.Equal(certificateBroadcastMessage.PEM, n.certificateStore.GetPublicKeyPEM())
+	rule2 := (rule2_1 && rule2_2) || !rule2_1
+
+	if !rule1 {
+		log.Warn().Msg("detected probable certificate forgery attempt for " + certificateBroadcastMessage.Addr)
+		return nil
+	}
+
+	if !rule2 {
+		log.Warn().Msg("node detected certificate forgery, will fight for " + certificateBroadcastMessage.Addr)
+		n.BroadcastCertificate() // Retransmit across the network
+		return nil
 	}
 
 	// Add the certificate to the catalog
