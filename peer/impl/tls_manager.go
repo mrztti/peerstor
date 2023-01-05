@@ -2,10 +2,14 @@ package impl
 
 import (
 	"crypto"
+	"crypto/aes"
+	"crypto/cipher"
 	"crypto/rand"
 	"crypto/rsa"
 	"crypto/sha256"
 	"fmt"
+	"io"
+	"log"
 
 	"github.com/monnand/dhkx"
 	"go.dedis.ch/cs438/logr"
@@ -52,7 +56,7 @@ func (t *TLSManager) GetSymmKey(peerIP string) []byte {
 }
 
 func (t *TLSManager) SetSymmKey(peerIP string, key []byte) {
-	t.symmKeyStore.Set(peerIP, key)
+	t.symmKeyStore.Set(peerIP, key[:32])
 }
 
 func (t *TLSManager) GetAsymmetricKey(peerIP string) crypto.PublicKey {
@@ -64,9 +68,76 @@ func (t *TLSManager) SetAsymmetricKey(peerIP string, key crypto.PublicKey) {
 	t.asymmetricKeyStore.Set(peerIP, key)
 }
 
-func (t *TLSManager) DecryptSymmetric(peerIP string, message []byte) (types.Message, error) {
+func (t *TLSManager) IntegrityOk(peerIP string, message []byte, signature []byte) bool {
 	// TODO: Implement
-	return types.EmptyMessage{}, nil
+	return true
+}
+
+func (n *node) EncryptSymmetric(peerIP string, message transport.Message) (types.TLSMessage, error) {
+	return n.tlsManager.EncryptSymmetric(peerIP, message)
+}
+
+func (n *node) DecryptSymmetric(peerIP string, message *types.TLSMessage) (transport.Message, error) {
+	return n.tlsManager.DecryptSymmetric(peerIP, message)
+}
+
+func (t *TLSManager) EncryptSymmetric(peerIP string, message transport.Message) (types.TLSMessage, error) {
+	symmetricKey := t.GetSymmKey(peerIP)
+	log.Default().Printf("[%s]: Encrypting message for %s with key %v", t.addr, peerIP, symmetricKey)
+	if symmetricKey == nil {
+		return types.TLSMessage{}, fmt.Errorf("no symmetric key found for peer %s", peerIP)
+	}
+	plaintext := []byte(message.Payload)
+
+	block, err := aes.NewCipher(symmetricKey)
+	if err != nil {
+		return types.TLSMessage{}, err
+	}
+
+	// The IV needs to be unique, but not secure: we will put it at the beginning of the ciphertext unencrypted.
+	ciphertext := make([]byte, aes.BlockSize+len(plaintext))
+	initial_vect := ciphertext[:aes.BlockSize]
+	if _, err := io.ReadFull(rand.Reader, initial_vect); err != nil {
+		return types.TLSMessage{}, err
+	}
+
+	stream := cipher.NewCFBEncrypter(block, initial_vect)
+	stream.XORKeyStream(ciphertext[aes.BlockSize:], plaintext)
+
+	tlsMessage := types.TLSMessage{
+		Source:      t.addr,
+		Content:     ciphertext,
+		Signature:   nil,
+		ContentType: message.Type,
+	}
+
+	return tlsMessage, nil
+}
+
+func (t *TLSManager) DecryptSymmetric(peerIP string, message *types.TLSMessage) (transport.Message, error) {
+	symmetricKey := t.GetSymmKey(peerIP)
+	// TODO: Check integrity!
+
+	block, err := aes.NewCipher(symmetricKey)
+	if err != nil {
+		return transport.Message{}, err
+	}
+
+	ciphertext := message.Content
+	if len(ciphertext) < aes.BlockSize {
+		return transport.Message{}, fmt.Errorf("[%s]: Cannot decrypt message from %s, ciphertext too short", t.addr, peerIP)
+	}
+	initial_vect := ciphertext[:aes.BlockSize]
+	ciphertext = ciphertext[aes.BlockSize:]
+
+	stream := cipher.NewCFBDecrypter(block, initial_vect)
+
+	stream.XORKeyStream(ciphertext, ciphertext)
+
+	return transport.Message{
+		Type:    message.ContentType,
+		Payload: ciphertext,
+	}, nil
 }
 
 func (t *TLSManager) GetDHManagerEntry(peerIP string) *DHManager {
