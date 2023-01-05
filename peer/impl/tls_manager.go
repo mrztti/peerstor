@@ -104,10 +104,16 @@ func (t *TLSManager) EncryptSymmetric(peerIP string, message transport.Message) 
 	stream := cipher.NewCFBEncrypter(block, initial_vect)
 	stream.XORKeyStream(ciphertext[aes.BlockSize:], plaintext)
 
+	// TODO(jl): Unify what we sign with public encryption. I think we should sign the source and the contenttype, too.
+	signature, err := t.SignMessage(plaintext)
+	if err != nil {
+		return types.TLSMessage{}, fmt.Errorf("signing failed %s", peerIP)
+	}
+
 	tlsMessage := types.TLSMessage{
 		Source:      t.addr,
 		Content:     ciphertext,
-		Signature:   nil,
+		Signature:   signature,
 		ContentType: message.Type,
 	}
 
@@ -165,6 +171,7 @@ func (t *TLSManager) EncryptPublic(peerIP string, message transport.Message) (ty
 	if err != nil {
 		return types.TLSMessage{}, fmt.Errorf("encryption failed %s", peerIP)
 	}
+	// TODO(jl): Shouldn't we sign the encrypted message? Also I think we should sign the contenttype as well.
 	signature, err := t.SignMessage(plaintext)
 	if err != nil {
 		return types.TLSMessage{}, fmt.Errorf("signing failed %s", peerIP)
