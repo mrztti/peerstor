@@ -17,6 +17,7 @@ import (
 	"sync"
 
 	"github.com/rs/zerolog/log"
+	"go.dedis.ch/cs438/transport"
 	"go.dedis.ch/cs438/types"
 )
 
@@ -205,6 +206,23 @@ func (n *node) BroadcastCertificate() error {
 	}
 
 	err = n.Broadcast(msg)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// HandleCertificateBroadcastMessage: Handles a CertificateBroadcastMessage
+func (n *node) HandleCertificateBroadcastMessage(msg types.Message, pkt transport.Packet) error {
+	// Cast the message
+	certificateBroadcastMessage, ok := msg.(*CertificateBroadcastMessage)
+	if !ok {
+		return errors.New("failed to cast message to CertificateBroadcastMessage")
+	}
+
+	// Add the certificate to the catalog
+	err := n.certificateCatalog.AddCertificate(certificateBroadcastMessage.Addr, certificateBroadcastMessage.PEM)
 	if err != nil {
 		return err
 	}

@@ -69,6 +69,7 @@ type node struct {
 	broadcastLock            sync.Mutex
 	attemptedRumoursSent     *AtomicCounter
 	certificateStore         *CertificateStore
+	certificateCatalog       *CertificateCatalog
 }
 
 // Start implements peer.Service
