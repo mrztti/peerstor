@@ -148,6 +148,7 @@ func Test_Encryption_BreakSign(t *testing.T) {
 		encMsg.SignedCiphertext[msgLen-5+i] = byte(i)
 	}
 	decMsg, err := node1.DecryptPublic(&encMsg)
+	log.Default().Printf("error is: %v", err)
 	require.Error(t, err)
 	require.NotEqual(t, msg.Payload, decMsg.Payload)
 }
@@ -327,7 +328,56 @@ func Test_TLS_Message_Is_Reliably_Delivered(t *testing.T) {
 	require.Equal(t, chat.Name(), lastMessage.Msg.Type)
 }
 
-func Test_TLS_SymmetricEncryption(t *testing.T) {
+func Test_TLS_SymmetricEncryption_Simple(t *testing.T) {
+	transp := channel.NewTransport()
+	fake := z.NewFakeMessage(t)
+	handler1, _ := fake.GetHandler(t)
+	handler2, _ := fake.GetHandler(t)
+
+	publicKeyN1, privateKeyN1 := GenerateKeyPair()
+	node1 := z.NewTestNode(t, peerFac, transp, "127.0.0.1:0", z.WithMessage(fake, handler1), z.WithAntiEntropy(time.Millisecond*50), z.WithKeys(publicKeyN1, privateKeyN1))
+	defer node1.Stop()
+
+	publicKeyN2, privateKeyN2 := GenerateKeyPair()
+	node2 := z.NewTestNode(t, peerFac, transp, "127.0.0.1:0", z.WithMessage(fake, handler2), z.WithAntiEntropy(time.Millisecond*50), z.WithKeys(publicKeyN2, privateKeyN2))
+	defer node2.Stop()
+
+	node1.SetAsmKey(node2.GetAddr(), publicKeyN2)
+	node2.SetAsmKey(node1.GetAddr(), publicKeyN1)
+
+	//node1 <-> node2
+
+	node2.AddPeer(node1.GetAddr())
+	node1.AddPeer(node2.GetAddr())
+	node1.CreateDHSymmetricKey(node2.GetAddr())
+
+	time.Sleep(time.Second)
+	require.Equal(t, node1.GetSymKey(node2.GetAddr()), node2.GetSymKey(node1.GetAddr()))
+
+	// Test Node1 -> Node2
+	messageToEncrypt := []byte("Hello World")
+	msg := transport.Message{Payload: messageToEncrypt}
+	encrypted, err := node1.EncryptSymmetric(node2.GetAddr(), msg)
+	require.NoError(t, err)
+	require.Greater(t, len(encrypted.SignedCiphertext), 0)
+	require.NotEqual(t, msg.Payload, encrypted.SignedCiphertext)
+	decrypted, err := node2.DecryptSymmetric(node1.GetAddr(), &encrypted)
+	require.NoError(t, err)
+	require.Equal(t, messageToEncrypt, []byte(decrypted.Payload))
+
+	// Test Node2 -> Node1
+	messageToEncrypt = []byte("Yellow World")
+	msg = transport.Message{Payload: messageToEncrypt}
+	encrypted, err = node2.EncryptSymmetric(node1.GetAddr(), msg)
+	require.NoError(t, err)
+	require.Greater(t, len(encrypted.SignedCiphertext), 0)
+	require.NotEqual(t, msg.Payload, encrypted.SignedCiphertext)
+	decrypted, err = node1.DecryptSymmetric(node2.GetAddr(), &encrypted)
+	require.NoError(t, err)
+	require.Equal(t, messageToEncrypt, []byte(decrypted.Payload))
+}
+
+func Test_TLS_SymmetricEncryption_BreakSign(t *testing.T) {
 	transp := channel.NewTransport()
 	fake := z.NewFakeMessage(t)
 	handler1, _ := fake.GetHandler(t)
@@ -361,11 +411,24 @@ func Test_TLS_SymmetricEncryption(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, messageToEncrypt, []byte(decrypted.Payload))
 
+	log.Default().Printf("\n\n\n\n\n\nBreak the signature")
 	// Test Node2 -> Node1
 	messageToEncrypt = []byte("Yellow World")
-	encrypted, err = node2.EncryptSymmetric(node1.GetAddr(), transport.Message{Payload: messageToEncrypt})
+	msg := transport.Message{Payload: messageToEncrypt}
+	encrypted, err = node2.EncryptSymmetric(node1.GetAddr(), msg)
 	require.NoError(t, err)
+	require.Greater(t, len(encrypted.SignedCiphertext), 0)
+	require.NotEqual(t, msg.Payload, encrypted.SignedCiphertext)
+
+	// Break the signature
+	msgLen := len(encrypted.SignedCiphertext)
+	log.Default().Printf("encrypted ciphertext: %v", encrypted.SignedCiphertext)
+	for i := 0; i < 5; i++ {
+		encrypted.SignedCiphertext[msgLen-5+i] = byte(i)
+	}
+
+	log.Default().Printf("corrupted ciphertext: %v", encrypted.SignedCiphertext)
 	decrypted, err = node1.DecryptSymmetric(node2.GetAddr(), &encrypted)
-	require.NoError(t, err)
-	require.Equal(t, messageToEncrypt, []byte(decrypted.Payload))
+	require.Error(t, err)
+	require.NotEqual(t, msg.Payload, decrypted.Payload)
 }
