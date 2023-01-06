@@ -2,75 +2,79 @@ package types
 
 import (
 	"fmt"
+	"math/big"
 	"strings"
 )
 
-type TLSPacket struct {
-	Source  string
-	Content []byte // Uses symmetric key
-	Hash    []byte // Uses symmetric key
+type TLSMessage struct {
+	Source           string
+	ContentType      string
+	SignedCiphertext []byte
 }
 
-type TLSPacketHello struct {
-	Source  string
-	Content []byte // Uses asymmetric key
-	Hash    []byte // Use asymmetric key
+type TLSMessageHello struct {
+	Source           string
+	ContentType      string
+	SignedCiphertext []byte
 }
 
 type TLSClientHello struct {
-	GroupDH           uint
-	PrimeDH           uint
-	ClientPresecretDH uint
+	GroupDH           *big.Int
+	PrimeDH           *big.Int
+	ClientPresecretDH []byte
+	Source            string
 }
 
 type TLSServerHello struct {
-	ServerPresecretDH uint
+	ServerPresecretDH []byte
+	Source            string
 	//SeshkeyDH         uint
 }
 
 // -----------------------------------------------------------------------------
-// TLSPacket
+// TLSMessage
 
 // NewEmpty implements types.Message.
-func (t TLSPacket) NewEmpty() Message {
-	return &TLSPacket{}
+func (t TLSMessage) NewEmpty() Message {
+	return &TLSMessage{}
 }
 
 // Name implements types.Message.
-func (t TLSPacket) Name() string {
-	return "tlspacket"
+func (t TLSMessage) Name() string {
+	return "tlsMessage"
 }
 
 // String implements types.Message.
-func (t TLSPacket) String() string {
-	return fmt.Sprintf("tlspacket{source:%s, hash: %v}", t.Source, t.Hash)
+func (t TLSMessage) String() string {
+	return fmt.Sprintf("tlsMessage{source:%s, ContentType:%s, SignedCiphertext:%v }",
+		t.Source, t.ContentType, t.SignedCiphertext)
 }
 
 // HTML implements types.Message.
-func (t TLSPacket) HTML() string {
+func (t TLSMessage) HTML() string {
 	return t.String()
 }
 
 // -----------------------------------------------------------------------------
-// TLSPacketHello
+// TLSMessageHello
 
 // NewEmpty implements types.Message.
-func (t TLSPacketHello) NewEmpty() Message {
-	return &TLSPacketHello{}
+func (t TLSMessageHello) NewEmpty() Message {
+	return &TLSMessageHello{}
 }
 
 // Name implements types.Message.
-func (t TLSPacketHello) Name() string {
-	return "TLSPacketHello"
+func (t TLSMessageHello) Name() string {
+	return "TLSMessageHello"
 }
 
 // String implements types.Message.
-func (t TLSPacketHello) String() string {
-	return fmt.Sprintf("tlspackethello{source:%s}", t.Source)
+func (t TLSMessageHello) String() string {
+	return fmt.Sprintf("tlsMessagehello{source:%s}", t.Source)
 }
 
 // HTML implements types.Message.
-func (t TLSPacketHello) HTML() string {
+func (t TLSMessageHello) HTML() string {
 	return t.String()
 }
 
