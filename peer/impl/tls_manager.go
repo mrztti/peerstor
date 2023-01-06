@@ -70,11 +70,6 @@ func (t *TLSManager) SetAsymmetricKey(peerIP string, key crypto.PublicKey) {
 	t.asymmetricKeyStore.Set(peerIP, key)
 }
 
-func (t *TLSManager) IntegrityOk(peerIP string, message []byte, signature []byte) bool {
-	// TODO: Implement
-	return true
-}
-
 func (n *node) EncryptSymmetric(peerIP string, message transport.Message) (types.TLSMessage, error) {
 	return n.tlsManager.EncryptSymmetric(peerIP, message)
 }
@@ -102,10 +97,9 @@ func (t *TLSManager) EncryptSymmetric(peerIP string, message transport.Message) 
 	if _, err := io.ReadFull(rand.Reader, initial_vect); err != nil {
 		return types.TLSMessage{}, err
 	}
-	// TODO(jl): Unify what we sign with public encryption. I think we should sign the source and the contenttype, too.
-	// TODO: This fails right now, investigate why
-	signature, err := t.SignMessage(concatenateArrays([]byte(t.addr), []byte(message.Type), initial_vect, plaintext))
 
+	// Sign then encrypt
+	signature, err := t.SignMessage(concatenateArrays([]byte(t.addr), []byte(message.Type), initial_vect, plaintext))
 	plaintextWithSignature := concatenateArrays(plaintext, signature)
 	stream := cipher.NewCFBEncrypter(block, initial_vect)
 	stream.XORKeyStream(ciphertext[aes.BlockSize:], plaintextWithSignature)
@@ -132,20 +126,31 @@ func (t *TLSManager) DecryptSymmetric(peerIP string, message *types.TLSMessage) 
 		return transport.Message{}, err
 	}
 
-	ciphertext := message.SignedCiphertext
-	if len(ciphertext) < aes.BlockSize {
+	cipherTextWithIVAndSignature := message.SignedCiphertext
+	if len(cipherTextWithIVAndSignature) < aes.BlockSize {
 		return transport.Message{}, fmt.Errorf("[%s]: Cannot decrypt message from %s, ciphertext too short", t.addr, peerIP)
 	}
-	initial_vect := ciphertext[:aes.BlockSize]
-	ciphertext = ciphertext[aes.BlockSize:]
+	initial_vect := cipherTextWithIVAndSignature[:aes.BlockSize]
+	ciphertextWithSignature := cipherTextWithIVAndSignature[aes.BlockSize:]
 
 	stream := cipher.NewCFBDecrypter(block, initial_vect)
 
-	stream.XORKeyStream(ciphertext, ciphertext)
+	stream.XORKeyStream(ciphertextWithSignature, ciphertextWithSignature)
 
+	// Check integrity
+	signatureStartIndex := len(ciphertextWithSignature) - SIGNATURE_SIZE_BYTES
+	signature := ciphertextWithSignature[signatureStartIndex:]
+	plaintext := ciphertextWithSignature[:signatureStartIndex]
+
+	signedBytes := concatenateArrays([]byte(t.addr), []byte(message.ContentType), initial_vect, plaintext)
+
+	signatureOk := !t.VerifySignature(signedBytes, signature, peerIP)
+	if !signatureOk {
+		return transport.Message{}, fmt.Errorf("signature verification failed %s", t.addr)
+	}
 	return transport.Message{
 		Type:    message.ContentType,
-		Payload: ciphertext,
+		Payload: plaintext,
 	}, nil
 }
 
@@ -169,6 +174,11 @@ func (t *TLSManager) EncryptPublic(peerIP string, message transport.Message) (ty
 	}
 
 	plaintext := []byte(message.Payload)
+	signature, err := t.SignMessage(concatenateArrays([]byte(t.addr), []byte(message.Type), plaintext))
+	if err != nil {
+		return types.TLSMessageHello{}, fmt.Errorf("signing failed %s", peerIP)
+	}
+	plaintextWithSignature := concatenateArrays(plaintext, signature)
 	hash := sha256.New()
 	msgLen := len(plaintext)
 	step := publicKey.Size() - 2*hash.Size() - 2
@@ -181,7 +191,7 @@ func (t *TLSManager) EncryptPublic(peerIP string, message transport.Message) (ty
 			finish = msgLen
 		}
 
-		encryptedBlockBytes, err := rsa.EncryptOAEP(hash, rand.Reader, &publicKey, plaintext[start:finish], nil)
+		encryptedBlockBytes, err := rsa.EncryptOAEP(hash, rand.Reader, &publicKey, plaintextWithSignature[start:finish], nil)
 		if err != nil {
 			return types.TLSMessageHello{}, fmt.Errorf("encryption failed %s %v", peerIP, err)
 
@@ -192,15 +202,11 @@ func (t *TLSManager) EncryptPublic(peerIP string, message transport.Message) (ty
 	// encryption, err := rsa.EncryptOAEP(sha256.New(), rand.Reader, &publicKey, plaintext, nil)
 
 	// TODO(jl): Shouldn't we sign the encrypted message? Also I think we should sign the contenttype as well.
-	signature, err := t.SignMessage(plaintext)
-	if err != nil {
-		return types.TLSMessageHello{}, fmt.Errorf("signing failed %s", peerIP)
-	}
+
 	tlsMessage := types.TLSMessageHello{
-		Source:      t.addr,
-		Content:     encryptedBytes,
-		Signature:   signature,
-		ContentType: message.Type}
+		Source:           t.addr,
+		SignedCiphertext: encryptedBytes,
+		ContentType:      message.Type}
 
 	return tlsMessage, nil
 }
@@ -210,7 +216,7 @@ func (t *TLSManager) DecryptPublic(message *types.TLSMessageHello) (transport.Me
 	if !ok || privateKey.Size() == 0 {
 		return transport.Message{}, fmt.Errorf("no private key found for peer %s", t.addr)
 	}
-	ciphertext := message.Content
+	ciphertext := message.SignedCiphertext
 	msgLen := len(ciphertext)
 	step := privateKey.PublicKey.Size()
 	var decryptedBytes []byte
@@ -232,7 +238,7 @@ func (t *TLSManager) DecryptPublic(message *types.TLSMessageHello) (transport.Me
 	// if err != nil {
 	// 	return transport.Message{}, fmt.Errorf("decryption failed %s", t.addr)
 	// }
-	verified := t.VerifySignature(decryptedBytes, message.Signature, message.Source)
+	verified := t.VerifySignature(decryptedBytes[0:msgLen-SIGNATURE_SIZE_BYTES], decryptedBytes[SIGNATURE_SIZE_BYTES:msgLen], message.Source)
 	if !verified {
 		return transport.Message{}, fmt.Errorf("signature verification failed %s", t.addr)
 	}

@@ -39,11 +39,6 @@ func (n *node) execTLSMessage(msg types.Message, pkt transport.Packet) error {
 		3. Decrypt content
 		4. Call handler
 	*/
-	integrityOk := n.tlsManager.VerifySignature(TLSMessage.SignedCiphertext, TLSMessage.Signature, pkt.Header.Source)
-	if !integrityOk {
-		err = fmt.Errorf("[%s]: integrity check failed for message from %s", n.addr, pkt.Header.Source)
-		return err
-	}
 	decryptedMessage, err := n.tlsManager.DecryptSymmetric(pkt.Header.Source, TLSMessage)
 	if err != nil {
 		return err

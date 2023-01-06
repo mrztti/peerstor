@@ -143,7 +143,10 @@ func Test_Encryption_BreakSign(t *testing.T) {
 
 	encMsg, err := node1.EncryptPublic(node1.GetAddr(), msg)
 	require.NoError(t, err)
-	encMsg.Signature = []byte("this is a fake signature")
+	msgLen := len(encMsg.SignedCiphertext)
+	for i := 0; i < 5; i++ {
+		encMsg.SignedCiphertext[msgLen-5+i] = byte(i)
+	}
 	decMsg, err := node1.DecryptPublic(&encMsg)
 	require.Error(t, err)
 	require.NotEqual(t, msg.Payload, decMsg.Payload)
@@ -203,7 +206,10 @@ func Test_DH_Asym_BreakSign_TwoNodes(t *testing.T) {
 	require.Greater(t, len(encMsg.SignedCiphertext), 0)
 	require.NotEqual(t, msg.Payload, encMsg.SignedCiphertext)
 
-	encMsg.Signature = []byte("this is a fake signature")
+	msgLen := len(encMsg.SignedCiphertext)
+	for i := 0; i < 5; i++ {
+		encMsg.SignedCiphertext[msgLen-5+i] = byte(i)
+	}
 	decMsg, err := node2.DecryptPublic(&encMsg)
 	require.Error(t, err)
 	require.NotEqual(t, msg.Payload, decMsg.Payload)

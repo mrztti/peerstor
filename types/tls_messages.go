@@ -13,10 +13,9 @@ type TLSMessage struct {
 }
 
 type TLSMessageHello struct {
-	Source      string
-	ContentType string
-	Content     []byte // Uses asymmetric key
-	Signature   []byte // Use asymmetric key
+	Source           string
+	ContentType      string
+	SignedCiphertext []byte
 }
 
 type TLSClientHello struct {
@@ -45,8 +44,8 @@ func (t TLSMessage) Name() string {
 
 // String implements types.Message.
 func (t TLSMessage) String() string {
-	return fmt.Sprintf("tlsMessage{source:%s, ContentType:%s, Content:%v Signature: %v}",
-		t.Source, t.ContentType, t.SignedCiphertext, t.Signature)
+	return fmt.Sprintf("tlsMessage{source:%s, ContentType:%s, SignedCiphertext:%v }",
+		t.Source, t.ContentType, t.SignedCiphertext)
 }
 
 // HTML implements types.Message.
