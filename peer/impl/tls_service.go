@@ -3,6 +3,7 @@ package impl
 import (
 	"crypto"
 	"fmt"
+	"log"
 	"math/rand"
 
 	"github.com/monnand/dhkx"
@@ -61,6 +62,7 @@ func (n *node) execTLSMessageHello(msg types.Message, pkt transport.Packet) erro
 		return err
 	}
 	decryptedMessage, err := n.tlsManager.DecryptPublic(TLSMessageHello)
+	log.Default().Println("decryptedMessage", decryptedMessage.Payload)
 	if err != nil {
 		return err
 	}

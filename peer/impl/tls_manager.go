@@ -180,9 +180,9 @@ func (t *TLSManager) EncryptPublic(peerIP string, message transport.Message) (ty
 	}
 	plaintextWithSignature := concatenateArrays(plaintext, signature)
 	hash := sha256.New()
-	msgLen := len(plaintext)
+	msgLen := len(plaintextWithSignature)
 	step := publicKey.Size() - 2*hash.Size() - 2
-
+	rand := rand.Reader
 	var encryptedBytes []byte
 
 	for start := 0; start < msgLen; start += step {
@@ -191,7 +191,7 @@ func (t *TLSManager) EncryptPublic(peerIP string, message transport.Message) (ty
 			finish = msgLen
 		}
 
-		encryptedBlockBytes, err := rsa.EncryptOAEP(hash, rand.Reader, &publicKey, plaintextWithSignature[start:finish], nil)
+		encryptedBlockBytes, err := rsa.EncryptOAEP(hash, rand, &publicKey, plaintextWithSignature[start:finish], nil)
 		if err != nil {
 			return types.TLSMessageHello{}, fmt.Errorf("encryption failed %s %v", peerIP, err)
 
@@ -211,6 +211,8 @@ func (t *TLSManager) EncryptPublic(peerIP string, message transport.Message) (ty
 	return tlsMessage, nil
 }
 
+// sign(plaintext) => plain_sign
+// encrypt(plain_sign) => enc_sign || Packet: signature: enc_sign
 func (t *TLSManager) DecryptPublic(message *types.TLSMessageHello) (transport.Message, error) {
 	privateKey, ok := t.keyManager.privateKey.(rsa.PrivateKey)
 	if !ok || privateKey.Size() == 0 {
@@ -221,13 +223,14 @@ func (t *TLSManager) DecryptPublic(message *types.TLSMessageHello) (transport.Me
 	step := privateKey.PublicKey.Size()
 	var decryptedBytes []byte
 	hash := sha256.New()
+	rand := rand.Reader
 	for start := 0; start < msgLen; start += step {
 		finish := start + step
 		if finish > msgLen {
 			finish = msgLen
 		}
 
-		decryptedBlockBytes, err := rsa.DecryptOAEP(hash, rand.Reader, &privateKey, ciphertext[start:finish], nil)
+		decryptedBlockBytes, err := rsa.DecryptOAEP(hash, rand, &privateKey, ciphertext[start:finish], nil)
 		if err != nil {
 			return transport.Message{}, fmt.Errorf("decryption failed %s", t.addr)
 		}
@@ -238,13 +241,23 @@ func (t *TLSManager) DecryptPublic(message *types.TLSMessageHello) (transport.Me
 	// if err != nil {
 	// 	return transport.Message{}, fmt.Errorf("decryption failed %s", t.addr)
 	// }
-	verified := t.VerifySignature(decryptedBytes[0:msgLen-SIGNATURE_SIZE_BYTES], decryptedBytes[SIGNATURE_SIZE_BYTES:msgLen], message.Source)
-	if !verified {
+	log.Default().Println("decryptedBytes", len(decryptedBytes))
+	signatureStartIndex := len(decryptedBytes) - SIGNATURE_SIZE_BYTES
+	log.Default().Println("signatureStartIndex", signatureStartIndex)
+	signature := decryptedBytes[signatureStartIndex:]
+	log.Default().Printf("signature len %d, signature %s", len(signature), signature)
+	plaintext := decryptedBytes[:signatureStartIndex]
+	log.Default().Printf("plaintext len %d; plaintext %s", len(plaintext), plaintext)
+
+	signedBytes := concatenateArrays([]byte(t.addr), []byte(message.ContentType), plaintext)
+
+	signatureOk := !t.VerifySignature(signedBytes, signature, t.addr)
+	if !signatureOk {
 		return transport.Message{}, fmt.Errorf("signature verification failed %s", t.addr)
 	}
 	transportMessage := transport.Message{
 		Type:    message.ContentType,
-		Payload: decryptedBytes,
+		Payload: plaintext,
 	}
 	return transportMessage, nil
 }
