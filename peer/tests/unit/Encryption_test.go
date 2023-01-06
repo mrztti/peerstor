@@ -52,7 +52,7 @@ func Test_Encryption_Asym_KeyConfig(t *testing.T) {
 	require.Equal(t, node2.GetPublicKeyFromAddr(node1.GetAddr()), node1.GetPublicKey())
 }
 
-func TTest_Encryption_Asym_Encryption_Decryption(t *testing.T) {
+func Test_Encryption_Asym_Encryption_Decryption(t *testing.T) {
 	transp := channel.NewTransport()
 	fake := z.NewFakeMessage(t)
 	handler1, _ := fake.GetHandler(t)
