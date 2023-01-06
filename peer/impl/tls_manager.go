@@ -144,9 +144,9 @@ func (t *TLSManager) DecryptSymmetric(peerIP string, message *types.TLSMessage) 
 	signature := ciphertextWithSignature[signatureStartIndex:]
 	plaintext := ciphertextWithSignature[:signatureStartIndex]
 
-	signedBytes := concatenateArrays([]byte(t.addr), []byte(message.ContentType), initial_vect, plaintext)
+	signedBytes := concatenateArrays([]byte(message.Source), []byte(message.ContentType), initial_vect, plaintext)
 	log.Default().Printf("Signed lenght bytes: %d", len(signedBytes))
-	log.Default().Printf("Signed lenght bytes expected: %d", len([]byte(t.addr))+len([]byte(message.ContentType))+len(initial_vect)+len(plaintext))
+	log.Default().Printf("Signed lenght bytes expected: %d", len([]byte(message.Source))+len([]byte(message.ContentType))+len(initial_vect)+len(plaintext))
 
 	log.Default().Printf("Signed bytes: %v", signedBytes)
 	log.Default().Printf("Signature: %v", signature)
@@ -256,7 +256,7 @@ func (t *TLSManager) DecryptPublic(message *types.TLSMessageHello) (transport.Me
 	plaintext := decryptedBytes[:signatureStartIndex]
 	log.Default().Printf("plaintext len %d; plaintext %s", len(plaintext), plaintext)
 
-	signedBytes := concatenateArrays([]byte(t.addr), []byte(message.ContentType), plaintext)
+	signedBytes := concatenateArrays([]byte(message.Source), []byte(message.ContentType), plaintext)
 
 	signatureOk := t.VerifySignature(signedBytes, signature, message.Source)
 	if !signatureOk {
