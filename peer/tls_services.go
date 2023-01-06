@@ -16,7 +16,7 @@ type TLSServices interface {
 	GetPrivateKey() crypto.PrivateKey
 	SetAsmKey(addr string, publicKey crypto.PublicKey)
 	GetPublicKeyFromAddr(addr string) crypto.PublicKey
-	EncryptPublic(peerIP string, message transport.Message) (types.TLSMessage, error)
-	DecryptPublic(message *types.TLSMessage) (transport.Message, error)
+	EncryptPublic(peerIP string, message transport.Message) (types.TLSMessageHello, error)
+	DecryptPublic(message *types.TLSMessageHello) (transport.Message, error)
 	SendTLSMessage(peerIP string, message types.Message) error
 }

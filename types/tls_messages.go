@@ -14,9 +14,10 @@ type TLSMessage struct {
 }
 
 type TLSMessageHello struct {
-	Source    string
-	Content   []byte // Uses asymmetric key
-	Signature []byte // Use asymmetric key
+	Source      string
+	ContentType string
+	Content     []byte // Uses asymmetric key
+	Signature   []byte // Use asymmetric key
 }
 
 type TLSClientHello struct {
