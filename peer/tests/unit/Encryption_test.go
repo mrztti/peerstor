@@ -222,12 +222,23 @@ func Test_TLS_Message_Is_Received(t *testing.T) {
 	handler2, _ := fake.GetHandler(t)
 	handler3, _ := fake.GetHandler(t)
 
-	node1 := z.NewTestNode(t, peerFac, transp, "127.0.0.1:0", z.WithMessage(fake, handler1), z.WithAntiEntropy(time.Millisecond*50))
+	publicKeyN1, privateKeyN1 := GenerateKeyPair()
+	publicKeyN2, privateKeyN2 := GenerateKeyPair()
+	publicKeyN3, privateKeyN3 := GenerateKeyPair()
+
+	node1 := z.NewTestNode(t, peerFac, transp, "127.0.0.1:0", z.WithMessage(fake, handler1), z.WithAntiEntropy(time.Millisecond*50), z.WithKeys(publicKeyN1, privateKeyN1))
 	defer node1.Stop()
-	node2 := z.NewTestNode(t, peerFac, transp, "127.0.0.1:0", z.WithMessage(fake, handler2), z.WithAntiEntropy(time.Millisecond*50))
+	node2 := z.NewTestNode(t, peerFac, transp, "127.0.0.1:0", z.WithMessage(fake, handler2), z.WithAntiEntropy(time.Millisecond*50), z.WithKeys(publicKeyN2, privateKeyN2))
 	defer node2.Stop()
-	node3 := z.NewTestNode(t, peerFac, transp, "127.0.0.1:0", z.WithMessage(fake, handler3), z.WithAntiEntropy(time.Millisecond*50))
+	node3 := z.NewTestNode(t, peerFac, transp, "127.0.0.1:0", z.WithMessage(fake, handler3), z.WithAntiEntropy(time.Millisecond*50), z.WithKeys(publicKeyN3, privateKeyN3))
 	defer node3.Stop()
+
+	node1.SetAsmKey(node2.GetAddr(), publicKeyN2)
+	node1.SetAsmKey(node3.GetAddr(), publicKeyN3)
+	node2.SetAsmKey(node1.GetAddr(), publicKeyN1)
+	node2.SetAsmKey(node3.GetAddr(), publicKeyN3)
+	node3.SetAsmKey(node1.GetAddr(), publicKeyN1)
+	node3.SetAsmKey(node2.GetAddr(), publicKeyN2)
 
 	//node1 <-> node2 <-> node3
 
@@ -279,13 +290,23 @@ func Test_TLS_Message_Is_Reliably_Delivered(t *testing.T) {
 	handler2, _ := fake.GetHandler(t)
 	handler3, _ := fake.GetHandler(t)
 
-	node1 := z.NewTestNode(t, peerFac, transp, "127.0.0.1:0", z.WithMessage(fake, handler1), z.WithAntiEntropy(time.Millisecond*50))
+	publicKeyN1, privateKeyN1 := GenerateKeyPair()
+	publicKeyN2, privateKeyN2 := GenerateKeyPair()
+	publicKeyN3, privateKeyN3 := GenerateKeyPair()
+
+	node1 := z.NewTestNode(t, peerFac, transp, "127.0.0.1:0", z.WithMessage(fake, handler1), z.WithAntiEntropy(time.Millisecond*50), z.WithKeys(publicKeyN1, privateKeyN1))
 	defer node1.Stop()
-	node2 := z.NewTestNode(t, peerFac, transp, "127.0.0.1:0", z.WithMessage(fake, handler2), z.WithAntiEntropy(time.Millisecond*50))
+	node2 := z.NewTestNode(t, peerFac, transp, "127.0.0.1:0", z.WithMessage(fake, handler2), z.WithAntiEntropy(time.Millisecond*50), z.WithKeys(publicKeyN2, privateKeyN2))
 	defer node2.Stop()
-	node3 := z.NewTestNode(t, peerFac, transp, "127.0.0.1:0", z.WithMessage(fake, handler3), z.WithAntiEntropy(time.Millisecond*50))
+	node3 := z.NewTestNode(t, peerFac, transp, "127.0.0.1:0", z.WithMessage(fake, handler3), z.WithAntiEntropy(time.Millisecond*50), z.WithKeys(publicKeyN3, privateKeyN3))
 	defer node3.Stop()
 
+	node1.SetAsmKey(node2.GetAddr(), publicKeyN2)
+	node1.SetAsmKey(node3.GetAddr(), publicKeyN3)
+	node2.SetAsmKey(node1.GetAddr(), publicKeyN1)
+	node2.SetAsmKey(node3.GetAddr(), publicKeyN3)
+	node3.SetAsmKey(node1.GetAddr(), publicKeyN1)
+	node3.SetAsmKey(node2.GetAddr(), publicKeyN2)
 	//node1 <-> node2 <-> node3
 
 	node2.AddPeer(node1.GetAddr())
