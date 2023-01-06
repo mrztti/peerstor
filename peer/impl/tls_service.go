@@ -52,31 +52,24 @@ func (n *node) execTLSMessage(msg types.Message, pkt transport.Packet) error {
 }
 
 func (n *node) execTLSMessageHello(msg types.Message, pkt transport.Packet) error {
-	// var err error
-	// TLSMessageHello, ok := msg.(*types.TLSMessageHello)
-	// if !ok {
-	// 	err = fmt.Errorf("wrong type: %T", msg)
-	// 	logr.Logger.Err(err).Msgf("[%s]: execTLSMessageHello failed", n.addr)
-	// 	return err
-	// }
 	/*
 		1. Use asymmetric Key pk
 		2. Check if encrypt(pk, content) == signature
 		3. Decrypt content
 		4. Call handler
 	*/
-
-	// integrityOk := n.tlsManager.IntegrityOk(pkt.Header.Source, TLSMessageHello.Content, TLSMessageHello.Signature)
-	// if !integrityOk {
-	// 	err = fmt.Errorf("[%s]: integrity check failed for message from %s", n.addr, pkt.Header.Source)
-	// 	return err
-	// }
-	// decryptedMessage, err := n.tlsManager.DecryptPublic(pkt.Header.Source, TLSMessageHello.Content)
-	// if err != nil {
-	// 	return err
-	// }
-	// return n.processDecryptedTLSMessage(decryptedMessage, pkt)
-	return nil
+	var err error
+	TLSMessageHello, ok := msg.(*types.TLSMessageHello)
+	if !ok {
+		err = fmt.Errorf("wrong type: %T", msg)
+		logr.Logger.Err(err).Msgf("[%s]: execTLSMessageHello failed", n.addr)
+		return err
+	}
+	decryptedMessage, err := n.tlsManager.DecryptPublic(TLSMessageHello)
+	if err != nil {
+		return err
+	}
+	return n.processDecryptedTLSMessage(decryptedMessage, pkt)
 }
 
 func (n *node) CreateDHSymmetricKey(addr string) error {
@@ -115,8 +108,17 @@ func (n *node) CreateDHSymmetricKey(addr string) error {
 		logr.Logger.Err(err).Msgf("[%s]: Error marshaling TLSClientHello to %s", n.addr, addr)
 		return err
 	}
-
-	err = n.Unicast(addr, transportMessage)
+	encryptedMessage, err := n.tlsManager.EncryptPublic(addr, transportMessage)
+	if err != nil {
+		logr.Logger.Err(err).Msgf("[%s]: Error Encrypting TLSClientHello to %s", n.addr, addr)
+		return err
+	}
+	tlsTransportMessage, err := n.conf.MessageRegistry.MarshalMessage(&encryptedMessage)
+	if err != nil {
+		logr.Logger.Err(err).Msgf("[%s]: Error marshaling TLSClientHello to %s", n.addr, addr)
+		return err
+	}
+	err = n.Unicast(addr, tlsTransportMessage)
 	if err != nil {
 		logr.Logger.Err(err).Msgf("[%s]: Error sending TLSClientHello to %s", n.addr, addr)
 		return err
@@ -149,8 +151,14 @@ func (n *node) execTLSClientHello(msg types.Message, pkt transport.Packet) error
 		logr.Logger.Err(err).Msgf("[%s]: Error marshaling TLSServerHello to %s", n.addr, pkt.Header.Source)
 		return err
 	}
+	encryptedMessage, err := n.tlsManager.EncryptPublic(pkt.Header.Source, transportMessage)
+	if err != nil {
+		logr.Logger.Err(err).Msgf("[%s]: Error Encrypting TLSServerHello to %s", n.addr, pkt.Header.Source)
+		return err
+	}
+	tlsTransportMessage, err := n.conf.MessageRegistry.MarshalMessage(&encryptedMessage)
 
-	err = n.Unicast(pkt.Header.Source, transportMessage)
+	err = n.Unicast(pkt.Header.Source, tlsTransportMessage)
 	if err != nil {
 		logr.Logger.Err(err).Msgf("[%s]: Error sending TLSServerHello to %s", n.addr, pkt.Header.Source)
 		return err
@@ -191,6 +199,21 @@ func (n *node) execTLSServerHello(msg types.Message, pkt transport.Packet) error
 	return nil
 }
 
+//	func (n *node) CreateTLSHelloMessage(addr string, msg transport.Message, ct string) types.TLSMessageHello {
+//		// Create TLSHelloMessage
+//		encryptedMsg, err := n.tlsManager.EncryptPublic(addr, msg)
+//		if err != nil {
+//			logr.Logger.Err(err).Msgf("[%s]: Error encrypting message to %s", n.addr, addr)
+//			return types.TLSMessageHello{}
+//		}
+//		TLSHelloMessage := types.TLSMessageHello{
+//			Source:      n.addr,
+//			ContentType: ct,
+//			Content:     []byte(encryptedMsg),
+//			Signature:   nil,
+//		}
+//		return TLSHelloMessage
+//	}
 func (n *node) GetPublicKey() crypto.PublicKey {
 	return n.tlsManager.keyManager.publicKey
 }

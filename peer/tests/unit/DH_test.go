@@ -11,7 +11,7 @@ import (
 	"go.dedis.ch/cs438/transport/channel"
 )
 
-func Test_DH_TwoNodeSetup(t *testing.T) {
+func Test_DH_TwoNodeSetupFail(t *testing.T) {
 	transp := channel.NewTransport()
 	fake := z.NewFakeMessage(t)
 	handler1, _ := fake.GetHandler(t)
@@ -27,7 +27,39 @@ func Test_DH_TwoNodeSetup(t *testing.T) {
 	node2.AddPeer(node1.GetAddr())
 
 	addr := node2.GetAddr()
-	node1.CreateDHSymmetricKey(addr)
+	err := node1.CreateDHSymmetricKey(addr)
+	time.Sleep(time.Second)
+
+	require.Error(t, err)
+}
+
+func Test_DH_TwoNodeSetup(t *testing.T) {
+	transp := channel.NewTransport()
+	fake := z.NewFakeMessage(t)
+	handler1, _ := fake.GetHandler(t)
+	handler2, _ := fake.GetHandler(t)
+
+	publicKeyN1, privateKeyN1 := GenerateKeyPair()
+	node1 := z.NewTestNode(t, peerFac, transp, "127.0.0.1:0", z.WithMessage(fake, handler1), z.WithAntiEntropy(time.Millisecond*50), z.WithKeys(publicKeyN1, privateKeyN1))
+	defer node1.Stop()
+
+	publicKeyN2, privateKeyN2 := GenerateKeyPair()
+	node2 := z.NewTestNode(t, peerFac, transp, "127.0.0.1:0", z.WithMessage(fake, handler2), z.WithAntiEntropy(time.Millisecond*50), z.WithKeys(publicKeyN2, privateKeyN2))
+	defer node2.Stop()
+
+	node1.SetAsmKey(node2.GetAddr(), publicKeyN2)
+	node2.SetAsmKey(node1.GetAddr(), publicKeyN1)
+
+	require.Equal(t, node1.GetPublicKey(), publicKeyN1)
+	require.Equal(t, node2.GetPublicKey(), publicKeyN2)
+
+	// node1 <-> node2
+	node1.AddPeer(node2.GetAddr())
+	node2.AddPeer(node1.GetAddr())
+
+	addr := node2.GetAddr()
+	err := node1.CreateDHSymmetricKey(addr)
+	require.NoError(t, err)
 	time.Sleep(time.Second)
 
 	n1key := node1.GetSymKey(addr)
@@ -49,14 +81,24 @@ func Test_DH_ThreeNodeSetup(t *testing.T) {
 	handler2, _ := fake.GetHandler(t)
 	handler3, _ := fake.GetHandler(t)
 
-	node1 := z.NewTestNode(t, peerFac, transp, "127.0.0.1:0", z.WithMessage(fake, handler1), z.WithAntiEntropy(time.Millisecond*50))
+	publicKeyN1, privateKeyN1 := GenerateKeyPair()
+	publicKeyN2, privateKeyN2 := GenerateKeyPair()
+	publicKeyN3, privateKeyN3 := GenerateKeyPair()
+
+	node1 := z.NewTestNode(t, peerFac, transp, "127.0.0.1:0", z.WithMessage(fake, handler1), z.WithAntiEntropy(time.Millisecond*50), z.WithKeys(publicKeyN1, privateKeyN1))
 	defer node1.Stop()
-	node2 := z.NewTestNode(t, peerFac, transp, "127.0.0.1:0", z.WithMessage(fake, handler2), z.WithAntiEntropy(time.Millisecond*50))
+	node2 := z.NewTestNode(t, peerFac, transp, "127.0.0.1:0", z.WithMessage(fake, handler2), z.WithAntiEntropy(time.Millisecond*50), z.WithKeys(publicKeyN2, privateKeyN2))
 	defer node2.Stop()
-	node3 := z.NewTestNode(t, peerFac, transp, "127.0.0.1:0", z.WithMessage(fake, handler3), z.WithAntiEntropy(time.Millisecond*50))
+	node3 := z.NewTestNode(t, peerFac, transp, "127.0.0.1:0", z.WithMessage(fake, handler3), z.WithAntiEntropy(time.Millisecond*50), z.WithKeys(publicKeyN3, privateKeyN3))
 	defer node3.Stop()
 
 	//node1 <-> node2 <-> node3
+	node1.SetAsmKey(node2.GetAddr(), publicKeyN2)
+	node1.SetAsmKey(node3.GetAddr(), publicKeyN3)
+	node2.SetAsmKey(node1.GetAddr(), publicKeyN1)
+	node2.SetAsmKey(node3.GetAddr(), publicKeyN3)
+	node3.SetAsmKey(node2.GetAddr(), publicKeyN2)
+	node3.SetAsmKey(node1.GetAddr(), publicKeyN1)
 
 	node2.AddPeer(node1.GetAddr())
 	node1.AddPeer(node2.GetAddr())
@@ -95,10 +137,16 @@ func Test_TLS_SymmetricEncryption(t *testing.T) {
 	handler1, _ := fake.GetHandler(t)
 	handler2, _ := fake.GetHandler(t)
 
-	node1 := z.NewTestNode(t, peerFac, transp, "127.0.0.1:0", z.WithMessage(fake, handler1), z.WithAntiEntropy(time.Millisecond*50))
+	publicKeyN1, privateKeyN1 := GenerateKeyPair()
+	node1 := z.NewTestNode(t, peerFac, transp, "127.0.0.1:0", z.WithMessage(fake, handler1), z.WithAntiEntropy(time.Millisecond*50), z.WithKeys(publicKeyN1, privateKeyN1))
 	defer node1.Stop()
-	node2 := z.NewTestNode(t, peerFac, transp, "127.0.0.1:0", z.WithMessage(fake, handler2), z.WithAntiEntropy(time.Millisecond*50))
+
+	publicKeyN2, privateKeyN2 := GenerateKeyPair()
+	node2 := z.NewTestNode(t, peerFac, transp, "127.0.0.1:0", z.WithMessage(fake, handler2), z.WithAntiEntropy(time.Millisecond*50), z.WithKeys(publicKeyN2, privateKeyN2))
 	defer node2.Stop()
+
+	node1.SetAsmKey(node2.GetAddr(), publicKeyN2)
+	node2.SetAsmKey(node1.GetAddr(), publicKeyN1)
 
 	//node1 <-> node2
 
