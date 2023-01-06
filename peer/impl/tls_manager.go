@@ -18,6 +18,8 @@ import (
 	"go.dedis.ch/cs438/types"
 )
 
+const SIGNATURE_SIZE_BYTES = 256
+
 type DHManager struct {
 	dhGroup *dhkx.DHGroup
 	dhKey   *dhkx.DHKey
@@ -207,8 +209,8 @@ func (t *TLSManager) DecryptPublic(message *types.TLSMessage) (transport.Message
 	return transportMessage, nil
 }
 
-func (t *TLSManager) SignMessage(message []byte) ([]byte, error) {
-	hashed := sha256.Sum256(message)
+func (t *TLSManager) SignMessage(messageBytes []byte) ([]byte, error) {
+	hashed := sha256.Sum256(messageBytes)
 	privateKey, ok := t.keyManager.privateKey.(rsa.PrivateKey)
 	if !ok || privateKey.Size() == 0 {
 		return nil, fmt.Errorf("no private key found for peer %s", t.addr)
@@ -221,8 +223,8 @@ func (t *TLSManager) SignMessage(message []byte) ([]byte, error) {
 	return signature, nil
 }
 
-func (t *TLSManager) VerifySignature(message, signature []byte, peerIP string) bool {
-	hashed := sha256.Sum256(message)
+func (t *TLSManager) VerifySignature(messageBytes, signature []byte, peerIP string) bool {
+	hashed := sha256.Sum256(messageBytes)
 	publicKey, ok := t.GetAsymmetricKey(peerIP).(rsa.PublicKey)
 	if !ok || publicKey == (rsa.PublicKey{}) {
 		logr.Logger.Warn().Msgf("[%s]: No public key found for %s", t.addr, peerIP)

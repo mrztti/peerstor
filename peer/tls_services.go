@@ -19,4 +19,5 @@ type TLSServices interface {
 	EncryptPublic(peerIP string, message transport.Message) (types.TLSMessage, error)
 	DecryptPublic(message *types.TLSMessage) (transport.Message, error)
 	SendTLSMessage(peerIP string, message types.Message) error
+	SignMessage(messageBytes []byte) ([]byte, error)
 }

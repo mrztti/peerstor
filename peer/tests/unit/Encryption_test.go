@@ -11,6 +11,7 @@ import (
 	"github.com/stretchr/testify/require"
 	z "go.dedis.ch/cs438/internal/testing"
 	"go.dedis.ch/cs438/logr"
+	"go.dedis.ch/cs438/peer/impl"
 	"go.dedis.ch/cs438/transport"
 	"go.dedis.ch/cs438/transport/channel"
 	"go.dedis.ch/cs438/types"
@@ -146,6 +147,27 @@ func Test_Encryption_BreakSign(t *testing.T) {
 	decMsg, err := node1.DecryptPublic(&encMsg)
 	require.Error(t, err)
 	require.NotEqual(t, msg.Payload, decMsg.Payload)
+}
+
+func Test_Signature_Is_Correct_Size(t *testing.T) {
+	transp := channel.NewTransport()
+	fake := z.NewFakeMessage(t)
+	handler1, _ := fake.GetHandler(t)
+
+	publicKeyN1, privateKeyN1 := GenerateKeyPair()
+	node1 := z.NewTestNode(t, peerFac, transp, "127.0.0.1:0", z.WithMessage(fake, handler1), z.WithAntiEntropy(time.Millisecond*50), z.WithKeys(publicKeyN1, privateKeyN1))
+	defer node1.Stop()
+
+	testMessage := []byte{}
+	lastMessageLength := len(testMessage)
+	for i := 0; i < 100; i++ {
+		testMessage = append(testMessage, []byte("this is a test message")...)
+		signature, err := node1.SignMessage(testMessage)
+		require.NoError(t, err)
+		require.Less(t, lastMessageLength, len(testMessage))
+		require.Equal(t, impl.SIGNATURE_SIZE_BYTES, len(signature))
+		lastMessageLength = len(testMessage)
+	}
 }
 
 func Test_DH_Asym_BreakSign_TwoNodes(t *testing.T) {
