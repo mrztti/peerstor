@@ -155,6 +155,11 @@ func (n *node) execTLSClientHello(msg types.Message, pkt transport.Packet) error
 	}
 	tlsTransportMessage, err := n.conf.MessageRegistry.MarshalMessage(&encryptedMessage)
 
+	if err != nil {
+		logr.Logger.Err(err).Msgf("[%s]: Error marshaling TLSServerHello to %s", n.addr, pkt.Header.Source)
+		return err
+	}
+
 	err = n.Unicast(pkt.Header.Source, tlsTransportMessage)
 	if err != nil {
 		logr.Logger.Err(err).Msgf("[%s]: Error sending TLSServerHello to %s", n.addr, pkt.Header.Source)
