@@ -382,7 +382,7 @@ func Test_TLS_SymmetricEncryption_Simple(t *testing.T) {
 	require.NoError(t, err)
 	require.Greater(t, len(encrypted.SignedCiphertext), 0)
 	require.NotEqual(t, msg.Payload, encrypted.SignedCiphertext)
-	decrypted, err := node2.DecryptSymmetric(node1.GetAddr(), &encrypted)
+	decrypted, err := node2.DecryptSymmetric(&encrypted)
 	require.NoError(t, err)
 	require.Equal(t, messageToEncrypt, []byte(decrypted.Payload))
 
@@ -393,7 +393,7 @@ func Test_TLS_SymmetricEncryption_Simple(t *testing.T) {
 	require.NoError(t, err)
 	require.Greater(t, len(encrypted.SignedCiphertext), 0)
 	require.NotEqual(t, msg.Payload, encrypted.SignedCiphertext)
-	decrypted, err = node1.DecryptSymmetric(node2.GetAddr(), &encrypted)
+	decrypted, err = node1.DecryptSymmetric(&encrypted)
 	require.NoError(t, err)
 	require.Equal(t, messageToEncrypt, []byte(decrypted.Payload))
 }
@@ -428,7 +428,7 @@ func Test_TLS_SymmetricEncryption_BreakSign(t *testing.T) {
 	messageToEncrypt := []byte("Hello World")
 	encrypted, err := node1.EncryptSymmetric(node2.GetAddr(), transport.Message{Payload: messageToEncrypt})
 	require.NoError(t, err)
-	decrypted, err := node2.DecryptSymmetric(node1.GetAddr(), &encrypted)
+	decrypted, err := node2.DecryptSymmetric(&encrypted)
 	require.NoError(t, err)
 	require.Equal(t, messageToEncrypt, []byte(decrypted.Payload))
 
@@ -449,7 +449,7 @@ func Test_TLS_SymmetricEncryption_BreakSign(t *testing.T) {
 	}
 
 	log.Default().Printf("corrupted ciphertext: %v", encrypted.SignedCiphertext)
-	decrypted, err = node1.DecryptSymmetric(node2.GetAddr(), &encrypted)
+	decrypted, err = node1.DecryptSymmetric(&encrypted)
 	require.Error(t, err)
 	require.NotEqual(t, msg.Payload, decrypted.Payload)
 }

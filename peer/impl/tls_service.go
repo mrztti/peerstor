@@ -40,7 +40,7 @@ func (n *node) execTLSMessage(msg types.Message, pkt transport.Packet) error {
 		3. Decrypt content
 		4. Call handler
 	*/
-	decryptedMessage, err := n.tlsManager.DecryptSymmetric(pkt.Header.Source, TLSMessage)
+	decryptedMessage, err := n.tlsManager.DecryptSymmetric(TLSMessage)
 	if err != nil {
 		return err
 	}

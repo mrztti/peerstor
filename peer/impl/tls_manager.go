@@ -74,8 +74,8 @@ func (n *node) EncryptSymmetric(peerIP string, message transport.Message) (types
 	return n.tlsManager.EncryptSymmetric(peerIP, message)
 }
 
-func (n *node) DecryptSymmetric(peerIP string, message *types.TLSMessage) (transport.Message, error) {
-	return n.tlsManager.DecryptSymmetric(peerIP, message)
+func (n *node) DecryptSymmetric(message *types.TLSMessage) (transport.Message, error) {
+	return n.tlsManager.DecryptSymmetric(message)
 }
 
 func (t *TLSManager) EncryptSymmetric(peerIP string, message transport.Message) (types.TLSMessage, error) {
@@ -121,7 +121,8 @@ func (t *TLSManager) EncryptSymmetric(peerIP string, message transport.Message) 
 	return tlsMessage, nil
 }
 
-func (t *TLSManager) DecryptSymmetric(peerIP string, message *types.TLSMessage) (transport.Message, error) {
+func (t *TLSManager) DecryptSymmetric(message *types.TLSMessage) (transport.Message, error) {
+	peerIP := message.Source
 	symmetricKey := t.GetSymmKey(peerIP)
 	block, err := aes.NewCipher(symmetricKey)
 	if err != nil {
