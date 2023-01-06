@@ -22,10 +22,12 @@ type TLSClientHello struct {
 	GroupDH           *big.Int
 	PrimeDH           *big.Int
 	ClientPresecretDH []byte
+	Source            string
 }
 
 type TLSServerHello struct {
 	ServerPresecretDH []byte
+	Source            string
 	//SeshkeyDH         uint
 }
 
