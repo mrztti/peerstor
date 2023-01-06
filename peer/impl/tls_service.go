@@ -3,6 +3,7 @@ package impl
 import (
 	"crypto"
 	"fmt"
+	"log"
 	"math/rand"
 
 	"github.com/monnand/dhkx"
@@ -39,12 +40,7 @@ func (n *node) execTLSMessage(msg types.Message, pkt transport.Packet) error {
 		3. Decrypt content
 		4. Call handler
 	*/
-	integrityOk := n.tlsManager.VerifySignature(TLSMessage.Content, TLSMessage.Signature, pkt.Header.Source)
-	if !integrityOk {
-		err = fmt.Errorf("[%s]: integrity check failed for message from %s", n.addr, pkt.Header.Source)
-		return err
-	}
-	decryptedMessage, err := n.tlsManager.DecryptSymmetric(pkt.Header.Source, TLSMessage)
+	decryptedMessage, err := n.tlsManager.DecryptSymmetric(TLSMessage)
 	if err != nil {
 		return err
 	}
@@ -66,6 +62,7 @@ func (n *node) execTLSMessageHello(msg types.Message, pkt transport.Packet) erro
 		return err
 	}
 	decryptedMessage, err := n.tlsManager.DecryptPublic(TLSMessageHello)
+	log.Default().Println("decryptedMessage", decryptedMessage.Payload)
 	if err != nil {
 		return err
 	}
@@ -102,6 +99,7 @@ func (n *node) CreateDHSymmetricKey(addr string) error {
 		GroupDH:           dh.G(),
 		PrimeDH:           dh.P(),
 		ClientPresecretDH: pub,
+		Source:            n.addr,
 	}
 	transportMessage, err := n.conf.MessageRegistry.MarshalMessage(&msg)
 	if err != nil {
@@ -140,11 +138,12 @@ func (n *node) execTLSClientHello(msg types.Message, pkt transport.Packet) error
 		dhKey:   priv,
 	}
 
-	n.tlsManager.dhManager.Set(pkt.Header.Source, &dhManager)
+	n.tlsManager.dhManager.Set(TLSClientHello.Source, &dhManager)
 	pub := priv.Bytes()
 
 	sm := types.TLSServerHello{
 		ServerPresecretDH: pub,
+		Source:            n.addr,
 	}
 	transportMessage, err := n.conf.MessageRegistry.MarshalMessage(&sm)
 	if err != nil {
@@ -158,7 +157,12 @@ func (n *node) execTLSClientHello(msg types.Message, pkt transport.Packet) error
 	}
 	tlsTransportMessage, err := n.conf.MessageRegistry.MarshalMessage(&encryptedMessage)
 
-	err = n.Unicast(pkt.Header.Source, tlsTransportMessage)
+	if err != nil {
+		logr.Logger.Err(err).Msgf("[%s]: Error marshaling TLSServerHello to %s", n.addr, pkt.Header.Source)
+		return err
+	}
+
+	err = n.Unicast(TLSClientHello.Source, tlsTransportMessage)
 	if err != nil {
 		logr.Logger.Err(err).Msgf("[%s]: Error sending TLSServerHello to %s", n.addr, pkt.Header.Source)
 		return err
@@ -183,7 +187,7 @@ func (n *node) execTLSServerHello(msg types.Message, pkt transport.Packet) error
 		logr.Logger.Err(err).Msgf("[%s]: execTLSServerHello failed", n.addr)
 		return err
 	}
-	dhManager, ok := n.tlsManager.dhManager.Get(pkt.Header.Source)
+	dhManager, ok := n.tlsManager.dhManager.Get(TLSServerHello.Source)
 	if !ok {
 		logr.Logger.Err(err).Msgf("[%s]: execTLSServerHello dhManager.Get failed!", n.addr)
 		return err
@@ -195,7 +199,7 @@ func (n *node) execTLSServerHello(msg types.Message, pkt transport.Packet) error
 		logr.Logger.Err(err).Msgf("[%s]: execTLSServerHello ComputeKey failed!", n.addr)
 		return err
 	}
-	n.tlsManager.SetSymmKey(pkt.Header.Source, ck.Bytes())
+	n.tlsManager.SetSymmKey(TLSServerHello.Source, ck.Bytes())
 	return nil
 }
 

@@ -7,27 +7,27 @@ import (
 )
 
 type TLSMessage struct {
-	Source      string
-	ContentType string
-	Content     []byte // Uses symmetric key
-	Signature   []byte // Uses symmetric key
+	Source           string
+	ContentType      string
+	SignedCiphertext []byte
 }
 
 type TLSMessageHello struct {
-	Source      string
-	ContentType string
-	Content     []byte // Uses asymmetric key
-	Signature   []byte // Use asymmetric key
+	Source           string
+	ContentType      string
+	SignedCiphertext []byte
 }
 
 type TLSClientHello struct {
 	GroupDH           *big.Int
 	PrimeDH           *big.Int
 	ClientPresecretDH []byte
+	Source            string
 }
 
 type TLSServerHello struct {
 	ServerPresecretDH []byte
+	Source            string
 	//SeshkeyDH         uint
 }
 
@@ -46,8 +46,8 @@ func (t TLSMessage) Name() string {
 
 // String implements types.Message.
 func (t TLSMessage) String() string {
-	return fmt.Sprintf("tlsMessage{source:%s, ContentType:%s, Content:%v Signature: %v}",
-		t.Source, t.ContentType, t.Content, t.Signature)
+	return fmt.Sprintf("tlsMessage{source:%s, ContentType:%s, SignedCiphertext:%v }",
+		t.Source, t.ContentType, t.SignedCiphertext)
 }
 
 // HTML implements types.Message.
