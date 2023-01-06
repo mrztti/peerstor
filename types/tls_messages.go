@@ -7,10 +7,9 @@ import (
 )
 
 type TLSMessage struct {
-	Source      string
-	ContentType string
-	Content     []byte // Uses symmetric key
-	Signature   []byte // Uses symmetric key
+	Source           string
+	ContentType      string
+	SignedCiphertext []byte
 }
 
 type TLSMessageHello struct {
@@ -46,7 +45,7 @@ func (t TLSMessage) Name() string {
 // String implements types.Message.
 func (t TLSMessage) String() string {
 	return fmt.Sprintf("tlsMessage{source:%s, ContentType:%s, Content:%v Signature: %v}",
-		t.Source, t.ContentType, t.Content, t.Signature)
+		t.Source, t.ContentType, t.SignedCiphertext, t.Signature)
 }
 
 // HTML implements types.Message.

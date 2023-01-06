@@ -74,8 +74,8 @@ func TTest_Encryption_Asym_Encryption_Decryption(t *testing.T) {
 
 	encMsg, err := node1.EncryptPublic(node1.GetAddr(), msg)
 	require.NoError(t, err)
-	require.Greater(t, len(encMsg.Content), 0)
-	require.NotEqual(t, msg.Payload, encMsg.Content)
+	require.Greater(t, len(encMsg.SignedCiphertext), 0)
+	require.NotEqual(t, msg.Payload, encMsg.SignedCiphertext)
 
 	decMsg, err := node1.DecryptPublic(&encMsg)
 	require.NoError(t, err)
@@ -112,8 +112,8 @@ func Test_Encryption_Asym_Encryption_Two_Nodes(t *testing.T) {
 
 	encMsg, err := node1.EncryptPublic(node2.GetAddr(), msg)
 	require.NoError(t, err)
-	require.Greater(t, len(encMsg.Content), 0)
-	require.NotEqual(t, msg.Payload, encMsg.Content)
+	require.Greater(t, len(encMsg.SignedCiphertext), 0)
+	require.NotEqual(t, msg.Payload, encMsg.SignedCiphertext)
 
 	decMsg, err := node2.DecryptPublic(&encMsg)
 	require.NoError(t, err)
@@ -200,8 +200,8 @@ func Test_DH_Asym_BreakSign_TwoNodes(t *testing.T) {
 
 	encMsg, err := node1.EncryptPublic(node2.GetAddr(), msg)
 	require.NoError(t, err)
-	require.Greater(t, len(encMsg.Content), 0)
-	require.NotEqual(t, msg.Payload, encMsg.Content)
+	require.Greater(t, len(encMsg.SignedCiphertext), 0)
+	require.NotEqual(t, msg.Payload, encMsg.SignedCiphertext)
 
 	encMsg.Signature = []byte("this is a fake signature")
 	decMsg, err := node2.DecryptPublic(&encMsg)
