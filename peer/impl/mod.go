@@ -43,6 +43,7 @@ func NewPeer(conf peer.Configuration) peer.Peer {
 		certificateStore:         certificateStore,
 		trustUpdateHook:          make(chan TrustMapping),
 		isOnionNode:              false,
+		tlsManager:               CreateTLSManager(myAddr),
 	}
 	newPeer.paxos.node = newPeer
 	newPeer.routingTable.Set(myAddr, myAddr)
@@ -81,6 +82,8 @@ type node struct {
 	trustUpdateHook          chan TrustMapping
 	nodeCatalog              *NodeCatalog
 	isOnionNode              bool
+	tlsManager               *TLSManager
+
 }
 
 // Start implements peer.Service
@@ -89,6 +92,10 @@ func (n *node) Start() error {
 	myAddr := n.conf.Socket.GetAddress()
 	n.routingTable.Set(myAddr, myAddr)
 
+	if n.conf.PrivateKey != nil && n.conf.PublicKey != nil {
+		n.tlsManager.SetOwnKeys(n.conf.PublicKey, n.conf.PrivateKey)
+	}
+  
 	go n.startListeningService()
 	// go n.startTickingService()
 	go n.startPaxosService()

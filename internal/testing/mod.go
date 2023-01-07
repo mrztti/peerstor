@@ -2,6 +2,7 @@ package testing
 
 import (
 	"bytes"
+	"crypto"
 
 	"crypto/sha256"
 	"encoding/hex"
@@ -150,6 +151,9 @@ type configTemplate struct {
 	paxosThreshold     func(uint) int
 	paxosID            uint
 	paxosProposerRetry time.Duration
+
+	publicKey  crypto.PublicKey
+	privateKey crypto.PrivateKey
 }
 
 func newConfigTemplate() configTemplate {
@@ -184,6 +188,9 @@ func newConfigTemplate() configTemplate {
 		},
 		paxosID:            0,
 		paxosProposerRetry: time.Second * 5,
+
+		publicKey:  nil,
+		privateKey: nil,
 	}
 }
 
@@ -293,6 +300,13 @@ func WithPaxosProposerRetry(d time.Duration) Option {
 	}
 }
 
+func WithKeys(publicKey crypto.PublicKey, privateKey crypto.PrivateKey) Option {
+	return func(ct *configTemplate) {
+		ct.publicKey = publicKey
+		ct.privateKey = privateKey
+	}
+}
+
 // NewTestNode returns a new test node.
 func NewTestNode(t require.TestingT, f peer.Factory, trans transport.Transport,
 	addr string, opts ...Option) TestNode {
@@ -320,7 +334,8 @@ func NewTestNode(t require.TestingT, f peer.Factory, trans transport.Transport,
 	config.PaxosThreshold = template.paxosThreshold
 	config.PaxosID = template.paxosID
 	config.PaxosProposerRetry = template.paxosProposerRetry
-
+	config.PrivateKey = template.privateKey
+	config.PublicKey = template.publicKey
 	node := f(config)
 
 	require.Equal(t, len(template.messages), len(template.handlers))
