@@ -33,6 +33,7 @@ func NewPeer(conf peer.Configuration) peer.Peer {
 		broadcastLock:            sync.Mutex{},
 		attemptedRumoursSent:     &AtomicCounter{count: 0},
 		tlsManager:               CreateTLSManager(myAddr),
+		torManager:               CreateTorManager(myAddr),
 	}
 	newPeer.paxos.node = newPeer
 	newPeer.routingTable.Set(myAddr, myAddr)
@@ -61,6 +62,7 @@ type node struct {
 	broadcastLock            sync.Mutex
 	attemptedRumoursSent     *AtomicCounter
 	tlsManager               *TLSManager
+	torManager               *TorManager
 }
 
 // Start implements peer.Service

@@ -52,6 +52,8 @@ func (n *node) registerRegistryCallbacks() {
 	n.conf.MessageRegistry.RegisterMessageCallback(types.TLSMessageHello{}, n.execTLSMessageHello)
 	n.conf.MessageRegistry.RegisterMessageCallback(types.TLSClientHello{}, n.execTLSClientHello)
 	n.conf.MessageRegistry.RegisterMessageCallback(types.TLSServerHello{}, n.execTLSServerHello)
+	n.conf.MessageRegistry.RegisterMessageCallback(types.TorControlMessage{}, n.execTorControlMessage)
+	n.conf.MessageRegistry.RegisterMessageCallback(types.TorRelayMessage{}, n.execTorRelayMessage)
 }
 
 func (n *node) execChatMessage(msg types.Message, pkt transport.Packet) error {
