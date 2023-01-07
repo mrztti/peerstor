@@ -18,6 +18,14 @@ type PaxosMessage interface {
 func NewPeer(conf peer.Configuration) peer.Peer {
 	myAddr := conf.Socket.GetAddress()
 	logr.Logger.Info().Msgf("[%s]: New peer", myAddr)
+
+	// Generate certificate information
+	certificateStore, err := GenerateCertificateStore(2048)
+	if err != nil {
+		logr.Logger.Error().Msgf("[%s]: Failed to generate certificate store", myAddr)
+		return nil
+	}
+
 	newPeer := &node{
 		conf:                     conf,
 		quitChannel:              make(chan bool),
@@ -32,11 +40,19 @@ func NewPeer(conf peer.Configuration) peer.Peer {
 		paxosInnerMessageChannel: make(chan PaxosMessage),
 		broadcastLock:            sync.Mutex{},
 		attemptedRumoursSent:     &AtomicCounter{count: 0},
+		certificateStore:         certificateStore,
+		trustUpdateHook:          make(chan TrustMapping),
+		isOnionNode:              false,
 		tlsManager:               CreateTLSManager(myAddr),
 	}
 	newPeer.paxos.node = newPeer
 	newPeer.routingTable.Set(myAddr, myAddr)
 	newPeer.registerRegistryCallbacks()
+	err = newPeer.NewTrustCatalog(0.5)
+	if err != nil {
+		logr.Logger.Error().Msgf("[%s]: Failed to create trust catalog", myAddr)
+		return nil
+	}
 	return newPeer
 }
 
@@ -60,7 +76,14 @@ type node struct {
 	paxosInnerMessageChannel chan PaxosMessage
 	broadcastLock            sync.Mutex
 	attemptedRumoursSent     *AtomicCounter
+	certificateStore         *CertificateStore
+	certificateCatalog       *CertificateCatalog
+	trustCatalog             *TrustCatalog
+	trustUpdateHook          chan TrustMapping
+	nodeCatalog              *NodeCatalog
+	isOnionNode              bool
 	tlsManager               *TLSManager
+
 }
 
 // Start implements peer.Service
@@ -72,6 +95,7 @@ func (n *node) Start() error {
 	if n.conf.PrivateKey != nil && n.conf.PublicKey != nil {
 		n.tlsManager.SetOwnKeys(n.conf.PublicKey, n.conf.PrivateKey)
 	}
+  
 	go n.startListeningService()
 	// go n.startTickingService()
 	go n.startPaxosService()
@@ -81,6 +105,9 @@ func (n *node) Start() error {
 	if n.conf.HeartbeatInterval > 0 {
 		go n.startHeartbeatService()
 	}
+
+	// Broadcast Node certificate
+	n.BroadcastCertificate()
 	return nil
 }
 
