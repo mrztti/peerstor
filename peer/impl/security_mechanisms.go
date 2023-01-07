@@ -71,8 +71,6 @@ func (t *TrustCatalog) NewPeer(name string) error {
 	}
 
 	t.data[name] = 1.0
-	// Broadcast a new vote using the hook
-	t.hook <- t.Trusts()
 	return nil
 }
 

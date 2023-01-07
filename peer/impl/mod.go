@@ -41,6 +41,7 @@ func NewPeer(conf peer.Configuration) peer.Peer {
 		broadcastLock:            sync.Mutex{},
 		attemptedRumoursSent:     &AtomicCounter{count: 0},
 		certificateStore:         certificateStore,
+		certificateCatalog:       NewCertificateCatalog(),
 		trustUpdateHook:          make(chan TrustMapping),
 		isOnionNode:              false,
 		tlsManager:               CreateTLSManager(myAddr),
@@ -51,6 +52,11 @@ func NewPeer(conf peer.Configuration) peer.Peer {
 	err = newPeer.NewTrustCatalog(0.5)
 	if err != nil {
 		logr.Logger.Error().Msgf("[%s]: Failed to create trust catalog", myAddr)
+		return nil
+	}
+	err = newPeer.NewNodeCatalog()
+	if err != nil {
+		logr.Logger.Error().Msgf("[%s]: Failed to create node catalog", myAddr)
 		return nil
 	}
 	return newPeer
@@ -83,7 +89,6 @@ type node struct {
 	nodeCatalog              *NodeCatalog
 	isOnionNode              bool
 	tlsManager               *TLSManager
-
 }
 
 // Start implements peer.Service
@@ -95,7 +100,7 @@ func (n *node) Start() error {
 	if n.conf.PrivateKey != nil && n.conf.PublicKey != nil {
 		n.tlsManager.SetOwnKeys(n.conf.PublicKey, n.conf.PrivateKey)
 	}
-  
+
 	go n.startListeningService()
 	// go n.startTickingService()
 	go n.startPaxosService()
@@ -107,7 +112,10 @@ func (n *node) Start() error {
 	}
 
 	// Broadcast Node certificate
-	n.BroadcastCertificate()
+	err := n.BroadcastCertificate()
+	if err != nil {
+		logr.Logger.Error().Msgf("[%s]: Failed to broadcast certificate", n.addr)
+	}
 	return nil
 }
 
