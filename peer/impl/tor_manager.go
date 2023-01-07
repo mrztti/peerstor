@@ -10,35 +10,42 @@ import (
 	"go.dedis.ch/cs438/peer"
 )
 
-type TorRoutingEntry struct {
-	circuitID string
-	nextHop   string
-}
-
 type TorManager struct {
 	addr            string
-	torRoutingTable peer.ConcurrentMap[TorRoutingEntry]
+	torRoutingTable peer.ConcurrentMap[peer.TorRoutingEntry]
 	myCircuits      peer.ConcurrentMap[[]string]
 }
 
 func CreateTorManager(addr string) *TorManager {
 	return &TorManager{
 		addr:            addr,
-		torRoutingTable: peer.CreateConcurrentMap[TorRoutingEntry](),
+		torRoutingTable: peer.CreateConcurrentMap[peer.TorRoutingEntry](),
 		myCircuits:      peer.CreateConcurrentMap[[]string](),
 	}
 }
 
-func (t *TorManager) GetNextHop(circuitID string) (TorRoutingEntry, error) {
+func (t *TorManager) GetNextHop(circuitID string) (peer.TorRoutingEntry, error) {
 	routingEntry, ok := t.torRoutingTable.Get(circuitID)
 	if !ok {
-		return TorRoutingEntry{}, fmt.Errorf("[%s]: circuitID %s does not exist", t.addr, circuitID)
+		return peer.TorRoutingEntry{}, fmt.Errorf("[%s]: circuitID %s does not exist", t.addr, circuitID)
 	}
 	return routingEntry, nil
 }
 
-func (t *TorManager) AddTorRoutingEntry(incomingCircuitID string, routingEntry TorRoutingEntry) {
+func (n *node) GetTorRoutingEntry(circuitID string) (peer.TorRoutingEntry, error) {
+	return n.torManager.GetNextHop(circuitID)
+}
+
+func (t *TorManager) AddTorRoutingEntry(incomingCircuitID string, routingEntry peer.TorRoutingEntry) {
 	t.torRoutingTable.Set(incomingCircuitID, routingEntry)
+}
+
+func (n *node) AddTorRoutingEntry(incomingCircuitID string, routingEntry peer.TorRoutingEntry) {
+	n.torManager.AddTorRoutingEntry(incomingCircuitID, routingEntry)
+}
+
+func (n *node) GetTorRoutingEntries() map[string]peer.TorRoutingEntry {
+	return n.torManager.torRoutingTable.GetCopy()
 }
 
 func getNewCircuitID() string {

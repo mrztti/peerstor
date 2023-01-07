@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"go.dedis.ch/cs438/logr"
+	"go.dedis.ch/cs438/peer"
 	"go.dedis.ch/cs438/transport"
 	"go.dedis.ch/cs438/types"
 )
@@ -21,11 +22,11 @@ func (n *node) execTorRelayMessage(msg types.Message, pkt transport.Packet) erro
 		// circuit does not exist
 		return err
 	}
-	if nextRoutingEntry.circuitID != torRelayMessage.CircuitID {
+	if nextRoutingEntry.CircuitID != torRelayMessage.CircuitID {
 		// message is not for us if we have to change circuitID
-		torRelayMessage.CircuitID = nextRoutingEntry.circuitID
+		torRelayMessage.CircuitID = nextRoutingEntry.CircuitID
 		torRelayMessage.LastHop = n.addr
-		n.SendTLSMessage(nextRoutingEntry.nextHop, torRelayMessage)
+		n.SendTLSMessage(nextRoutingEntry.NextHop, torRelayMessage)
 		return nil
 	}
 	return nil
@@ -54,7 +55,7 @@ func (n *node) execTorControlMessage(msg types.Message, pkt transport.Packet) er
 		// Bob now knows to forward the message
 		// Charlie's table: (2, Bob)
 		// He knows he is the destination
-		n.torManager.torRoutingTable.Set(torControlMessage.CircuitID, TorRoutingEntry{circuitID: torControlMessage.CircuitID, nextHop: torControlMessage.LastHop})
+		n.torManager.torRoutingTable.Set(torControlMessage.CircuitID, peer.TorRoutingEntry{CircuitID: torControlMessage.CircuitID, NextHop: torControlMessage.LastHop})
 		torClientHelloMessageBytes, err := n.tlsManager.DecryptPublicTor(torControlMessage.Data)
 		if err != nil {
 			logr.Logger.Err(err).Msgf("[%s]: execTorControlMessage failed, the message is not of the expected type. the message: %v", n.addr, torControlMessage)
