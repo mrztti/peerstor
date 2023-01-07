@@ -8,6 +8,10 @@
 package impl
 
 import (
+	"crypto"
+	"crypto/rand"
+	"crypto/rsa"
+	"encoding/json"
 	"errors"
 	"sync"
 	"time"
@@ -17,7 +21,7 @@ import (
 
 // =============================================================================
 // TrustCatalog: A thread safe map between a name and a real value.
-// AThe new state is sent on the hook channel every time the trust in a peer changes
+// The new state is sent on the hook channel every time the trust in a peer changes
 type TrustCatalog struct {
 	lock      sync.Mutex
 	data      map[string]float32
@@ -146,7 +150,7 @@ func (t *TrustCatalog) DetectModifications(old bool, new bool) {
 }
 
 // Trusts: Outputs a copy of the entire trust catalog as a map hiding the internal thresholds
-func (t *TrustCatalog) Trusts() map[string]bool {
+func (t *TrustCatalog) Trusts() TrustMapping {
 	t.lock.Lock()
 	defer t.lock.Unlock()
 
@@ -157,6 +161,25 @@ func (t *TrustCatalog) Trusts() map[string]bool {
 
 	return trusts
 }
+
+// GetProof: Sign the trust catalog and return the signature
+func (n *node) SignTrusts() ([]byte, error) {
+	trusts := n.trustCatalog.Trusts()
+
+	// Serialize the map to a JSON string
+	data, err := json.Marshal(trusts)
+	if err != nil {
+		return nil, err
+	}
+
+	// get private key
+	prk := n.certificateStore.GetPrivateKey()
+	// sign the trust catalog using the private key
+	return rsa.SignPKCS1v15(rand.Reader, &prk, crypto.SHA256, data)
+}
+
+// =============================================================================
+// TODO: Implement a ban list using a blockchain
 
 //=============================================================================
 // Randomized testing security mechanism

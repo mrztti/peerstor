@@ -162,6 +162,16 @@ func (c *CertificateCatalog) AddCertificate(name string, pemBytes []byte) error 
 	return nil
 }
 
+// TotalKnownNodes: Returns the total number of known nodes by the peer
+func (n *node) TotalKnownNodes() uint32 {
+	// Count the number of nodes in the catalog
+	n.certificateCatalog.lock.Lock()
+	defer n.certificateCatalog.lock.Unlock()
+
+	return uint32(len(n.certificateCatalog.catalog))
+
+}
+
 // CertificateBroadcastMessage: a message containing the name of the peer and its public key in PEM format
 //
 // - implements types.Message
@@ -318,8 +328,13 @@ func (n *node) GetRandomOnionNode() (string, *rsa.PublicKey, error) {
 	// Build trusted node list
 	var keys []string
 	for k := range nc.values {
+		// Exclude self
+		if k == n.conf.Socket.GetAddress() {
+			continue
+		}
+
 		// Only add trusted nodes
-		if n.trustCatalog.IsTrusted(k) {
+		if n.trustCatalog.IsTrusted(k) { //TODO: exclude banned nodes
 			keys = append(keys, k)
 		}
 	}
