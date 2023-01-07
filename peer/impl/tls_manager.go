@@ -61,12 +61,12 @@ func (t *TLSManager) SetSymmKey(peerIP string, key []byte) {
 	t.symmKeyStore.Set(peerIP, key[:32])
 }
 
-func (t *TLSManager) SetSymmKeyTor(circuitID string, key []byte) {
-	t.symmKeyStore.Set(circuitID, key[:32])
+func (t *TLSManager) SetSymmKeyTor(peerIP string, circuitID string, key []byte) {
+	t.symmKeyStore.Set("tor#"+circuitID+"#"+peerIP, key[:32])
 }
 
-func (t *TLSManager) GetSymmKeyTor(circuitID string) []byte {
-	val, _ := t.symmKeyStore.Get(circuitID)
+func (t *TLSManager) GetSymmKeyTor(peerIP string, circuitID string) []byte {
+	val, _ := t.symmKeyStore.Get("tor#" + circuitID + "#" + peerIP)
 	return val
 }
 

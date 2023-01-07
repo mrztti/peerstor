@@ -1,10 +1,14 @@
 package impl
 
 import (
+	"crypto/aes"
+	"crypto/cipher"
 	"crypto/rand"
 	"crypto/rsa"
 	"crypto/sha256"
 	"fmt"
+	"io"
+	"log"
 
 	"github.com/google/uuid"
 	"go.dedis.ch/cs438/peer"
@@ -107,6 +111,60 @@ func (t *TLSManager) DecryptPublicTor(ciphertext []byte) ([]byte, error) {
 	return decryptedBytes, nil
 }
 
+func (t *TLSManager) EncryptSymmetricTor(torID string, plaintext []byte) ([]byte, error) {
+	symmetricKey := t.GetSymmKey(torID)
+	log.Default().Printf("[%s]: Encrypting message for %s with key %v", t.addr, torID, symmetricKey)
+	if symmetricKey == nil {
+		return []byte{}, fmt.Errorf("no symmetric key found for peer %s", torID)
+	}
+
+	block, err := aes.NewCipher(symmetricKey)
+	if err != nil {
+		return []byte{}, err
+	}
+
+	// The IV needs to be unique, but not secure: we will put it at the beginning of the ciphertext unencrypted.
+	ciphertext := make([]byte, aes.BlockSize+len(plaintext)+SIGNATURE_SIZE_BYTES)
+	initial_vect := ciphertext[:aes.BlockSize]
+	if _, err := io.ReadFull(rand.Reader, initial_vect); err != nil {
+		return []byte{}, err
+	}
+
+	stream := cipher.NewCFBEncrypter(block, initial_vect)
+	stream.XORKeyStream(ciphertext[aes.BlockSize:], plaintext)
+
+	if err != nil {
+		return []byte{}, fmt.Errorf("signing failed %s", torID)
+	}
+
+	return ciphertext, nil
+}
+
+func (t *TLSManager) DecryptSymmetricTor(torID string, cipherText []byte) ([]byte, error) {
+
+	symmetricKey := t.GetSymmKey(torID)
+	block, err := aes.NewCipher(symmetricKey)
+	if err != nil {
+		return []byte{}, err
+	}
+
+	if len(cipherText) < aes.BlockSize {
+		return []byte{}, fmt.Errorf("[%s]: Cannot decrypt message from %s, ciphertext too short", t.addr, torID)
+	}
+	initial_vect := cipherText[:aes.BlockSize]
+	plaintext := cipherText[aes.BlockSize:]
+
+	stream := cipher.NewCFBDecrypter(block, initial_vect)
+
+	stream.XORKeyStream(plaintext, plaintext)
+
+	return plaintext, nil
+}
+
 func (n *node) GetCircuitIDs() []string {
 	return n.torManager.myCircuits.GetKeys()
+}
+
+func (n *node) createTorEntryName(peerIP, circuitID string) string {
+	return fmt.Sprintf("tor#%s#%s", circuitID)
 }

@@ -104,7 +104,7 @@ func (n *node) execTorClientHelloMessage(msg types.Message, lastHop, circuitID s
 	if err != nil {
 		return err
 	}
-	n.tlsManager.SetSymmKeyTor(circuitID, ck)
+	n.tlsManager.SetSymmKeyTor(lastHop, circuitID, ck)
 
 	sign, err := n.tlsManager.SignMessage(ck)
 	if err != nil {
@@ -152,7 +152,7 @@ func (n *node) execTorServerHello(msg types.Message, circuitID string) error {
 		logr.Logger.Err(err).Msgf("[%s]: execTorServerHello ComputeKey failed!", n.addr)
 		return err
 	}
-	n.tlsManager.SetSymmKeyTor(circuitID, ck)
+	n.tlsManager.SetSymmKeyTor(torServerHello.Source, circuitID, ck)
 	logr.Logger.Info().Msgf("[%s]: execTorServerHello success!", n.addr)
 	return nil
 }
