@@ -22,19 +22,19 @@ const (
 )
 
 type TorControlMessage struct {
-	circuitID string
-	cmd       ControlCommand
-	data      []byte
+	CircuitID string
+	Cmd       ControlCommand
+	Data      []byte
 }
 
 type TorRelayMessage struct {
-	circuitID string
-	cmd       RelayCommand
-	relay     string
-	streamID  string
-	digest    []byte
-	len       uint
-	data      []byte
+	CircuitID string
+	Cmd       RelayCommand
+	Relay     string
+	StreamID  string
+	Digest    []byte
+	Len       uint
+	Data      []byte
 }
 
 // -----------------------------------------------------------------------------
@@ -52,8 +52,8 @@ func (t TorControlMessage) Name() string {
 
 // String implements types.Message.
 func (t TorControlMessage) String() string {
-	return fmt.Sprintf("TorControlMessage{circuitID:%s, cmd:%s, data:%v }",
-		t.circuitID, t.cmd, t.data)
+	return fmt.Sprintf("TorControlMessage{circuitID:%v, cmd:%v, data:%v }",
+		t.CircuitID, t.Cmd, t.Data)
 }
 
 // HTML implements types.Message.
@@ -76,8 +76,8 @@ func (t TorRelayMessage) Name() string {
 
 // String implements types.Message.
 func (t TorRelayMessage) String() string {
-	return fmt.Sprintf("TorRelayMessage{circuitID:%s, cmd:%s, relay:%s, streamID:%s, digest:%v, len:%d, data:%v }",
-		t.circuitID, t.cmd, t.relay, t.streamID, t.digest, t.len, t.data)
+	return fmt.Sprintf("TorRelayMessage{circuitID:%v, cmd:%v, relay:%v, streamID:%s, digest:%v, len:%d, data:%v }",
+		t.CircuitID, t.Cmd, t.Relay, t.StreamID, t.Digest, t.Len, t.Data)
 }
 
 // HTML implements types.Message.

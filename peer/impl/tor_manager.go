@@ -1,6 +1,8 @@
 package impl
 
 import (
+	"fmt"
+
 	"github.com/google/uuid"
 	"go.dedis.ch/cs438/peer"
 )
@@ -22,9 +24,12 @@ func CreateTorManager(addr string) *TorManager {
 	}
 }
 
-func (t *TorManager) GetNextHop(circuitID string) TorRoutingEntry {
-	routingEntry, _ := t.torRoutingTable.Get(circuitID)
-	return routingEntry
+func (t *TorManager) GetNextHop(circuitID string) (TorRoutingEntry, error) {
+	routingEntry, ok := t.torRoutingTable.Get(circuitID)
+	if !ok {
+		return TorRoutingEntry{}, fmt.Errorf("[%s]: circuitID %s does not exist", t.addr, circuitID)
+	}
+	return routingEntry, nil
 }
 
 func (t *TorManager) AddTorRoutingEntry(incomingCircuitID string, routingEntry TorRoutingEntry) {
