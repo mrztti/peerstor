@@ -1,6 +1,8 @@
 package impl
 
 import (
+	"fmt"
+
 	"go.dedis.ch/cs438/logr"
 	"go.dedis.ch/cs438/transport"
 	"go.dedis.ch/cs438/types"
@@ -18,8 +20,8 @@ func (n *node) execTorRelayMessage(msg types.Message, pkt transport.Packet) erro
 		// circuit does not exist
 		return err
 	}
-	if nextRoutingEntry.nextHop != n.addr {
-		// message is not for us
+	if nextRoutingEntry.circuitID != torRelayMessage.CircuitID {
+		// message is not for us if we have to change circuitID
 		torRelayMessage.CircuitID = nextRoutingEntry.circuitID
 		torRelayMessage.LastHop = n.addr
 		n.SendTLSMessage(nextRoutingEntry.nextHop, torRelayMessage)
@@ -35,32 +37,110 @@ func (n *node) execTorControlMessage(msg types.Message, pkt transport.Packet) er
 		logr.Logger.Err(err).Msgf("[%s]: execTorControlMessage failed, the message is not of the expected type. the message: %v", n.addr, torControlMessage)
 		return err
 	}
-	// if torControlMessage.Cmd == types.Create {
-	// 	n.torManager.torRoutingTable.Set(torControlMessage.CircuitID)
-	// }
+
+	switch torControlMessage.Cmd {
+	case types.Create:
+		// Alice (1) -> Bob (2) -> Charlie
+		// Bob's table: 1->(2, Charlie); 2->(1, Alice)
+		// Alice (1) -> Bob
+		// Bob's table: 1->(1, ALICE)
+		// Bob knows the message is for him because he is not changing circuitID
+		// Bob knows to respond to Alice
+		// ....
+		// Alice (1) -> Bob [EXTEND]
+		// Bob's table becomes: (1->2, Charlie)
+		// Bob now knows to forward the message
+		// Charlie's table: (2, Bob)
+		// He knows he is the destination
+		n.torManager.torRoutingTable.Set(torControlMessage.CircuitID, TorRoutingEntry{circuitID: torControlMessage.CircuitID, nextHop: torControlMessage.LastHop})
+		torClientHelloMessageBytes, err := n.tlsManager.DecryptPublicTor(torControlMessage.Data)
+		if err != nil {
+			logr.Logger.Err(err).Msgf("[%s]: execTorControlMessage failed, the message is not of the expected type. the message: %v", n.addr, torControlMessage)
+			return err
+		}
+		transportMessage := transport.Message{
+			Payload: torClientHelloMessageBytes,
+			Type:    types.TorClientHello{}.Name(),
+		}
+		var newMessage types.Message
+		n.conf.MessageRegistry.UnmarshalMessage(&transportMessage, newMessage)
+		n.execTorClientHelloMessage(newMessage, torControlMessage.LastHop, torControlMessage.CircuitID)
+
+	case types.Created:
+		// TorServerHello
+
+	}
+
 	return nil
 }
 
-func (n *node) execTorClientHelloMessage(msg types.Message, pkt transport.Packet) error {
+func (n *node) execTorClientHelloMessage(msg types.Message, lastHop, circuitID string) error {
 	var err error
-	torClientHelloMessage, ok := msg.(*types.TorClientHello)
+	torClientHelloMessage, ok := msg.(types.TorClientHello)
 	if !ok {
 		logr.Logger.Err(err).Msgf("[%s]: execTorClientHelloMessage failed, the message is not of the expected type. the message: %v", n.addr, torClientHelloMessage)
 		return err
 	}
 	dhManager, err := n.DHfirstStepWithParams(torClientHelloMessage.PrimeDH, torClientHelloMessage.GroupDH)
-	n.tlsManager.dhManager.Set(torClientHelloMessage.CircuitID, &dhManager)
-	pub := dhManager.dhKey.Bytes()
-
-	sm := types.TorServerHello{
-		ServerPresecretDH: pub,
-		CircuitID:         torClientHelloMessage.CircuitID,
-	}
-	transportMessage, err := n.conf.MessageRegistry.MarshalMessage(&sm)
 	if err != nil {
 		return err
 	}
+	n.tlsManager.SetDHManagerEntryTor(lastHop, circuitID, &dhManager)
 
+	pub := dhManager.dhKey.Bytes()
+	a := torClientHelloMessage.ClientPresecretDH
+	ck, err := n.DHsecondStep(dhManager, a)
+	if err != nil {
+		return err
+	}
+	n.tlsManager.SetSymmKeyTor(circuitID, ck)
+
+	sign, err := n.tlsManager.SignMessage(ck)
+	if err != nil {
+		return err
+	}
+	sm := types.TorServerHello{
+		ServerPresecretDH: pub,
+		Signature:         sign,
+		Source:            n.addr,
+	}
+	transportMessage, err := n.conf.MessageRegistry.MarshalMessage(&sm)
+	if err != nil {
+		logr.Logger.Err(err).Msgf("[%s]: Error marshaling TLSServerHello to %s", n.addr, lastHop)
+		return err
+	}
+	torControlMessage := types.TorControlMessage{
+		LastHop:   n.addr,
+		CircuitID: circuitID,
+		Cmd:       types.Created,
+		Data:      transportMessage.Payload,
+	}
+
+	return n.SendTLSMessage(lastHop, torControlMessage)
+
+}
+
+func (n *node) execTorServerHello(msg types.Message, circuitID string) error {
+	var err error
+	torServerHello, ok := msg.(*types.TorServerHello)
+	if !ok {
+		logr.Logger.Err(err).Msgf("[%s]: execTorServerHello failed", n.addr)
+		return err
+	}
+	dhManager := n.tlsManager.GetDHManagerEntryTor(torServerHello.Source, circuitID)
+	if dhManager == nil {
+		logr.Logger.Err(err).Msgf("[%s]: execTorServerHello dhManager.Get failed!", n.addr)
+		return fmt.Errorf("[%s]: execTorServerHello dhManager.Get failed!", n.addr)
+	}
+	ck, err := n.DHsecondStep(*dhManager, torServerHello.ServerPresecretDH)
+	if !n.tlsManager.VerifySignature(ck, torServerHello.Signature, torServerHello.Source) {
+		logr.Logger.Err(err).Msgf("[%s]: execTorServerHello VerifySignature failed!", n.addr)
+		return err
+	}
+	if err != nil {
+		logr.Logger.Err(err).Msgf("[%s]: execTorServerHello ComputeKey failed!", n.addr)
+		return err
+	}
+	n.tlsManager.SetSymmKeyTor(circuitID, ck)
 	return nil
-
 }

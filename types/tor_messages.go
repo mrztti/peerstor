@@ -91,12 +91,12 @@ type TorClientHello struct {
 	GroupDH           *big.Int
 	PrimeDH           *big.Int
 	ClientPresecretDH []byte
-	CircuitID         string
 }
 
 type TorServerHello struct {
 	ServerPresecretDH []byte
-	CircuitID         string
+	Signature         []byte
+	Source            string
 }
 
 // -----------------------------------------------------------------------------

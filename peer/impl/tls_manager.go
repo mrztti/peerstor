@@ -61,6 +61,15 @@ func (t *TLSManager) SetSymmKey(peerIP string, key []byte) {
 	t.symmKeyStore.Set(peerIP, key[:32])
 }
 
+func (t *TLSManager) SetSymmKeyTor(circuitID string, key []byte) {
+	t.symmKeyStore.Set(circuitID, key[:32])
+}
+
+func (t *TLSManager) GetSymmKeyTor(circuitID string) []byte {
+	val, _ := t.symmKeyStore.Get(circuitID)
+	return val
+}
+
 func (t *TLSManager) GetAsymmetricKey(peerIP string) crypto.PublicKey {
 	val, _ := t.asymmetricKeyStore.Get(peerIP)
 	return val
@@ -167,8 +176,16 @@ func (t *TLSManager) GetDHManagerEntry(peerIP string) *DHManager {
 	return val
 }
 
+func (t *TLSManager) GetDHManagerEntryTor(peerIP, circuitID string) *DHManager {
+	return t.GetDHManagerEntry("tor#" + circuitID + "#" + peerIP)
+}
+
 func (t *TLSManager) SetDHManagerEntry(peerIP string, dhManager *DHManager) {
 	t.dhManager.Set(peerIP, dhManager)
+}
+
+func (t *TLSManager) SetDHManagerEntryTor(peerIP, circuitID string, dhManager *DHManager) {
+	t.dhManager.Set("tor#"+circuitID+"#"+peerIP, dhManager)
 }
 
 func (n *node) GetSymKey(addr string) []byte {
@@ -207,9 +224,6 @@ func (t *TLSManager) EncryptPublic(peerIP string, message transport.Message) (ty
 
 		encryptedBytes = append(encryptedBytes, encryptedBlockBytes...)
 	}
-	// encryption, err := rsa.EncryptOAEP(sha256.New(), rand.Reader, &publicKey, plaintext, nil)
-
-	// TODO(jl): Shouldn't we sign the encrypted message? Also I think we should sign the contenttype as well.
 
 	tlsMessage := types.TLSMessageHello{
 		Source:           t.addr,

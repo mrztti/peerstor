@@ -1,6 +1,9 @@
 package impl
 
 import (
+	"crypto/rand"
+	"crypto/rsa"
+	"crypto/sha256"
 	"fmt"
 
 	"github.com/google/uuid"
@@ -38,4 +41,65 @@ func (t *TorManager) AddTorRoutingEntry(incomingCircuitID string, routingEntry T
 
 func getNewCircuitID() string {
 	return uuid.NewString()
+}
+
+func (t *TLSManager) EncryptPublicTor(peerIP string, plaintext []byte) ([]byte, error) {
+	publicKey, ok := t.GetAsymmetricKey(peerIP).(rsa.PublicKey)
+	if !ok || publicKey == (rsa.PublicKey{}) {
+		return []byte{}, fmt.Errorf("no public key found for peer %s", peerIP)
+	}
+	hash := sha256.New()
+	msgLen := len(plaintext)
+	step := publicKey.Size() - 2*hash.Size() - 2
+	rand := rand.Reader
+	var encryptedBytes []byte
+
+	for start := 0; start < msgLen; start += step {
+		finish := start + step
+		if finish > msgLen {
+			finish = msgLen
+		}
+
+		encryptedBlockBytes, err := rsa.EncryptOAEP(hash, rand, &publicKey, plaintext[start:finish], nil)
+		if err != nil {
+			return []byte{}, fmt.Errorf("encryption failed %s %v", peerIP, err)
+
+		}
+
+		encryptedBytes = append(encryptedBytes, encryptedBlockBytes...)
+	}
+	return encryptedBytes, nil
+}
+
+// sign(plaintext) => plain_sign
+// encrypt(plain_sign) => enc_sign || Packet: signature: enc_sign
+func (t *TLSManager) DecryptPublicTor(ciphertext []byte) ([]byte, error) {
+	privateKey, ok := t.keyManager.privateKey.(rsa.PrivateKey)
+	if !ok || privateKey.Size() == 0 {
+		return []byte{}, fmt.Errorf("no private key found for peer %s", t.addr)
+	}
+	msgLen := len(ciphertext)
+	step := privateKey.PublicKey.Size()
+	var decryptedBytes []byte
+	hash := sha256.New()
+	rand := rand.Reader
+	for start := 0; start < msgLen; start += step {
+		finish := start + step
+		if finish > msgLen {
+			finish = msgLen
+		}
+
+		decryptedBlockBytes, err := rsa.DecryptOAEP(hash, rand, &privateKey, ciphertext[start:finish], nil)
+		if err != nil {
+			return []byte{}, fmt.Errorf("decryption failed %s", t.addr)
+		}
+
+		decryptedBytes = append(decryptedBytes, decryptedBlockBytes...)
+	}
+	// decryptedMessage, err := rsa.DecryptOAEP(sha256.New(), rand.Reader, &privateKey, ciphertext, nil)
+	// if err != nil {
+	// 	return transport.Message{}, fmt.Errorf("decryption failed %s", t.addr)
+	// }
+
+	return decryptedBytes, nil
 }

@@ -12,7 +12,7 @@ func (n *node) TorCreate(addr string) error {
 		logr.Logger.Err(err).Msgf("[%s]: Error creating DHManager", n.addr)
 		return err
 	}
-	n.tlsManager.SetDHManagerEntry(circID, &dhManager)
+	n.tlsManager.SetDHManagerEntryTor(addr, circID, &dhManager)
 	pub := dhManager.dhKey.Bytes()
 
 	msg := types.TorClientHello{
@@ -25,7 +25,7 @@ func (n *node) TorCreate(addr string) error {
 		logr.Logger.Err(err).Msgf("[%s]: Error marshaling TLSClientHello to %s", n.addr, addr)
 		return err
 	}
-	encryptedMessage, err := n.tlsManager.EncryptPublic(addr, transportMessage)
+	encryptedPayload, err := n.tlsManager.EncryptPublicTor(addr, transportMessage.Payload)
 	if err != nil {
 		logr.Logger.Err(err).Msgf("[%s]: Error Encrypting TLSClientHello to %s", n.addr, addr)
 		return err
@@ -35,7 +35,7 @@ func (n *node) TorCreate(addr string) error {
 	torControlMessage := types.TorControlMessage{
 		CircuitID: circID,
 		Cmd:       types.Create,
-		Data:      encryptedMessage.SignedCiphertext}
+		Data:      encryptedPayload}
 
 	err = n.SendTLSMessage(addr, torControlMessage)
 	if err != nil {

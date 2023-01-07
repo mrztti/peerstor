@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"log"
 
-	"github.com/monnand/dhkx"
 	"go.dedis.ch/cs438/logr"
 	"go.dedis.ch/cs438/transport"
 	"go.dedis.ch/cs438/types"
@@ -121,7 +120,7 @@ func (n *node) execTLSClientHello(msg types.Message, pkt transport.Packet) error
 	if err != nil {
 		return err
 	}
-	n.tlsManager.dhManager.Set(TLSClientHello.Source, &dhManager)
+	n.tlsManager.SetDHManagerEntry(TLSClientHello.Source, &dhManager)
 
 	pub := dhManager.dhKey.Bytes()
 
@@ -171,19 +170,18 @@ func (n *node) execTLSServerHello(msg types.Message, pkt transport.Packet) error
 		logr.Logger.Err(err).Msgf("[%s]: execTLSServerHello failed", n.addr)
 		return err
 	}
-	dhManager, ok := n.tlsManager.dhManager.Get(TLSServerHello.Source)
-	if !ok {
+	dhManager := n.tlsManager.GetDHManagerEntry(TLSServerHello.Source)
+	if dhManager == nil {
 		logr.Logger.Err(err).Msgf("[%s]: execTLSServerHello dhManager.Get failed!", n.addr)
 		return err
 	}
 	a := TLSServerHello.ServerPresecretDH
-	aPubKey := dhkx.NewPublicKey(a)
-	ck, err := dhManager.dhGroup.ComputeKey(aPubKey, dhManager.dhKey)
+	ck, err := n.DHsecondStep(*dhManager, a)
 	if err != nil {
 		logr.Logger.Err(err).Msgf("[%s]: execTLSServerHello ComputeKey failed!", n.addr)
 		return err
 	}
-	n.tlsManager.SetSymmKey(TLSServerHello.Source, ck.Bytes())
+	n.tlsManager.SetSymmKey(TLSServerHello.Source, ck)
 	return nil
 }
 
