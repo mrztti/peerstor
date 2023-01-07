@@ -13,6 +13,17 @@ func (n *node) execTorRelayMessage(msg types.Message, pkt transport.Packet) erro
 		logr.Logger.Err(err).Msgf("[%s]: execTorRelayMessage failed, the message is not of the expected type. the message: %v", n.addr, torRelayMessage)
 		return err
 	}
+	nextRoutingEntry, err := n.torManager.GetNextHop(torRelayMessage.CircuitID)
+	if err != nil {
+		// circuit does not exist
+		return err
+	}
+	if nextRoutingEntry.nextHop != n.addr {
+		// message is not for us
+		torRelayMessage.CircuitID = nextRoutingEntry.circuitID
+		n.SendTLSMessage(nextRoutingEntry.nextHop, torRelayMessage)
+		return nil
+	}
 	return nil
 }
 
