@@ -10,4 +10,5 @@ type TorServices interface {
 	GetNextHop(circuitID string) (TorRoutingEntry, error)
 	AddTorRoutingEntry(incomingCircuitID string, routingEntry TorRoutingEntry)
 	GetTorRoutingEntries() map[string]TorRoutingEntry
+	GetCircuitIDs() []string
 }

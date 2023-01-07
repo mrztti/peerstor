@@ -43,5 +43,48 @@ func (n *node) TorCreate(addr string) error {
 		logr.Logger.Err(err).Msgf("[%s]: Error sending TLSClientHello to %s", n.addr, addr)
 		return err
 	}
+	n.torManager.myCircuits.Set(circID, []string{addr})
+	return nil
+}
+
+func (n *node) TorCreate(addr string, circID string) error {
+	dhManager, err := n.DHfirstStep()
+	if err != nil {
+		logr.Logger.Err(err).Msgf("[%s]: Error creating DHManager", n.addr)
+		return err
+	}
+	n.tlsManager.SetDHManagerEntryTor(addr, circID, &dhManager)
+	pub := dhManager.dhKey.Bytes()
+
+	msg := types.TorClientHello{
+		GroupDH:           dhManager.dhGroup.G(),
+		PrimeDH:           dhManager.dhGroup.P(),
+		ClientPresecretDH: pub,
+	}
+	transportMessage, err := n.conf.MessageRegistry.MarshalMessage(&msg)
+	if err != nil {
+		logr.Logger.Err(err).Msgf("[%s]: Error marshaling TLSClientHello to %s", n.addr, addr)
+		return err
+	}
+	encryptedPayload, err := n.tlsManager.EncryptPublicTor(addr, transportMessage.Payload)
+	if err != nil {
+		logr.Logger.Err(err).Msgf("[%s]: Error Encrypting TLSClientHello to %s", n.addr, addr)
+		return err
+	}
+	// TorControlMessage is a wrapper around a transport message
+	// that contains the circuit ID
+	torControlMessage := types.TorRelayMessage{
+		LastHop:   n.addr,
+		CircuitID: circID,
+		Cmd:       types.Create,
+		Data:      encryptedPayload,
+		LastHop:   n.addr}
+
+	err = n.SendTLSMessage(addr, torControlMessage)
+	if err != nil {
+		logr.Logger.Err(err).Msgf("[%s]: Error sending TLSClientHello to %s", n.addr, addr)
+		return err
+	}
+	n.torManager.myCircuits.Set(circID, []string{addr})
 	return nil
 }

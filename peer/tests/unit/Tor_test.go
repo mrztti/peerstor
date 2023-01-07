@@ -51,6 +51,8 @@ func TestTorCreate(t *testing.T) {
 	require.Equal(t, n1key, n2key)
 	node1.TorCreate(node2.GetAddr())
 	time.Sleep(time.Second)
+	require.Greater(t, len(node1.GetCircuitIDs()), 0)
+
 }
 
 func Test_Tor_Routing_Simple(t *testing.T) {
