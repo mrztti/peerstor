@@ -2,6 +2,7 @@ package unit
 
 import (
 	"log"
+	"strings"
 	"testing"
 	"time"
 
@@ -261,4 +262,31 @@ func Test_Tor_Extend(t *testing.T) {
 	log.Default().Println("Bob Symmetric keys: ", bob.GetSymKeys())
 	log.Default().Println("Charlie Symmetric keys: ", charlie.GetSymKeys())
 
+	aliceAddr := alice.GetAddr()
+	bobAddr := bob.GetAddr()
+	charlieAddr := charlie.GetAddr()
+
+	aliceKeys := alice.GetSymKeys()
+	bobKeys := bob.GetSymKeys()
+	charlieKeys := charlie.GetSymKeys()
+
+	delete(aliceKeys, bobAddr)
+	delete(aliceKeys, charlieAddr)
+	delete(bobKeys, aliceAddr)
+	delete(bobKeys, charlieAddr)
+	delete(charlieKeys, bobAddr)
+	delete(charlieKeys, aliceAddr)
+
+	for dictKey, val := range aliceKeys {
+		if strings.Contains(dictKey, bobAddr) {
+			for _, value := range bobKeys {
+				require.Equal(t, val, value)
+			}
+		} else {
+			for charKey, value := range charlieKeys {
+				log.Default().Println(charKey)
+				require.Equal(t, val, value)
+			}
+		}
+	}
 }
