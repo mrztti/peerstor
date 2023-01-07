@@ -54,6 +54,10 @@ func (n *node) registerRegistryCallbacks() {
 		CertificateBroadcastMessage{},
 		n.HandleCertificateBroadcastMessage,
 	)
+	n.conf.MessageRegistry.RegisterMessageCallback(
+		OnionNodeRegistrationMessage{},
+		n.HandleOnionNodeRegistrationMessage,
+	)
 }
 
 func (n *node) execChatMessage(msg types.Message, pkt transport.Packet) error {

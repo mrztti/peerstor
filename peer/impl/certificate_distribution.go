@@ -9,12 +9,14 @@ package impl
 
 import (
 	"bytes"
+	"crypto"
 	"crypto/rand"
 	"crypto/rsa"
 	"crypto/x509"
 	"encoding/pem"
 	"errors"
 	"fmt"
+	"math/big"
 	"sync"
 
 	"github.com/rs/zerolog/log"
@@ -22,6 +24,7 @@ import (
 	"go.dedis.ch/cs438/types"
 )
 
+// =============================================================================
 // CertificateStore: Read-only memory store for storing the long lasting public and private certificate keys
 // Thread-safe because it is read-only
 type CertificateStore struct {
@@ -96,6 +99,7 @@ func (c *CertificateStore) GetPublicKeyPEM() []byte {
 	return pem
 }
 
+// =============================================================================
 // CertificateCatalog: A thread safe map between a name and a rsa.PublicKey. We allow changes to a certificate once it is inscribed to prevent certificate forgery
 type CertificateCatalog struct {
 	catalog map[string]rsa.PublicKey
@@ -189,8 +193,6 @@ func (d CertificateBroadcastMessage) HTML() string {
 	return d.String()
 }
 
-// -----------------------------------------------------------------------------
-
 // BroadcastCertificate: Broadcasts the certificate to all the peers
 // Pack the CertificateBroadcastMessage inside a RumorsMessage and broadcast it across the network
 func (n *node) BroadcastCertificate() error {
@@ -248,4 +250,200 @@ func (n *node) HandleCertificateBroadcastMessage(msg types.Message, pkt transpor
 	}
 
 	return nil
+}
+
+// =============================================================================
+// NodeCatalog: Provides a registry of onion nodes.
+type NodeCatalog struct {
+	lock   sync.Mutex
+	values map[string](*rsa.PublicKey)
+}
+
+// NewNodeCatalog: Creates a new NodeCatalog
+func (n *node) NewNodeCatalog() error {
+	if n.nodeCatalog != nil {
+		return errors.New("node catalog already exists")
+	}
+
+	n.nodeCatalog = &NodeCatalog{
+		lock:   sync.Mutex{},
+		values: make(map[string](*rsa.PublicKey)),
+	}
+	return nil
+}
+
+// AddNode: Add a node to the onion registry and init trust at 1 if node is not already known
+func (n *node) AddOnionNode(name string) error {
+	nc := n.nodeCatalog
+	nc.lock.Lock()
+	defer nc.lock.Unlock()
+
+	_, ok := nc.values[name]
+	if ok || name == n.conf.Socket.GetAddress() {
+		// Do not add again or self
+		return nil
+	}
+	// Fetch the public key from the certificate catalog
+	pk, err := n.certificateCatalog.Get(name)
+	if err != nil {
+		return err
+	}
+
+	// Check if the node already exists in the trust catalog
+	if n.trustCatalog.Knows(name) {
+		// Only add if the node is not blacklisted
+		if n.trustCatalog.IsTrusted(name) {
+			nc.values[name] = &pk
+		}
+		return nil
+	}
+
+	nc.values[name] = &pk
+
+	// Add the node to the trust catalog
+	err = n.trustCatalog.NewPeer(name)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// GetRandomOnionNode: Returns a random node from the Onion registry
+func (n *node) GetRandomOnionNode() (string, *rsa.PublicKey, error) {
+	nc := n.nodeCatalog
+	nc.lock.Lock()
+	defer nc.lock.Unlock()
+
+	// Build trusted node list
+	var keys []string
+	for k := range nc.values {
+		// Only add trusted nodes
+		if n.trustCatalog.IsTrusted(k) {
+			keys = append(keys, k)
+		}
+	}
+	if len(keys) == 0 {
+		return "", nil, errors.New("no onion nodes available")
+	}
+
+	// use crypto/rand to generate a random index into the keys slice
+	randIndex, err := rand.Int(rand.Reader, big.NewInt(int64(len(keys))))
+	if err != nil {
+		return "", nil, err
+	}
+
+	// Get the node
+	name := keys[randIndex.Int64()]
+	pk := nc.values[name]
+
+	return name, pk, nil
+}
+
+// OnionNodeRegistrationMessage: Node declares that it is willing to be a Onion transmission node.
+// Proof is a signature of the node's address.
+// The proof makes it harder to forge a registration message.
+// - implements types.Message
+type OnionNodeRegistrationMessage struct {
+	Addr  string
+	Proof []byte
+}
+
+// -----------------------------------------------------------------------------
+// OnionNodeRegistrationMessage
+
+// NewEmpty implements types.Message.
+func (o OnionNodeRegistrationMessage) NewEmpty() types.Message {
+	return &OnionNodeRegistrationMessage{}
+}
+
+// Name implements types.Message.
+func (o OnionNodeRegistrationMessage) Name() string {
+	return "onion_node_registration"
+}
+
+// String implements types.Message.
+func (o OnionNodeRegistrationMessage) String() string {
+	return fmt.Sprintf("onion_node_registration{name:%s, proof:%s}", o.Addr, string(o.Proof))
+}
+
+// HTML implements types.Message.
+func (o OnionNodeRegistrationMessage) HTML() string {
+	return o.String()
+}
+
+// -----------------------------------------------------------------------------
+
+// RegisterAsOnionNode: Registers the node as an onion transmission node.
+func (n *node) RegisterAsOnionNode() error {
+
+	if n.isOnionNode {
+		return errors.New("node is already registered as an onion node")
+	}
+
+	// Read the private key
+	prk := n.certificateStore.GetPrivateKey()
+
+	// Sign the address
+	self := n.conf.Socket.GetAddress()
+	proof, err := rsa.SignPKCS1v15(rand.Reader, &prk, crypto.SHA256, []byte(self))
+	if err != nil {
+		return err
+	}
+
+	// Create the message
+	msg := &OnionNodeRegistrationMessage{
+		Addr:  self,
+		Proof: proof,
+	}
+
+	// Marshal the message
+	br, err := n.conf.MessageRegistry.MarshalMessage(msg)
+	if err != nil {
+		return err
+	}
+
+	// Broadcast the message
+	err = n.Broadcast(br)
+	if err != nil {
+		return err
+	}
+
+	n.isOnionNode = true
+	return nil
+}
+
+// HandleOnionNodeRegistrationMessage: Handles an onion node registration message.
+func (n *node) HandleOnionNodeRegistrationMessage(msg types.Message, pkt transport.Packet) error {
+
+	// Convert the message
+	onionNodeRegistrationMessage, ok := msg.(*OnionNodeRegistrationMessage)
+	if !ok {
+		return errors.New("could not convert message to onion node registration message")
+	}
+
+	// Check the address
+	if pkt.Header.Source != onionNodeRegistrationMessage.Addr {
+		return errors.New("message address does not match packet address")
+	}
+
+	// Verify the proof
+	pk, err := n.certificateCatalog.Get(onionNodeRegistrationMessage.Addr)
+	if err != nil {
+		return err
+	}
+
+	err = rsa.VerifyPKCS1v15(&pk, crypto.SHA256, []byte(onionNodeRegistrationMessage.Addr), onionNodeRegistrationMessage.Proof)
+	if err != nil {
+		return err
+	}
+
+	// Add the node to the onion node catalog
+	err = n.AddOnionNode(onionNodeRegistrationMessage.Addr)
+	if err != nil {
+		return err
+	}
+
+	return nil
+
 }

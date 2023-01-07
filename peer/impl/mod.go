@@ -41,10 +41,17 @@ func NewPeer(conf peer.Configuration) peer.Peer {
 		broadcastLock:            sync.Mutex{},
 		attemptedRumoursSent:     &AtomicCounter{count: 0},
 		certificateStore:         certificateStore,
+		trustUpdateHook:          make(chan TrustMapping),
+		isOnionNode:              false,
 	}
 	newPeer.paxos.node = newPeer
 	newPeer.routingTable.Set(myAddr, myAddr)
 	newPeer.registerRegistryCallbacks()
+	err = newPeer.NewTrustCatalog(0.5)
+	if err != nil {
+		logr.Logger.Error().Msgf("[%s]: Failed to create trust catalog", myAddr)
+		return nil
+	}
 	return newPeer
 }
 
@@ -70,6 +77,10 @@ type node struct {
 	attemptedRumoursSent     *AtomicCounter
 	certificateStore         *CertificateStore
 	certificateCatalog       *CertificateCatalog
+	trustCatalog             *TrustCatalog
+	trustUpdateHook          chan TrustMapping
+	nodeCatalog              *NodeCatalog
+	isOnionNode              bool
 }
 
 // Start implements peer.Service
@@ -77,6 +88,7 @@ func (n *node) Start() error {
 	logr.Logger.Info().Msgf("[%s]: Starting peer", n.addr)
 	myAddr := n.conf.Socket.GetAddress()
 	n.routingTable.Set(myAddr, myAddr)
+
 	go n.startListeningService()
 	// go n.startTickingService()
 	go n.startPaxosService()
