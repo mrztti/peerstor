@@ -45,8 +45,8 @@ func (t TLSMessage) Name() string {
 
 // String implements types.Message.
 func (t TLSMessage) String() string {
-	return fmt.Sprintf("tlsMessage{source:%s, ContentType:%s, SignedCiphertext:%v }",
-		t.Source, t.ContentType, t.SignedCiphertext)
+	return fmt.Sprintf("tlsMessage{source:%s, ContentType:%s }",
+		t.Source, t.ContentType)
 }
 
 // HTML implements types.Message.
@@ -92,7 +92,7 @@ func (t TLSServerHello) Name() string {
 
 // String implements types.Message.
 func (t TLSServerHello) String() string {
-	return fmt.Sprintf("tlsserverhello{presecret:%d}", t.ServerPresecretDH)
+	return fmt.Sprintf("tlsserverhello{}")
 }
 
 // HTML implements types.Message.

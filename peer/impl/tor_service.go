@@ -2,6 +2,7 @@ package impl
 
 import (
 	"go.dedis.ch/cs438/logr"
+	"go.dedis.ch/cs438/peer"
 	"go.dedis.ch/cs438/types"
 )
 
@@ -43,6 +44,7 @@ func (n *node) TorCreate(addr string) error {
 		logr.Logger.Err(err).Msgf("[%s]: Error sending TLSClientHello to %s", n.addr, addr)
 		return err
 	}
+	n.torManager.torRoutingTable.Set(circID, peer.TorRoutingEntry{CircuitID: circID, NextHop: addr})
 	n.torManager.myCircuits.Set(circID, []string{addr})
 	return nil
 }
@@ -94,10 +96,11 @@ func (n *node) TorExtend(addr string, circID string) error {
 	torControlMessage := types.TorRelayMessage{
 		LastHop:   n.addr,
 		CircuitID: circID,
+		Relay:     addr,
 		Cmd:       types.RelayExtend,
 		Data:      encryptedPayload}
 
-	err = n.SendTLSMessage(addr, torControlMessage)
+	err = n.SendTLSMessage(nodesAddress[0], torControlMessage)
 	if err != nil {
 		logr.Logger.Err(err).Msgf("[%s]: Error sending TLSClientHello to %s", n.addr, addr)
 		return err

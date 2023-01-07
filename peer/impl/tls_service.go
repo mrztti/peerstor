@@ -3,7 +3,6 @@ package impl
 import (
 	"crypto"
 	"fmt"
-	"log"
 
 	"go.dedis.ch/cs438/logr"
 	"go.dedis.ch/cs438/transport"
@@ -60,7 +59,7 @@ func (n *node) execTLSMessageHello(msg types.Message, pkt transport.Packet) erro
 		return err
 	}
 	decryptedMessage, err := n.tlsManager.DecryptPublic(TLSMessageHello)
-	log.Default().Println("decryptedMessage", decryptedMessage.Payload)
+	// log.Default().Println("decryptedMessage", decryptedMessage.Payload)
 	if err != nil {
 		return err
 	}

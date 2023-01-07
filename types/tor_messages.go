@@ -54,8 +54,8 @@ func (t TorControlMessage) Name() string {
 
 // String implements types.Message.
 func (t TorControlMessage) String() string {
-	return fmt.Sprintf("TorControlMessage{LastHop: %v, circuitID:%v, cmd:%v, data:%v }",
-		t.LastHop, t.CircuitID, t.Cmd, t.Data)
+	return fmt.Sprintf("TorControlMessage{LastHop: %v, circuitID:%v, cmd:%v}",
+		t.LastHop, t.CircuitID, t.Cmd)
 }
 
 // HTML implements types.Message.
@@ -78,8 +78,8 @@ func (t TorRelayMessage) Name() string {
 
 // String implements types.Message.
 func (t TorRelayMessage) String() string {
-	return fmt.Sprintf("TorRelayMessage{LastHop: %s, circuitID:%v, cmd:%v, relay:%v, streamID:%s, digest:%v, len:%d, data:%v }",
-		t.LastHop, t.CircuitID, t.Cmd, t.Relay, t.StreamID, t.Digest, t.Len, t.Data)
+	return fmt.Sprintf("TorRelayMessage{LastHop: %s, circuitID:%v, cmd:%v, relay:%v, streamID:%s, digest:%v, len:%d }",
+		t.LastHop, t.CircuitID, t.Cmd, t.Relay, t.StreamID, t.Digest, t.Len)
 }
 
 // HTML implements types.Message.

@@ -8,7 +8,6 @@ import (
 	"crypto/sha256"
 	"fmt"
 	"io"
-	"log"
 
 	"github.com/google/uuid"
 	"go.dedis.ch/cs438/peer"
@@ -56,6 +55,14 @@ func getNewCircuitID() string {
 	return uuid.NewString()
 }
 
+func (n *node) EncryptPublicTor(peerIP string, plaintext []byte) ([]byte, error) {
+	return n.tlsManager.EncryptPublicTor(peerIP, plaintext)
+}
+
+func (n *node) DecryptPublicTor(ciphertext []byte) ([]byte, error) {
+	return n.tlsManager.DecryptPublicTor(ciphertext)
+}
+
 func (t *TLSManager) EncryptPublicTor(peerIP string, plaintext []byte) ([]byte, error) {
 	publicKey, ok := t.GetAsymmetricKey(peerIP).(rsa.PublicKey)
 	if !ok || publicKey == (rsa.PublicKey{}) {
@@ -66,7 +73,6 @@ func (t *TLSManager) EncryptPublicTor(peerIP string, plaintext []byte) ([]byte, 
 	step := publicKey.Size() - 2*hash.Size() - 2
 	rand := rand.Reader
 	var encryptedBytes []byte
-
 	for start := 0; start < msgLen; start += step {
 		finish := start + step
 		if finish > msgLen {
@@ -111,9 +117,17 @@ func (t *TLSManager) DecryptPublicTor(ciphertext []byte) ([]byte, error) {
 	return decryptedBytes, nil
 }
 
+func (n *node) EncryptSymmetricTor(torID string, plaintext []byte) ([]byte, error) {
+	return n.tlsManager.EncryptSymmetricTor(torID, plaintext)
+}
+
+func (n *node) DecryptSymmetricTor(torID string, ciphertext []byte) ([]byte, error) {
+	return n.tlsManager.DecryptSymmetricTor(torID, ciphertext)
+}
+
 func (t *TLSManager) EncryptSymmetricTor(torID string, plaintext []byte) ([]byte, error) {
 	symmetricKey := t.GetSymmKey(torID)
-	log.Default().Printf("[%s]: Encrypting message for %s with key %v", t.addr, torID, symmetricKey)
+	// log.Default().Printf("[%s]: Encrypting message for %s with key %v", t.addr, torID, symmetricKey)
 	if symmetricKey == nil {
 		return []byte{}, fmt.Errorf("no symmetric key found for peer %s", torID)
 	}
@@ -124,7 +138,7 @@ func (t *TLSManager) EncryptSymmetricTor(torID string, plaintext []byte) ([]byte
 	}
 
 	// The IV needs to be unique, but not secure: we will put it at the beginning of the ciphertext unencrypted.
-	ciphertext := make([]byte, aes.BlockSize+len(plaintext)+SIGNATURE_SIZE_BYTES)
+	ciphertext := make([]byte, aes.BlockSize+len(plaintext))
 	initial_vect := ciphertext[:aes.BlockSize]
 	if _, err := io.ReadFull(rand.Reader, initial_vect); err != nil {
 		return []byte{}, err
@@ -166,5 +180,9 @@ func (n *node) GetCircuitIDs() []string {
 }
 
 func (n *node) createTorEntryName(peerIP, circuitID string) string {
-	return fmt.Sprintf("tor#%s#%s", circuitID)
+	return fmt.Sprintf("tor#%s#%s", circuitID, peerIP)
+}
+
+func (n *node) GetSymKeys() map[string][]byte {
+	return n.tlsManager.symmKeyStore.GetCopy()
 }

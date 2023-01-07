@@ -261,5 +261,4 @@ func Test_Tor_Extend(t *testing.T) {
 	log.Default().Println("Bob Symmetric keys: ", bob.GetSymKeys())
 	log.Default().Println("Charlie Symmetric keys: ", charlie.GetSymKeys())
 
-	aliceAddr :
 }

@@ -11,4 +11,10 @@ type TorServices interface {
 	AddTorRoutingEntry(incomingCircuitID string, routingEntry TorRoutingEntry)
 	GetTorRoutingEntries() map[string]TorRoutingEntry
 	GetCircuitIDs() []string
+	TorExtend(addr string, circID string) error
+	EncryptPublicTor(peerIP string, plaintext []byte) ([]byte, error)
+	DecryptPublicTor(ciphertext []byte) ([]byte, error)
+	EncryptSymmetricTor(torID string, plaintext []byte) ([]byte, error)
+	DecryptSymmetricTor(torID string, cipherText []byte) ([]byte, error)
+	GetSymKeys() map[string][]byte
 }

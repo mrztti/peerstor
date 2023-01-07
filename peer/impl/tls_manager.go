@@ -89,7 +89,7 @@ func (n *node) DecryptSymmetric(message *types.TLSMessage) (transport.Message, e
 
 func (t *TLSManager) EncryptSymmetric(peerIP string, message transport.Message) (types.TLSMessage, error) {
 	symmetricKey := t.GetSymmKey(peerIP)
-	log.Default().Printf("[%s]: Encrypting message for %s with key %v", t.addr, peerIP, symmetricKey)
+	// log.Default().Printf("[%s]: Encrypting message for %s with key %v", t.addr, peerIP, symmetricKey)
 	if symmetricKey == nil {
 		return types.TLSMessage{}, fmt.Errorf("no symmetric key found for peer %s", peerIP)
 	}
@@ -286,7 +286,7 @@ func (t *TLSManager) DecryptPublic(message *types.TLSMessageHello) (transport.Me
 
 func (t *TLSManager) SignMessage(messageBytes []byte) ([]byte, error) {
 	hashed := sha256.Sum256(messageBytes)
-	log.Default().Printf("hashed encrypt %v", hashed)
+	// log.Default().Printf("hashed encrypt %v", hashed)
 	privateKey, ok := t.keyManager.privateKey.(rsa.PrivateKey)
 	if !ok || privateKey.Size() == 0 {
 		return nil, fmt.Errorf("no private key found for peer %s", t.addr)
@@ -301,7 +301,7 @@ func (t *TLSManager) SignMessage(messageBytes []byte) ([]byte, error) {
 
 func (t *TLSManager) VerifySignature(messageBytes, signature []byte, peerIP string) bool {
 	hashed := sha256.Sum256(messageBytes)
-	log.Default().Printf("hashed decrypt %v", hashed)
+	// log.Default().Printf("hashed decrypt %v", hashed)
 	publicKey, ok := t.GetAsymmetricKey(peerIP).(rsa.PublicKey)
 	if !ok || publicKey == (rsa.PublicKey{}) {
 		logr.Logger.Warn().Msgf("[%s]: No public key found for %s", t.addr, peerIP)
