@@ -21,6 +21,7 @@ func (n *node) execTorRelayMessage(msg types.Message, pkt transport.Packet) erro
 	if nextRoutingEntry.nextHop != n.addr {
 		// message is not for us
 		torRelayMessage.CircuitID = nextRoutingEntry.circuitID
+		torRelayMessage.LastHop = n.addr
 		n.SendTLSMessage(nextRoutingEntry.nextHop, torRelayMessage)
 		return nil
 	}
