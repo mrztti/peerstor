@@ -1,6 +1,7 @@
 package impl
 
 import (
+	"go.dedis.ch/cs438/logr"
 	"go.dedis.ch/cs438/transport"
 	"go.dedis.ch/cs438/types"
 )
@@ -9,20 +10,11 @@ func (n *node) execTorControlMessage(msg types.Message, pkt transport.Packet) er
 	return nil
 }
 
-// func (n *node) torStartDH(addr string) error {
-// 	in := []int{0, 1, 2}
-// 	randomIndex := rand.Intn(len(in))
-// 	pick := in[randomIndex]
+func (n *node) torStartDH(addr string) error {
+	dhManager, err := n.DHfirstStep()
+	if err != nil {
+		logr.Logger.Err(err).Msgf("[%s]: Error creating DHManager", n.addr)
+		return err
+	}
 
-// 	dh, err := dhkx.GetGroup(pick)
-// 	if err != nil {
-// 		return err
-// 	}
-
-// 	priv, err := dh.GeneratePrivateKey(nil)
-
-// 	if err != nil {
-// 		return err
-// 	}
-
-// }
+}

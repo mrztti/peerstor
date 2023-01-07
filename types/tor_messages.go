@@ -2,6 +2,8 @@ package types
 
 import (
 	"fmt"
+	"math/big"
+	"strings"
 )
 
 type ControlCommand int
@@ -80,5 +82,62 @@ func (t TorRelayMessage) String() string {
 
 // HTML implements types.Message.
 func (t TorRelayMessage) HTML() string {
+	return t.String()
+}
+
+type TorClientHello struct {
+	GroupDH           *big.Int
+	PrimeDH           *big.Int
+	ClientPresecretDH []byte
+	Source            string
+}
+
+type TorServerHello struct {
+	ServerPresecretDH []byte
+	Source            string
+}
+
+// -----------------------------------------------------------------------------
+// TorClientHello
+
+// NewEmpty implements types.Message.
+func (t TorClientHello) NewEmpty() Message {
+	return &TLSClientHello{}
+}
+
+// Name implements types.Message.
+func (t TorClientHello) Name() string {
+	return "torclienthello"
+}
+
+// String implements types.Message.
+func (t TorClientHello) String() string {
+	out := new(strings.Builder)
+	out.WriteString("tlsclienthello{")
+	fmt.Fprintf(out, "groupdh:%d, primedh:%d, clientpresecretdh:%d}", t.GroupDH, t.PrimeDH, t.ClientPresecretDH)
+
+	return out.String()
+}
+
+func (t TorClientHello) HTML() string {
+	return t.String()
+}
+
+func (t TorServerHello) NewEmpty() Message {
+	return &TorServerHello{}
+}
+
+// Name implements types.Message.
+func (t TorServerHello) Name() string {
+	return "torserverhello"
+}
+
+// String implements types.Message.
+func (t TorServerHello) String() string {
+	return fmt.Sprintf("TorClientHello{source:%s presecret:%d}", t.Source, t.ServerPresecretDH)
+}
+
+// HTML implements types.Message.
+func (t TorServerHello) HTML() string {
 	return t.String()
 }

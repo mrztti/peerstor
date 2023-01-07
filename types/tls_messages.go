@@ -28,7 +28,6 @@ type TLSClientHello struct {
 type TLSServerHello struct {
 	ServerPresecretDH []byte
 	Source            string
-	//SeshkeyDH         uint
 }
 
 // -----------------------------------------------------------------------------
