@@ -12,6 +12,7 @@ func (n *node) execTorRelayMessage(msg types.Message, pkt transport.Packet) erro
 	var err error
 	torRelayMessage, ok := msg.(*types.TorRelayMessage)
 	if !ok {
+		err = fmt.Errorf("wrong type: %T", msg)
 		logr.Logger.Err(err).Msgf("[%s]: execTorRelayMessage failed, the message is not of the expected type. the message: %v", n.addr, torRelayMessage)
 		return err
 	}
@@ -34,6 +35,7 @@ func (n *node) execTorControlMessage(msg types.Message, pkt transport.Packet) er
 	var err error
 	torControlMessage, ok := msg.(*types.TorControlMessage)
 	if !ok {
+		err = fmt.Errorf("wrong type: %T", msg)
 		logr.Logger.Err(err).Msgf("[%s]: execTorControlMessage failed, the message is not of the expected type. the message: %v", n.addr, torControlMessage)
 		return err
 	}
@@ -62,13 +64,19 @@ func (n *node) execTorControlMessage(msg types.Message, pkt transport.Packet) er
 			Payload: torClientHelloMessageBytes,
 			Type:    types.TorClientHello{}.Name(),
 		}
-		var newMessage types.Message
-		n.conf.MessageRegistry.UnmarshalMessage(&transportMessage, newMessage)
+		var newMessage types.TorClientHello
+		n.conf.MessageRegistry.UnmarshalMessage(&transportMessage, &newMessage)
+		logr.Logger.Info().Msgf("[%s]: execTorControlMessage %s", n.addr, torControlMessage.LastHop)
 		n.execTorClientHelloMessage(newMessage, torControlMessage.LastHop, torControlMessage.CircuitID)
 
 	case types.Created:
-		// TorServerHello
-
+		transportMessage := transport.Message{
+			Payload: torControlMessage.Data,
+			Type:    types.TorServerHello{}.Name(),
+		}
+		var newMessage types.TorServerHello
+		n.conf.MessageRegistry.UnmarshalMessage(&transportMessage, &newMessage)
+		n.execTorServerHello(newMessage, torControlMessage.CircuitID)
 	}
 
 	return nil
@@ -76,8 +84,10 @@ func (n *node) execTorControlMessage(msg types.Message, pkt transport.Packet) er
 
 func (n *node) execTorClientHelloMessage(msg types.Message, lastHop, circuitID string) error {
 	var err error
+	logr.Logger.Info().Msgf("[%s]: execTorClientHelloMessage %s", n.addr, lastHop)
 	torClientHelloMessage, ok := msg.(types.TorClientHello)
 	if !ok {
+		err = fmt.Errorf("execTorClientHelloMessage failed, the message is not of the expected type. the message: %v", torClientHelloMessage)
 		logr.Logger.Err(err).Msgf("[%s]: execTorClientHelloMessage failed, the message is not of the expected type. the message: %v", n.addr, torClientHelloMessage)
 		return err
 	}
@@ -122,7 +132,7 @@ func (n *node) execTorClientHelloMessage(msg types.Message, lastHop, circuitID s
 
 func (n *node) execTorServerHello(msg types.Message, circuitID string) error {
 	var err error
-	torServerHello, ok := msg.(*types.TorServerHello)
+	torServerHello, ok := msg.(types.TorServerHello)
 	if !ok {
 		logr.Logger.Err(err).Msgf("[%s]: execTorServerHello failed", n.addr)
 		return err
@@ -130,7 +140,7 @@ func (n *node) execTorServerHello(msg types.Message, circuitID string) error {
 	dhManager := n.tlsManager.GetDHManagerEntryTor(torServerHello.Source, circuitID)
 	if dhManager == nil {
 		logr.Logger.Err(err).Msgf("[%s]: execTorServerHello dhManager.Get failed!", n.addr)
-		return fmt.Errorf("[%s]: execTorServerHello dhManager.Get failed!", n.addr)
+		return fmt.Errorf("[%s]: execTorServerHello dhManager. Get failed", n.addr)
 	}
 	ck, err := n.DHsecondStep(*dhManager, torServerHello.ServerPresecretDH)
 	if !n.tlsManager.VerifySignature(ck, torServerHello.Signature, torServerHello.Source) {
@@ -142,5 +152,6 @@ func (n *node) execTorServerHello(msg types.Message, circuitID string) error {
 		return err
 	}
 	n.tlsManager.SetSymmKeyTor(circuitID, ck)
+	logr.Logger.Info().Msgf("[%s]: execTorServerHello success!", n.addr)
 	return nil
 }

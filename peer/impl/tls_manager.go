@@ -110,8 +110,8 @@ func (t *TLSManager) EncryptSymmetric(peerIP string, message transport.Message) 
 	// Sign then encrypt
 	signedBytes := concatenateArrays([]byte(t.addr), []byte(message.Type), initial_vect, plaintext)
 	signature, err := t.SignMessage(signedBytes)
-	log.Default().Printf("Signed bytes: %v", signedBytes)
-	log.Default().Printf("Signature: %v", signature)
+	// log.Default().Printf("Signed bytes: %v", signedBytes)
+	// log.Default().Printf("Signature: %v", signature)
 
 	plaintextWithSignature := concatenateArrays(plaintext, signature)
 	stream := cipher.NewCFBEncrypter(block, initial_vect)
@@ -155,11 +155,11 @@ func (t *TLSManager) DecryptSymmetric(message *types.TLSMessage) (transport.Mess
 	plaintext := ciphertextWithSignature[:signatureStartIndex]
 
 	signedBytes := concatenateArrays([]byte(message.Source), []byte(message.ContentType), initial_vect, plaintext)
-	log.Default().Printf("Signed lenght bytes: %d", len(signedBytes))
-	log.Default().Printf("Signed lenght bytes expected: %d", len([]byte(message.Source))+len([]byte(message.ContentType))+len(initial_vect)+len(plaintext))
+	// log.Default().Printf("Signed lenght bytes: %d", len(signedBytes))
+	// log.Default().Printf("Signed lenght bytes expected: %d", len([]byte(message.Source))+len([]byte(message.ContentType))+len(initial_vect)+len(plaintext))
 
-	log.Default().Printf("Signed bytes: %v", signedBytes)
-	log.Default().Printf("Signature: %v", signature)
+	// log.Default().Printf("Signed bytes: %v", signedBytes)
+	// log.Default().Printf("Signature: %v", signature)
 
 	signatureOk := t.VerifySignature(signedBytes, signature, peerIP)
 	if !signatureOk {
@@ -263,13 +263,13 @@ func (t *TLSManager) DecryptPublic(message *types.TLSMessageHello) (transport.Me
 	// if err != nil {
 	// 	return transport.Message{}, fmt.Errorf("decryption failed %s", t.addr)
 	// }
-	log.Default().Println("decryptedBytes", len(decryptedBytes))
+	// log.Default().Println("decryptedBytes", len(decryptedBytes))
 	signatureStartIndex := len(decryptedBytes) - SIGNATURE_SIZE_BYTES
-	log.Default().Println("signatureStartIndex", signatureStartIndex)
+	// log.Default().Println("signatureStartIndex", signatureStartIndex)
 	signature := decryptedBytes[signatureStartIndex:]
-	log.Default().Printf("signature len %d, signature %s", len(signature), signature)
+	// log.Default().Printf("signature len %d, signature %s", len(signature), signature)
 	plaintext := decryptedBytes[:signatureStartIndex]
-	log.Default().Printf("plaintext len %d; plaintext %s", len(plaintext), plaintext)
+	// log.Default().Printf("plaintext len %d; plaintext %s", len(plaintext), plaintext)
 
 	signedBytes := concatenateArrays([]byte(message.Source), []byte(message.ContentType), plaintext)
 

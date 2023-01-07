@@ -35,7 +35,8 @@ func (n *node) TorCreate(addr string) error {
 	torControlMessage := types.TorControlMessage{
 		CircuitID: circID,
 		Cmd:       types.Create,
-		Data:      encryptedPayload}
+		Data:      encryptedPayload,
+		LastHop:   n.addr}
 
 	err = n.SendTLSMessage(addr, torControlMessage)
 	if err != nil {

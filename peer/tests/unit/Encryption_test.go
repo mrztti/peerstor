@@ -453,7 +453,7 @@ func Test_TLS_SymmetricEncryption_BreakSign(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, messageToEncrypt, []byte(decrypted.Payload))
 
-	log.Default().Printf("\n\n\n\n\n\nBreak the signature")
+	// log.Default().Printf("\n\n\n\n\n\nBreak the signature")
 	// Test Node2 -> Node1
 	messageToEncrypt = []byte("Yellow World")
 	msg := transport.Message{Payload: messageToEncrypt}

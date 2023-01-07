@@ -18,12 +18,14 @@ type TorRoutingEntry struct {
 type TorManager struct {
 	addr            string
 	torRoutingTable peer.ConcurrentMap[TorRoutingEntry]
+	myCircuits      peer.ConcurrentMap[[]string]
 }
 
 func CreateTorManager(addr string) *TorManager {
 	return &TorManager{
 		addr:            addr,
 		torRoutingTable: peer.CreateConcurrentMap[TorRoutingEntry](),
+		myCircuits:      peer.CreateConcurrentMap[[]string](),
 	}
 }
 
@@ -71,8 +73,6 @@ func (t *TLSManager) EncryptPublicTor(peerIP string, plaintext []byte) ([]byte, 
 	return encryptedBytes, nil
 }
 
-// sign(plaintext) => plain_sign
-// encrypt(plain_sign) => enc_sign || Packet: signature: enc_sign
 func (t *TLSManager) DecryptPublicTor(ciphertext []byte) ([]byte, error) {
 	privateKey, ok := t.keyManager.privateKey.(rsa.PrivateKey)
 	if !ok || privateKey.Size() == 0 {
@@ -96,10 +96,6 @@ func (t *TLSManager) DecryptPublicTor(ciphertext []byte) ([]byte, error) {
 
 		decryptedBytes = append(decryptedBytes, decryptedBlockBytes...)
 	}
-	// decryptedMessage, err := rsa.DecryptOAEP(sha256.New(), rand.Reader, &privateKey, ciphertext, nil)
-	// if err != nil {
-	// 	return transport.Message{}, fmt.Errorf("decryption failed %s", t.addr)
-	// }
 
 	return decryptedBytes, nil
 }
