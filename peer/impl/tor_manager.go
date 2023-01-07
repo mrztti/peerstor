@@ -99,3 +99,7 @@ func (t *TLSManager) DecryptPublicTor(ciphertext []byte) ([]byte, error) {
 
 	return decryptedBytes, nil
 }
+
+func (n *node) GetCircuitIDs() []string {
+	return n.torManager.myCircuits.GetKeys()
+}
