@@ -4,15 +4,30 @@ import (
 	"fmt"
 )
 
+type ControlCommand int
+type RelayCommand int
+
+const (
+	Create ControlCommand = iota
+	Created
+)
+
+const (
+	RelayData RelayCommand = iota
+	RelayConnected
+	RelayExtend
+	RelayExtended
+)
+
 type TorControlMessage struct {
 	circuitID string
-	cmd       string
+	cmd       ControlCommand
 	data      []byte
 }
 
 type TorRelayMessage struct {
 	circuitID string
-	cmd       string
+	cmd       RelayCommand
 	relay     string
 	streamID  string
 	digest    []byte
