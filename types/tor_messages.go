@@ -15,8 +15,8 @@ const (
 )
 
 const (
-	RelayData RelayCommand = iota
-	RelayConnected
+	RelayRequest RelayCommand = iota
+	RelayResponse
 	RelayExtend
 	RelayExtended
 )
