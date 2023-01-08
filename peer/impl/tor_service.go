@@ -147,10 +147,10 @@ func (n *node) TorDecrypt(circID string, data []byte) ([]byte, error) {
 	return data, nil
 }
 
-func (n *node) TorRelayRequest(addr string, circID string, data []byte) error {
+func (n *node) TorRelayRequest(circID string, data []byte) error {
 	encryptedPayload, err := n.TorEncrypt(circID, data)
 	if err != nil {
-		logr.Logger.Err(err).Msgf("[%s]: Error Encrypting TLSClientHello to %s", n.addr, addr)
+		logr.Logger.Err(err).Msgf("[%s]: Error Encrypting TLSClientHello to %s", n.addr, circID)
 		return err
 	}
 	msg := types.TorRelayMessage{
@@ -159,6 +159,10 @@ func (n *node) TorRelayRequest(addr string, circID string, data []byte) error {
 		Cmd:       types.RelayRequest,
 		Data:      encryptedPayload,
 	}
-
-	return n.SendTLSMessage(addr, msg)
+	nodeAdress, ok := n.torManager.myCircuits.Get(circID)
+	if !ok {
+		logr.Logger.Err(err).Msgf("[%s]: Error getting nodesAdress from myCircuits", n.addr)
+		return err
+	}
+	return n.SendTLSMessage(nodeAdress[0], msg)
 }

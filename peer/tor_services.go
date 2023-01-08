@@ -17,5 +17,5 @@ type TorServices interface {
 	EncryptSymmetricTor(torID string, plaintext []byte) ([]byte, error)
 	DecryptSymmetricTor(torID string, cipherText []byte) ([]byte, error)
 	GetSymKeys() map[string][]byte
-	TorRelayRequest(addr string, circID string, data []byte) error
+	TorRelayRequest(circID string, data []byte) error
 }

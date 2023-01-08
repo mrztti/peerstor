@@ -107,7 +107,7 @@ func Test_Tor_Messaging_Simpe(t *testing.T) {
 
 	log.Default().Printf("\n\n\n\n\n\n\n SENDING MSG TO ELISKA")
 
-	alice.TorRelayRequest(bob.GetAddr(), alice.GetCircuitIDs()[0], msg)
+	alice.TorRelayRequest(alice.GetCircuitIDs()[0], msg)
 	time.Sleep(time.Second)
 	eliskaMsg := eliska.GetRegistry().GetMessages()
 	for _, m := range eliskaMsg {
