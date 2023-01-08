@@ -15,7 +15,6 @@ import (
 	"crypto/x509"
 	"encoding/pem"
 	"errors"
-	"fmt"
 	"math/big"
 	"sync"
 
@@ -142,12 +141,6 @@ func (c *CertificateCatalog) AddCertificate(name string, pemBytes []byte) error 
 	c.lock.Lock()
 	defer c.lock.Unlock()
 
-	// Check if the name is already in use
-	_, ok := c.catalog[name]
-	if ok {
-		log.Warn().Msg("detected probable certificate forgery attempt for " + name)
-	}
-
 	// Decode the PEM
 	block, _ := pem.Decode(pemBytes)
 	if block == nil {
@@ -158,6 +151,14 @@ func (c *CertificateCatalog) AddCertificate(name string, pemBytes []byte) error 
 	publicKey, err := x509.ParsePKCS1PublicKey(block.Bytes)
 	if err != nil {
 		return err
+	}
+
+	// Check if the name is already in use
+	val, ok := c.catalog[name]
+	// Check if the keys match
+	match := bytes.Equal(publicKey.N.Bytes(), val.N.Bytes()) && publicKey.E == val.E
+	if ok && !match {
+		log.Warn().Msg("detected probable certificate forgery attempt for " + name)
 	}
 
 	// Add the new certificate
@@ -176,42 +177,11 @@ func (n *node) TotalKnownNodes() uint32 {
 
 }
 
-// CertificateBroadcastMessage: a message containing the name of the peer and its public key in PEM format
-//
-// - implements types.Message
-type CertificateBroadcastMessage struct {
-	Addr string
-	PEM  []byte
-}
-
-// -----------------------------------------------------------------------------
-// CertificateBroadcastMessage
-
-// NewEmpty implements types.Message.
-func (d CertificateBroadcastMessage) NewEmpty() types.Message {
-	return &CertificateBroadcastMessage{}
-}
-
-// Name implements types.Message.
-func (d CertificateBroadcastMessage) Name() string {
-	return "certificate_broadcast"
-}
-
-// String implements types.Message.
-func (d CertificateBroadcastMessage) String() string {
-	return fmt.Sprintf("certificate{name:%s, PEM:%s}", d.Addr, string(d.PEM))
-}
-
-// HTML implements types.Message.
-func (d CertificateBroadcastMessage) HTML() string {
-	return d.String()
-}
-
 // BroadcastCertificate: Broadcasts the certificate to all the peers
 // Pack the CertificateBroadcastMessage inside a RumorsMessage and broadcast it across the network
 func (n *node) BroadcastCertificate() error {
 	// Create the CertificateBroadcastMessage
-	certificateBroadcastMessage := CertificateBroadcastMessage{
+	certificateBroadcastMessage := types.CertificateBroadcastMessage{
 		Addr: n.conf.Socket.GetAddress(),
 		PEM:  n.certificateStore.GetPublicKeyPEM(),
 	}
@@ -233,7 +203,7 @@ func (n *node) BroadcastCertificate() error {
 // HandleCertificateBroadcastMessage: Handles a CertificateBroadcastMessage
 func (n *node) HandleCertificateBroadcastMessage(msg types.Message, pkt transport.Packet) error {
 	// Cast the message
-	certificateBroadcastMessage, ok := msg.(*CertificateBroadcastMessage)
+	certificateBroadcastMessage, ok := msg.(*types.CertificateBroadcastMessage)
 	if !ok {
 		return errors.New("failed to cast message to CertificateBroadcastMessage")
 	}
@@ -386,38 +356,6 @@ func (n *node) GetAllOnionNodes() (map[string](*rsa.PublicKey), error) {
 	return nodes, nil
 }
 
-// OnionNodeRegistrationMessage: Node declares that it is willing to be a Onion transmission node.
-// Proof is a signature of the node's address.
-// The proof makes it harder to forge a registration message.
-// - implements types.Message
-type OnionNodeRegistrationMessage struct {
-	Addr  string
-	Proof []byte
-}
-
-// -----------------------------------------------------------------------------
-// OnionNodeRegistrationMessage
-
-// NewEmpty implements types.Message.
-func (o OnionNodeRegistrationMessage) NewEmpty() types.Message {
-	return &OnionNodeRegistrationMessage{}
-}
-
-// Name implements types.Message.
-func (o OnionNodeRegistrationMessage) Name() string {
-	return "onion_node_registration"
-}
-
-// String implements types.Message.
-func (o OnionNodeRegistrationMessage) String() string {
-	return fmt.Sprintf("onion_node_registration{name:%s, proof:%s}", o.Addr, string(o.Proof))
-}
-
-// HTML implements types.Message.
-func (o OnionNodeRegistrationMessage) HTML() string {
-	return o.String()
-}
-
 // -----------------------------------------------------------------------------
 
 // RegisterAsOnionNode: Registers the node as an onion transmission node.
@@ -438,7 +376,7 @@ func (n *node) RegisterAsOnionNode() error {
 	}
 
 	// Create the message
-	msg := &OnionNodeRegistrationMessage{
+	msg := &types.OnionNodeRegistrationMessage{
 		Addr:  self,
 		Proof: proof,
 	}
@@ -463,7 +401,7 @@ func (n *node) RegisterAsOnionNode() error {
 func (n *node) HandleOnionNodeRegistrationMessage(msg types.Message, pkt transport.Packet) error {
 
 	// Convert the message
-	onionNodeRegistrationMessage, ok := msg.(*OnionNodeRegistrationMessage)
+	onionNodeRegistrationMessage, ok := msg.(*types.OnionNodeRegistrationMessage)
 	if !ok {
 		return errors.New("could not convert message to onion node registration message")
 	}
@@ -492,4 +430,21 @@ func (n *node) HandleOnionNodeRegistrationMessage(msg types.Message, pkt transpo
 
 	return nil
 
+}
+
+//=============================================================================
+// Util
+
+// GetSentMessagesByType: Returns a slice of all sent messages of a given type.
+func (n *node) GetSentMessagesByType(class types.Message) []*transport.Message {
+	messages := make([]*transport.Message, 0)
+
+	all := n.conf.Socket.GetOuts()
+	for _, br := range all {
+		if br.Msg.Type != class.Name() {
+			continue
+		}
+		messages = append(messages, br.Msg)
+	}
+	return messages
 }
