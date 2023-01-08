@@ -26,9 +26,9 @@ func (n *node) execTorRelayMessage(msg types.Message, pkt transport.Packet) erro
 	if nextRoutingEntry.CircuitID != torRelayMessage.CircuitID {
 		log.Default().Printf("[%s]: about to forward a message for circuit ID: %s, last hop was %s; next circuit ID will be :%s, next hop will be: %s, type of message:%v", n.addr, torRelayMessage.CircuitID, torRelayMessage.LastHop, nextRoutingEntry.CircuitID, nextRoutingEntry.NextHop, torRelayMessage.Cmd)
 		switch torRelayMessage.Cmd {
-		case types.RelayExtend:
+		case types.RelayExtend, types.RelayRequest:
 			torRelayMessage.Data, err = n.tlsManager.DecryptSymmetricTor(n.createTorEntryName(torRelayMessage.LastHop, torRelayMessage.CircuitID), torRelayMessage.Data)
-		case types.RelayExtended:
+		case types.RelayExtended, types.RelayResponse:
 			torRelayMessage.Data, err = n.tlsManager.EncryptSymmetricTor(n.createTorEntryName(nextRoutingEntry.NextHop, nextRoutingEntry.CircuitID), torRelayMessage.Data)
 		}
 		if err != nil {
@@ -83,6 +83,30 @@ func (n *node) execTorRelayMessage(msg types.Message, pkt transport.Packet) erro
 		var newMessage types.TorServerHello
 		n.conf.MessageRegistry.UnmarshalMessage(&transportMessage, &newMessage)
 		n.execTorServerHello(newMessage, torRelayMessage.CircuitID)
+	case types.RelayRequest:
+		torRelayMessage.Data, err = n.tlsManager.DecryptSymmetricTor(n.createTorEntryName(torRelayMessage.LastHop, torRelayMessage.CircuitID), torRelayMessage.Data)
+		if err != nil {
+			return err
+		}
+		logr.Logger.Warn().Msgf("[%s]: Received the following request: %s", n.addr, string(torRelayMessage.Data))
+		responseDataPlaintext := "wrapped response " + string(torRelayMessage.Data) + " from " + n.addr
+		encryptedData, err := n.tlsManager.EncryptSymmetricTor(n.createTorEntryName(torRelayMessage.LastHop, torRelayMessage.CircuitID), []byte(responseDataPlaintext))
+		if err != nil {
+			return err
+		}
+		sampleResponse := types.TorRelayMessage{
+			LastHop:   n.addr,
+			CircuitID: torRelayMessage.CircuitID,
+			Cmd:       types.RelayResponse,
+			Data:      encryptedData,
+		}
+		n.SendTLSMessage(torRelayMessage.LastHop, sampleResponse)
+	case types.RelayResponse:
+		torRelayMessage.Data, err = n.tlsManager.DecryptSymmetricTor(n.createTorEntryName(torRelayMessage.LastHop, torRelayMessage.CircuitID), torRelayMessage.Data)
+		if err != nil {
+			return err
+		}
+		logr.Logger.Warn().Msgf("[%s]: Received the following response: %s", n.addr, string(torRelayMessage.Data))
 	}
 	return nil
 }
