@@ -12,7 +12,7 @@ import (
 	"go.dedis.ch/cs438/transport/channel"
 )
 
-func TestTorCreate(t *testing.T) {
+func Test_Tor_Circuit_Tor_Create(t *testing.T) {
 	transp := channel.NewTransport()
 	fake := z.NewFakeMessage(t)
 	handler1, _ := fake.GetHandler(t)
@@ -57,7 +57,7 @@ func TestTorCreate(t *testing.T) {
 
 }
 
-func Test_Tor_Routing_Simple(t *testing.T) {
+func Test_Tor_Circuit_Routing_Simple(t *testing.T) {
 	transp := channel.NewTransport()
 	fake := z.NewFakeMessage(t)
 	handler1, _ := fake.GetHandler(t)
@@ -108,7 +108,7 @@ func Test_Tor_Routing_Simple(t *testing.T) {
 
 }
 
-func Test_Tor_Public_Encryption(t *testing.T) {
+func Test_Tor_Circuit_Public_Encryption(t *testing.T) {
 	transp := channel.NewTransport()
 	fake := z.NewFakeMessage(t)
 	handler1, _ := fake.GetHandler(t)
@@ -147,7 +147,7 @@ func Test_Tor_Public_Encryption(t *testing.T) {
 	require.Equal(t, decryptedBytes, bytesToEncrypt)
 }
 
-func Test_Tor_Symmetric_Encryption(t *testing.T) {
+func Test_Tor_Circuit_Symmetric_Encryption(t *testing.T) {
 	transp := channel.NewTransport()
 	fake := z.NewFakeMessage(t)
 	handler1, _ := fake.GetHandler(t)
@@ -196,7 +196,7 @@ func Test_Tor_Symmetric_Encryption(t *testing.T) {
 	require.Equal(t, messageToEncrypt, decrypted)
 }
 
-func Test_Tor_Extend(t *testing.T) {
+func Test_Tor_Circuit_Extend(t *testing.T) {
 	transp := channel.NewTransport()
 	fake := z.NewFakeMessage(t)
 	handler1, _ := fake.GetHandler(t)
@@ -291,7 +291,7 @@ func Test_Tor_Extend(t *testing.T) {
 	}
 }
 
-func Test_Tor_Extend_Extend(t *testing.T) {
+func Test_Tor_Circuit_Extend_Extend(t *testing.T) {
 	transp := channel.NewTransport()
 	fake := z.NewFakeMessage(t)
 	handler1, _ := fake.GetHandler(t)
@@ -404,17 +404,7 @@ func Test_Tor_Extend_Extend(t *testing.T) {
 	for k := range bob.GetSymKeys() {
 		bobsSymKeys = append(bobsSymKeys, k)
 	}
-	log.Default().Printf("successfully extended to charlie. bobs circ ids 2: %v", bobsSymKeys)
-	// log.Default().Println("alices registered messaged: ", alice.GetRegistry().GetMessages())
-	// log.Default().Println("charlie registered messaged: ", charlie.GetRegistry().GetMessages())
-	// log.Default().Println("Alice Symmetric keys: ", alice.GetSymKeys())
-	// log.Default().Println("Bob Symmetric keys: ", bob.GetSymKeys())
-	// log.Default().Println("Charlie Symmetric keys: ", charlie.GetSymKeys())
-	// detlefsMessages := detlef.GetRegistry().GetMessages()
-	// log.Println("Detlef registered messages: ", detlefsMessages)
-	// for _, msg := range detlefsMessages {
-	// 	log.Println("Detlef received message: ", msg.Name())
-	// }
+
 	aliceAddr := alice.GetAddr()
 	bobAddr := bob.GetAddr()
 	charlieAddr := charlie.GetAddr()
@@ -456,7 +446,7 @@ func Test_Tor_Extend_Extend(t *testing.T) {
 	}
 }
 
-func Test_Tor_Extend_Extend_Extend(t *testing.T) {
+func Test_Tor_Circuit_Extend_Extend_Extend(t *testing.T) {
 	transp := channel.NewTransport()
 	fake := z.NewFakeMessage(t)
 	handler1, _ := fake.GetHandler(t)
@@ -603,17 +593,7 @@ func Test_Tor_Extend_Extend_Extend(t *testing.T) {
 	for k := range bob.GetSymKeys() {
 		bobsSymKeys = append(bobsSymKeys, k)
 	}
-	log.Default().Printf("successfully extended to charlie. bobs circ ids 2: %v", bobsSymKeys)
-	// log.Default().Println("alices registered messaged: ", alice.GetRegistry().GetMessages())
-	// log.Default().Println("charlie registered messaged: ", charlie.GetRegistry().GetMessages())
-	// log.Default().Println("Alice Symmetric keys: ", alice.GetSymKeys())
-	// log.Default().Println("Bob Symmetric keys: ", bob.GetSymKeys())
-	// log.Default().Println("Charlie Symmetric keys: ", charlie.GetSymKeys())
-	// detlefsMessages := detlef.GetRegistry().GetMessages()
-	// log.Println("Detlef registered messages: ", detlefsMessages)
-	// for _, msg := range detlefsMessages {
-	// 	log.Println("Detlef received message: ", msg.Name())
-	// }
+
 	aliceAddr := alice.GetAddr()
 	bobAddr := bob.GetAddr()
 	charlieAddr := charlie.GetAddr()

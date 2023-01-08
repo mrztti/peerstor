@@ -68,29 +68,22 @@ func (n *node) TorExtend(addr string, circID string) error {
 		logr.Logger.Err(err).Msgf("[%s]: Error marshaling TLSClientHello to %s", n.addr, addr)
 		return err
 	}
-	nodesAddress, ok := n.torManager.myCircuits.Get(circID)
-	if !ok {
-		logr.Logger.Err(err).Msgf("[%s]: Error getting nodesAdress from myCircuits", n.addr)
-		return err
-	}
+
 	encryptedPayload, err := n.tlsManager.EncryptPublicTor(addr, transportMessage.Payload)
 	if err != nil {
 		logr.Logger.Err(err).Msgf("[%s]: Error Encrypting TLSClientHello to %s", n.addr, addr)
 		return err
 	}
-	// iterate in reverse order
-	for i := len(nodesAddress) - 1; i >= 0; i-- {
-		logr.Logger.Info().Msgf("[%s]: Encrypting TLSClientHello to %s", n.addr, nodesAddress[i])
-		encryptedPayload, err = n.tlsManager.EncryptSymmetricTor(n.createTorEntryName(nodesAddress[i], circID), encryptedPayload)
-		if err != nil {
-			logr.Logger.Err(err).Msgf("[%s]: Error Encrypting TLSClientHello to %s", n.addr, addr)
-			return err
-		}
+	nodesAddress, ok := n.torManager.myCircuits.Get(circID)
+	if !ok {
+		logr.Logger.Err(err).Msgf("[%s]: Error getting nodesAdress from myCircuits", n.addr)
+		return err
 	}
-
-	// for _, node := range nodesAddress {
-	// 	logr.Logger.Info().Msgf("[%s]: Encrypting TLSClientHello to %s", n.addr, node)
-	// 	encryptedPayload, err = n.tlsManager.EncryptSymmetricTor(n.createTorEntryName(node, circID), encryptedPayload)
+	encryptedPayload, err = n.TorEncrypt(circID, encryptedPayload)
+	// iterate in reverse order
+	// for i := len(nodesAddress) - 1; i >= 0; i-- {
+	// 	logr.Logger.Info().Msgf("[%s]: Encrypting TLSClientHello to %s", n.addr, nodesAddress[i])
+	// 	encryptedPayload, err = n.tlsManager.EncryptSymmetricTor(n.createTorEntryName(nodesAddress[i], circID), encryptedPayload)
 	// 	if err != nil {
 	// 		logr.Logger.Err(err).Msgf("[%s]: Error Encrypting TLSClientHello to %s", n.addr, addr)
 	// 		return err
@@ -116,4 +109,38 @@ func (n *node) TorExtend(addr string, circID string) error {
 		return err
 	}
 	return nil
+}
+
+func (n *node) TorEncrypt(circID string, data []byte) ([]byte, error) {
+	var err error
+	nodesAddress, ok := n.torManager.myCircuits.Get(circID)
+	if !ok {
+		logr.Logger.Err(err).Msgf("[%s]: Error getting nodesAdress from myCircuits", n.addr)
+		return []byte{}, err
+	}
+	for i := len(nodesAddress) - 1; i >= 0; i-- {
+		logr.Logger.Info().Msgf("[%s]: Encrypting TLSClientHello to %s", n.addr, nodesAddress[i])
+		data, err = n.tlsManager.EncryptSymmetricTor(n.createTorEntryName(nodesAddress[i], circID), data)
+		if err != nil {
+			logr.Logger.Err(err).Msgf("[%s]: Error Encrypting TLSClientHello to %s", n.addr, nodesAddress[i])
+			return []byte{}, err
+		}
+	}
+	return data, nil
+}
+
+func (n *node) TorRelayRequest(addr string, circID string, data []byte) error {
+	encryptedPayload, err := n.TorEncrypt(circID, data)
+	if err != nil {
+		logr.Logger.Err(err).Msgf("[%s]: Error Encrypting TLSClientHello to %s", n.addr, addr)
+		return err
+	}
+	msg := types.TorRelayMessage{
+		LastHop:   n.addr,
+		CircuitID: circID,
+		Cmd:       types.RelayRequest,
+		Data:      encryptedPayload,
+	}
+
+	return n.SendTLSMessage(addr, msg)
 }
