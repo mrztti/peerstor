@@ -8,6 +8,7 @@ import (
 	"crypto/sha256"
 	"fmt"
 	"io"
+	"log"
 
 	"github.com/google/uuid"
 	"go.dedis.ch/cs438/peer"
@@ -127,7 +128,7 @@ func (n *node) DecryptSymmetricTor(torID string, ciphertext []byte) ([]byte, err
 
 func (t *TLSManager) EncryptSymmetricTor(torID string, plaintext []byte) ([]byte, error) {
 	symmetricKey := t.GetSymmKey(torID)
-	// log.Default().Printf("[%s]: Encrypting message for %s with key %v", t.addr, torID, symmetricKey)
+	log.Default().Printf("[%s]: Encrypting message for %s with key %v", t.addr, torID, symmetricKey)
 	if symmetricKey == nil {
 		return []byte{}, fmt.Errorf("no symmetric key found for peer %s", torID)
 	}
@@ -155,8 +156,8 @@ func (t *TLSManager) EncryptSymmetricTor(torID string, plaintext []byte) ([]byte
 }
 
 func (t *TLSManager) DecryptSymmetricTor(torID string, cipherText []byte) ([]byte, error) {
-
 	symmetricKey := t.GetSymmKey(torID)
+	log.Default().Printf("[%s]: Decrypt message for %s with key %v", t.addr, torID, symmetricKey)
 	block, err := aes.NewCipher(symmetricKey)
 	if err != nil {
 		return []byte{}, err

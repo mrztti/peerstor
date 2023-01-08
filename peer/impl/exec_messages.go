@@ -131,16 +131,16 @@ func (n *node) execPrivateMessage(msg types.Message, pkt transport.Packet) error
 	}
 	_, ok = privateMessage.Recipients[n.addr]
 	if ok {
-		logr.Logger.Info().
-			Msgf("[%s]: Processing private message from %s. Recipients were %#v",
-				n.addr, pkt.Header.Source, privateMessage.Recipients)
+		// logr.Logger.Info().
+		// 	Msgf("[%s]: Processing private message from %s. Recipients were %#v",
+		// 		n.addr, pkt.Header.Source, privateMessage.Recipients)
 		err = n.conf.MessageRegistry.ProcessPacket(transport.Packet{
 			Header: pkt.Header,
 			Msg:    privateMessage.Msg,
 		})
 	} else {
-		logr.Logger.Info().Msgf("[%s]: Ignoring private message from %s. Recipients were %#v",
-			n.addr, pkt.Header.Source, privateMessage.Recipients)
+		// logr.Logger.Info().Msgf("[%s]: Ignoring private message from %s. Recipients were %#v",
+		// 	n.addr, pkt.Header.Source, privateMessage.Recipients)
 	}
 	return err
 }

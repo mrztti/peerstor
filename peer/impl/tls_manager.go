@@ -9,7 +9,6 @@ import (
 	"crypto/sha256"
 	"fmt"
 	"io"
-	"log"
 
 	"github.com/monnand/dhkx"
 	"go.dedis.ch/cs438/logr"
@@ -307,7 +306,7 @@ func (t *TLSManager) VerifySignature(messageBytes, signature []byte, peerIP stri
 		logr.Logger.Warn().Msgf("[%s]: No public key found for %s", t.addr, peerIP)
 		return false
 	}
-	log.Default().Printf("about to verify signature")
+	// log.Default().Printf("about to verify signature")
 	err := rsa.VerifyPKCS1v15(&publicKey, crypto.SHA256, hashed[:], signature)
 	return err == nil
 }
