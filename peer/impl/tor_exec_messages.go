@@ -20,6 +20,7 @@ func (n *node) execTorRelayMessage(msg types.Message, pkt transport.Packet) erro
 	}
 	nextRoutingEntry, err := n.torManager.GetNextHop(torRelayMessage.CircuitID)
 	if err != nil {
+		logr.Logger.Err(err).Msgf("[%s]: execTorRelayMessage failed, the circuit does not exist. the message: %v", n.addr, torRelayMessage)
 		// circuit does not exist
 		return err
 	}
@@ -102,7 +103,7 @@ func (n *node) execTorRelayMessage(msg types.Message, pkt transport.Packet) erro
 		}
 		n.SendTLSMessage(torRelayMessage.LastHop, sampleResponse)
 	case types.RelayResponse:
-		torRelayMessage.Data, err = n.tlsManager.DecryptSymmetricTor(n.createTorEntryName(torRelayMessage.LastHop, torRelayMessage.CircuitID), torRelayMessage.Data)
+		torRelayMessage.Data, err = n.TorDecrypt(torRelayMessage.CircuitID, torRelayMessage.Data)
 		if err != nil {
 			return err
 		}

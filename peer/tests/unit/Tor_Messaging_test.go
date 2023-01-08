@@ -1,6 +1,7 @@
 package unit
 
 import (
+	"log"
 	"testing"
 	"time"
 
@@ -102,5 +103,16 @@ func Test_Tor_Messaging_Simpe(t *testing.T) {
 	time.Sleep(time.Second)
 	alice.TorExtend(eliska.GetAddr(), alice.GetCircuitIDs()[0])
 	time.Sleep(time.Second)
+	msg := []byte("hello jirka")
 
+	log.Default().Printf("\n\n\n\n\n\n\n SENDING MSG TO ELISKA")
+
+	alice.TorRelayRequest(bob.GetAddr(), alice.GetCircuitIDs()[0], msg)
+	time.Sleep(time.Second)
+	eliskaMsg := eliska.GetRegistry().GetMessages()
+	for _, m := range eliskaMsg {
+		if m.Name() == "TorRelayMessage" {
+			log.Default().Printf("MSG: %s", m.Name())
+		}
+	}
 }

@@ -129,6 +129,24 @@ func (n *node) TorEncrypt(circID string, data []byte) ([]byte, error) {
 	return data, nil
 }
 
+func (n *node) TorDecrypt(circID string, data []byte) ([]byte, error) {
+	var err error
+	nodesAddress, ok := n.torManager.myCircuits.Get(circID)
+	if !ok {
+		logr.Logger.Err(err).Msgf("[%s]: Error getting nodesAdress from myCircuits", n.addr)
+		return []byte{}, err
+	}
+	for i := 0; i < len(nodesAddress); i++ {
+		logr.Logger.Info().Msgf("[%s]: Decrypting TLSClientHello to %s", n.addr, nodesAddress[i])
+		data, err = n.tlsManager.DecryptSymmetricTor(n.createTorEntryName(nodesAddress[i], circID), data)
+		if err != nil {
+			logr.Logger.Err(err).Msgf("[%s]: Error Decrypting TLSClientHello to %s", n.addr, nodesAddress[i])
+			return []byte{}, err
+		}
+	}
+	return data, nil
+}
+
 func (n *node) TorRelayRequest(addr string, circID string, data []byte) error {
 	encryptedPayload, err := n.TorEncrypt(circID, data)
 	if err != nil {
