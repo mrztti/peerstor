@@ -418,28 +418,253 @@ func Test_Tor_Extend_Extend(t *testing.T) {
 	aliceAddr := alice.GetAddr()
 	bobAddr := bob.GetAddr()
 	charlieAddr := charlie.GetAddr()
+	detlefAddr := detlef.GetAddr()
 
 	aliceKeys := alice.GetSymKeys()
 	bobKeys := bob.GetSymKeys()
 	charlieKeys := charlie.GetSymKeys()
+	detlefKeys := detlef.GetSymKeys()
 
 	delete(aliceKeys, bobAddr)
 	delete(aliceKeys, charlieAddr)
+	delete(aliceKeys, detlefAddr)
 	delete(bobKeys, aliceAddr)
 	delete(bobKeys, charlieAddr)
+	delete(bobKeys, detlefAddr)
 	delete(charlieKeys, bobAddr)
 	delete(charlieKeys, aliceAddr)
+	delete(charlieKeys, detlefAddr)
+	delete(detlefKeys, aliceAddr)
+	delete(detlefKeys, bobAddr)
+	delete(detlefKeys, charlieAddr)
 
-	// for dictKey, val := range aliceKeys {
-	// 	if strings.Contains(dictKey, bobAddr) {
-	// 		for _, value := range bobKeys {
-	// 			require.Equal(t, val, value)
-	// 		}
-	// 	} else {
-	// 		for charKey, value := range charlieKeys {
-	// 			log.Default().Println(charKey)
-	// 			require.Equal(t, val, value)
-	// 		}
-	// 	}
+	for dictKey, val := range aliceKeys {
+		if strings.Contains(dictKey, bobAddr) {
+			for _, value := range bobKeys {
+				require.Equal(t, val, value)
+			}
+		} else if strings.Contains(dictKey, charlieAddr) {
+			for charKey, value := range charlieKeys {
+				log.Default().Println(charKey)
+				require.Equal(t, val, value)
+			}
+		} else {
+			for _, value := range detlefKeys {
+				require.Equal(t, val, value)
+			}
+		}
+	}
+}
+
+func Test_Tor_Extend_Extend_Extend(t *testing.T) {
+	transp := channel.NewTransport()
+	fake := z.NewFakeMessage(t)
+	handler1, _ := fake.GetHandler(t)
+	handler2, _ := fake.GetHandler(t)
+	handler3, _ := fake.GetHandler(t)
+	handler4, _ := fake.GetHandler(t)
+	handler5, _ := fake.GetHandler(t)
+
+	publicKeyN1, privateKeyN1 := GenerateKeyPair()
+	publicKeyN2, privateKeyN2 := GenerateKeyPair()
+	publicKeyN3, privateKeyN3 := GenerateKeyPair()
+	publicKeyN4, privateKeyN4 := GenerateKeyPair()
+	publicKeyN5, privateKeyN5 := GenerateKeyPair()
+
+	alice := z.NewTestNode(t, peerFac, transp, "127.0.0.1:0", z.WithMessage(fake, handler1), z.WithAntiEntropy(time.Millisecond*50), z.WithKeys(publicKeyN1, privateKeyN1))
+	defer alice.Stop()
+	bob := z.NewTestNode(t, peerFac, transp, "127.0.0.1:0", z.WithMessage(fake, handler2), z.WithAntiEntropy(time.Millisecond*50), z.WithKeys(publicKeyN2, privateKeyN2))
+	defer bob.Stop()
+	charlie := z.NewTestNode(t, peerFac, transp, "127.0.0.1:0", z.WithMessage(fake, handler3), z.WithAntiEntropy(time.Millisecond*50), z.WithKeys(publicKeyN3, privateKeyN3))
+	defer charlie.Stop()
+	detlef := z.NewTestNode(t, peerFac, transp, "127.0.0.1:0", z.WithMessage(fake, handler4), z.WithAntiEntropy(time.Millisecond*50), z.WithKeys(publicKeyN4, privateKeyN4))
+	defer detlef.Stop()
+	eliska := z.NewTestNode(t, peerFac, transp, "127.0.0.1:0", z.WithMessage(fake, handler5), z.WithAntiEntropy(time.Millisecond*50), z.WithKeys(publicKeyN5, privateKeyN5))
+	defer eliska.Stop()
+	//node1 <-> node2 <-> node3 <-> node4
+	alice.SetAsmKey(bob.GetAddr(), publicKeyN2)
+	alice.SetAsmKey(charlie.GetAddr(), publicKeyN3)
+	alice.SetAsmKey(detlef.GetAddr(), publicKeyN4)
+	alice.SetAsmKey(eliska.GetAddr(), publicKeyN5)
+	bob.SetAsmKey(alice.GetAddr(), publicKeyN1)
+	bob.SetAsmKey(charlie.GetAddr(), publicKeyN3)
+	bob.SetAsmKey(detlef.GetAddr(), publicKeyN4)
+	bob.SetAsmKey(eliska.GetAddr(), publicKeyN5)
+	charlie.SetAsmKey(bob.GetAddr(), publicKeyN2)
+	charlie.SetAsmKey(alice.GetAddr(), publicKeyN1)
+	charlie.SetAsmKey(detlef.GetAddr(), publicKeyN4)
+	charlie.SetAsmKey(eliska.GetAddr(), publicKeyN5)
+	detlef.SetAsmKey(bob.GetAddr(), publicKeyN2)
+	detlef.SetAsmKey(charlie.GetAddr(), publicKeyN3)
+	detlef.SetAsmKey(alice.GetAddr(), publicKeyN1)
+	detlef.SetAsmKey(eliska.GetAddr(), publicKeyN5)
+	eliska.SetAsmKey(alice.GetAddr(), publicKeyN1)
+	eliska.SetAsmKey(bob.GetAddr(), publicKeyN2)
+	eliska.SetAsmKey(charlie.GetAddr(), publicKeyN3)
+	eliska.SetAsmKey(detlef.GetAddr(), publicKeyN4)
+
+	alice.AddPeer(bob.GetAddr())
+	bob.AddPeer(alice.GetAddr())
+	bob.AddPeer(charlie.GetAddr())
+	charlie.AddPeer(bob.GetAddr())
+	charlie.AddPeer(detlef.GetAddr())
+	detlef.AddPeer(charlie.GetAddr())
+	detlef.AddPeer(eliska.GetAddr())
+	eliska.AddPeer(detlef.GetAddr())
+
+	alice.SetRoutingEntry(charlie.GetAddr(), bob.GetAddr())
+	alice.SetRoutingEntry(detlef.GetAddr(), bob.GetAddr())
+	alice.SetRoutingEntry(eliska.GetAddr(), bob.GetAddr())
+	bob.SetRoutingEntry(detlef.GetAddr(), charlie.GetAddr())
+	bob.SetRoutingEntry(eliska.GetAddr(), charlie.GetAddr())
+	charlie.SetRoutingEntry(alice.GetAddr(), bob.GetAddr())
+	charlie.SetRoutingEntry(eliska.GetAddr(), detlef.GetAddr())
+	detlef.SetRoutingEntry(alice.GetAddr(), charlie.GetAddr())
+	detlef.SetRoutingEntry(bob.GetAddr(), charlie.GetAddr())
+	eliska.SetRoutingEntry(alice.GetAddr(), detlef.GetAddr())
+	eliska.SetRoutingEntry(bob.GetAddr(), detlef.GetAddr())
+	eliska.SetRoutingEntry(charlie.GetAddr(), detlef.GetAddr())
+
+	alice.CreateDHSymmetricKey(bob.GetAddr())
+	alice.CreateDHSymmetricKey(charlie.GetAddr())
+	charlie.CreateDHSymmetricKey(bob.GetAddr())
+	detlef.CreateDHSymmetricKey(charlie.GetAddr())
+	detlef.CreateDHSymmetricKey(bob.GetAddr())
+	detlef.CreateDHSymmetricKey(alice.GetAddr())
+	eliska.CreateDHSymmetricKey(detlef.GetAddr())
+	eliska.CreateDHSymmetricKey(charlie.GetAddr())
+	eliska.CreateDHSymmetricKey(bob.GetAddr())
+	eliska.CreateDHSymmetricKey(alice.GetAddr())
+
+	time.Sleep(time.Second)
+
+	require.Greater(t, len(alice.GetSymKey(bob.GetAddr())), 0)
+	require.Greater(t, len(alice.GetSymKey(charlie.GetAddr())), 0)
+	require.Greater(t, len(alice.GetSymKey(detlef.GetAddr())), 0)
+	require.Greater(t, len(bob.GetSymKey(charlie.GetAddr())), 0)
+	require.Greater(t, len(bob.GetSymKey(alice.GetAddr())), 0)
+	require.Greater(t, len(bob.GetSymKey(detlef.GetAddr())), 0)
+	require.Greater(t, len(charlie.GetSymKey(alice.GetAddr())), 0)
+	require.Greater(t, len(charlie.GetSymKey(bob.GetAddr())), 0)
+	require.Greater(t, len(charlie.GetSymKey(detlef.GetAddr())), 0)
+	require.Greater(t, len(detlef.GetSymKey(alice.GetAddr())), 0)
+	require.Greater(t, len(detlef.GetSymKey(bob.GetAddr())), 0)
+	require.Greater(t, len(detlef.GetSymKey(charlie.GetAddr())), 0)
+	require.Greater(t, len(eliska.GetSymKey(alice.GetAddr())), 0)
+	require.Greater(t, len(eliska.GetSymKey(bob.GetAddr())), 0)
+	require.Greater(t, len(eliska.GetSymKey(charlie.GetAddr())), 0)
+	require.Greater(t, len(eliska.GetSymKey(detlef.GetAddr())), 0)
+
+	require.Equal(t, alice.GetSymKey(bob.GetAddr()), bob.GetSymKey(alice.GetAddr()))
+	require.Equal(t, bob.GetSymKey(charlie.GetAddr()), charlie.GetSymKey(bob.GetAddr()))
+	require.Equal(t, alice.GetSymKey(charlie.GetAddr()), charlie.GetSymKey(alice.GetAddr()))
+	require.Equal(t, alice.GetSymKey(detlef.GetAddr()), detlef.GetSymKey(alice.GetAddr()))
+	require.Equal(t, bob.GetSymKey(detlef.GetAddr()), detlef.GetSymKey(bob.GetAddr()))
+	require.Equal(t, charlie.GetSymKey(detlef.GetAddr()), detlef.GetSymKey(charlie.GetAddr()))
+	require.Equal(t, alice.GetSymKey(eliska.GetAddr()), eliska.GetSymKey(alice.GetAddr()))
+	require.Equal(t, bob.GetSymKey(eliska.GetAddr()), eliska.GetSymKey(bob.GetAddr()))
+	require.Equal(t, charlie.GetSymKey(eliska.GetAddr()), eliska.GetSymKey(charlie.GetAddr()))
+	require.Equal(t, detlef.GetSymKey(eliska.GetAddr()), eliska.GetSymKey(detlef.GetAddr()))
+
+	require.NotEqual(t, alice.GetSymKey(bob.GetAddr()), bob.GetSymKey(charlie.GetAddr()))
+	require.NotEqual(t, alice.GetSymKey(charlie.GetAddr()), charlie.GetSymKey(bob.GetAddr()))
+	require.NotEqual(t, alice.GetSymKey(bob.GetAddr()), alice.GetSymKey(charlie.GetAddr()))
+	require.NotEqual(t, alice.GetSymKey(bob.GetAddr()), alice.GetSymKey(detlef.GetAddr()))
+	require.NotEqual(t, alice.GetSymKey(charlie.GetAddr()), alice.GetSymKey(detlef.GetAddr()))
+	require.NotEqual(t, bob.GetSymKey(charlie.GetAddr()), bob.GetSymKey(detlef.GetAddr()))
+	require.NotEqual(t, alice.GetSymKey(bob.GetAddr()), bob.GetSymKey(detlef.GetAddr()))
+	require.NotEqual(t, alice.GetSymKey(charlie.GetAddr()), charlie.GetSymKey(detlef.GetAddr()))
+	require.NotEqual(t, bob.GetSymKey(charlie.GetAddr()), charlie.GetSymKey(detlef.GetAddr()))
+	require.NotEqual(t, alice.GetSymKey(bob.GetAddr()), charlie.GetSymKey(detlef.GetAddr()))
+
+	err := alice.TorCreate(bob.GetAddr())
+	require.NoError(t, err)
+	time.Sleep(time.Second)
+	log.Default().Printf("alice circuit ids: %v", alice.GetCircuitIDs())
+	err = alice.TorExtend(charlie.GetAddr(), alice.GetCircuitIDs()[0])
+	require.NoError(t, err)
+	time.Sleep(time.Second)
+	aliceSymKeys := []string{}
+	for k := range alice.GetSymKeys() {
+		aliceSymKeys = append(aliceSymKeys, k)
+	}
+	log.Default().Printf("successfully extended to charlie. alice circ ids: %v", aliceSymKeys)
+	bobsSymKeys := []string{}
+	for k := range bob.GetSymKeys() {
+		bobsSymKeys = append(bobsSymKeys, k)
+	}
+	log.Default().Printf("successfully extended to charlie. bobs circ ids: %v", bobsSymKeys)
+	err = alice.TorExtend(detlef.GetAddr(), alice.GetCircuitIDs()[0])
+	require.NoError(t, err)
+	time.Sleep(time.Second)
+	alice.TorExtend(eliska.GetAddr(), alice.GetCircuitIDs()[0])
+	time.Sleep(time.Second)
+	bobsSymKeys = []string{}
+	for k := range bob.GetSymKeys() {
+		bobsSymKeys = append(bobsSymKeys, k)
+	}
+	log.Default().Printf("successfully extended to charlie. bobs circ ids 2: %v", bobsSymKeys)
+	// log.Default().Println("alices registered messaged: ", alice.GetRegistry().GetMessages())
+	// log.Default().Println("charlie registered messaged: ", charlie.GetRegistry().GetMessages())
+	// log.Default().Println("Alice Symmetric keys: ", alice.GetSymKeys())
+	// log.Default().Println("Bob Symmetric keys: ", bob.GetSymKeys())
+	// log.Default().Println("Charlie Symmetric keys: ", charlie.GetSymKeys())
+	// detlefsMessages := detlef.GetRegistry().GetMessages()
+	// log.Println("Detlef registered messages: ", detlefsMessages)
+	// for _, msg := range detlefsMessages {
+	// 	log.Println("Detlef received message: ", msg.Name())
 	// }
+	aliceAddr := alice.GetAddr()
+	bobAddr := bob.GetAddr()
+	charlieAddr := charlie.GetAddr()
+	detlefAddr := detlef.GetAddr()
+	eliskaAddr := eliska.GetAddr()
+
+	aliceKeys := alice.GetSymKeys()
+	bobKeys := bob.GetSymKeys()
+	charlieKeys := charlie.GetSymKeys()
+	detlefKeys := detlef.GetSymKeys()
+	eliskaKeys := eliska.GetSymKeys()
+
+	delete(aliceKeys, bobAddr)
+	delete(aliceKeys, charlieAddr)
+	delete(aliceKeys, detlefAddr)
+	delete(aliceKeys, eliskaAddr)
+	delete(bobKeys, aliceAddr)
+	delete(bobKeys, charlieAddr)
+	delete(bobKeys, detlefAddr)
+	delete(bobKeys, eliskaAddr)
+	delete(charlieKeys, bobAddr)
+	delete(charlieKeys, aliceAddr)
+	delete(charlieKeys, detlefAddr)
+	delete(charlieKeys, eliskaAddr)
+	delete(detlefKeys, aliceAddr)
+	delete(detlefKeys, bobAddr)
+	delete(detlefKeys, charlieAddr)
+	delete(detlefKeys, eliskaAddr)
+	delete(eliskaKeys, aliceAddr)
+	delete(eliskaKeys, bobAddr)
+	delete(eliskaKeys, charlieAddr)
+	delete(eliskaKeys, detlefAddr)
+
+	for dictKey, val := range aliceKeys {
+		if strings.Contains(dictKey, bobAddr) {
+			for _, value := range bobKeys {
+				require.Equal(t, val, value)
+			}
+		} else if strings.Contains(dictKey, charlieAddr) {
+			for charKey, value := range charlieKeys {
+				log.Default().Println(charKey)
+				require.Equal(t, val, value)
+			}
+		} else if strings.Contains(dictKey, detlefAddr) {
+			for _, value := range detlefKeys {
+				require.Equal(t, val, value)
+			}
+		} else if strings.Contains(dictKey, eliskaAddr) {
+			for _, value := range eliskaKeys {
+				require.Equal(t, val, value)
+			}
+		}
+	}
 }
