@@ -18,6 +18,7 @@ type TorManager struct {
 	addr            string
 	torRoutingTable peer.ConcurrentMap[peer.TorRoutingEntry]
 	myCircuits      peer.ConcurrentMap[[]string]
+	torChannels     peer.ConcurrentMap[chan int]
 }
 
 func CreateTorManager(addr string) *TorManager {
@@ -25,6 +26,7 @@ func CreateTorManager(addr string) *TorManager {
 		addr:            addr,
 		torRoutingTable: peer.CreateConcurrentMap[peer.TorRoutingEntry](),
 		myCircuits:      peer.CreateConcurrentMap[[]string](),
+		torChannels:     peer.CreateConcurrentMap[chan int](),
 	}
 }
 

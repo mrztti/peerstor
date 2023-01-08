@@ -92,7 +92,7 @@ func Test_Tor_Messaging_Simpe(t *testing.T) {
 
 	time.Sleep(time.Second)
 
-	err := alice.TorCreate(bob.GetAddr())
+	err := alice.TorCreate(bob.GetAddr(), "somethingrandom")
 	require.NoError(t, err)
 	time.Sleep(time.Second)
 	err = alice.TorExtend(charlie.GetAddr(), alice.GetCircuitIDs()[0])

@@ -1,13 +1,55 @@
 package impl
 
 import (
+	"fmt"
+	"time"
+
 	"go.dedis.ch/cs438/logr"
 	"go.dedis.ch/cs438/peer"
 	"go.dedis.ch/cs438/types"
 )
 
-func (n *node) TorCreate(addr string) error {
+func (n *node) TorEstablishCircuit(finalDestination string, circuitLen int) error {
+	circuitNodes := []string{}
+	intermediateNodesLen := circuitLen - 1
+	for k := range n.tlsManager.asymmetricKeyStore.GetCopy() {
+		if k != finalDestination && k != n.addr {
+			circuitNodes = append(circuitNodes, k)
+		}
+		if len(circuitNodes) == intermediateNodesLen {
+			break
+		}
+	}
+	if len(circuitNodes) < intermediateNodesLen {
+		return fmt.Errorf("not enough intermediate nodes to establish a circuit")
+	}
+	circuitNodes = append(circuitNodes, finalDestination)
 	circID := getNewCircuitID()
+	circChan := make(chan int)
+	n.torManager.torChannels.Set(circID, circChan)
+	err := n.TorCreate(circuitNodes[0], circID)
+	if err != nil {
+		return err
+	}
+	for {
+		select {
+		case circLenght := <-circChan:
+			if circLenght == circuitLen {
+				n.torManager.torChannels.Remove(circID)
+				return nil
+			}
+			err = n.TorExtend(circuitNodes[circLenght], circID)
+			if err != nil {
+				return err
+			}
+		case <-time.After(5 * time.Second):
+			// TODO: Handle this better (tear down the circuit)
+			return fmt.Errorf("timeout while establishing circuit")
+		}
+	}
+}
+
+func (n *node) TorCreate(addr string, circID string) error {
 	dhManager, err := n.DHfirstStep()
 	if err != nil {
 		logr.Logger.Err(err).Msgf("[%s]: Error creating DHManager", n.addr)

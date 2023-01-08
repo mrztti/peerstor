@@ -6,7 +6,7 @@ type TorRoutingEntry struct {
 }
 
 type TorServices interface {
-	TorCreate(addr string) error
+	TorCreate(addr string, circID string) error
 	GetNextHop(circuitID string) (TorRoutingEntry, error)
 	AddTorRoutingEntry(incomingCircuitID string, routingEntry TorRoutingEntry)
 	GetTorRoutingEntries() map[string]TorRoutingEntry
@@ -18,4 +18,5 @@ type TorServices interface {
 	DecryptSymmetricTor(torID string, cipherText []byte) ([]byte, error)
 	GetSymKeys() map[string][]byte
 	TorRelayRequest(circID string, data []byte) error
+	TorEstablishCircuit(finalDestination string, circuitLen int) error
 }

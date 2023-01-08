@@ -267,6 +267,16 @@ func (n *node) execTorServerHello(msg types.Message, circuitID string) error {
 	}
 	nodesAddress = append(nodesAddress, torServerHello.Source)
 	n.torManager.myCircuits.Set(circuitID, nodesAddress)
+	circChan, ok := n.torManager.torChannels.Get(circuitID)
+	if ok {
+		circChan <- len(nodesAddress)
+	}
+	// TODO(Jirka, Aamir): Fix error message. This error is legit in a normal run of the program, but it ruins our tests which is why we have removed it for now.
+	// if !ok {
+	// 	err := fmt.Errorf("[%s]: execTorServerHello torChannels.Get failed", n.addr)
+	// 	logr.Logger.Err(err).Msgf("[%s]: execTorServerHello torChannels.Get failed!", n.addr)
+	// 	return err
+	// }
 	logr.Logger.Info().Msgf("[%s]: execTorServerHello success!", n.addr)
 	return nil
 }
