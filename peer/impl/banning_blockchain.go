@@ -67,6 +67,10 @@ func (b *CommonBanList) IsBanned(address string) bool {
 	return ok
 }
 
+func (n *node) HasSharedBan(address string) bool {
+	return n.banList.IsBanned(address)
+}
+
 //=============================================================================
 
 type BanProposePhase1Message struct {

@@ -133,6 +133,10 @@ func (c *CertificateCatalog) Get(name string) (rsa.PublicKey, error) {
 	return publicKeyCopy, nil
 }
 
+func (n *node) GetPeerPublicKey(name string) (rsa.PublicKey, error) {
+	return n.certificateCatalog.Get(name)
+}
+
 // AddCertificate: Adds a new certificate to the catalog.
 func (c *CertificateCatalog) AddCertificate(name string, pemBytes []byte) error {
 	c.lock.Lock()
@@ -325,6 +329,36 @@ func (n *node) GetRandomOnionNode() (string, *rsa.PublicKey, error) {
 	nc.lock.Lock()
 	defer nc.lock.Unlock()
 
+	all, err := n.GetAllOnionNodes()
+	if err != nil {
+		return "", nil, err
+	}
+
+	// Get keys
+	var keys []string
+	for k := range all {
+		keys = append(keys, k)
+	}
+
+	// use crypto/rand to generate a random index into the keys slice
+	randIndex, err := rand.Int(rand.Reader, big.NewInt(int64(len(keys))))
+	if err != nil {
+		return "", nil, err
+	}
+
+	// Get the node
+	name := keys[randIndex.Int64()]
+	pk := nc.values[name]
+
+	return name, pk, nil
+}
+
+// GetAllOnionNodes: Returns all nodes from the Onion registry
+func (n *node) GetAllOnionNodes() (map[string](*rsa.PublicKey), error) {
+	nc := n.nodeCatalog
+	nc.lock.Lock()
+	defer nc.lock.Unlock()
+
 	// Build trusted node list
 	var keys []string
 	for k := range nc.values {
@@ -339,20 +373,17 @@ func (n *node) GetRandomOnionNode() (string, *rsa.PublicKey, error) {
 		}
 	}
 	if len(keys) == 0 {
-		return "", nil, errors.New("no onion nodes available")
+		return nil, errors.New("no onion nodes available")
 	}
 
-	// use crypto/rand to generate a random index into the keys slice
-	randIndex, err := rand.Int(rand.Reader, big.NewInt(int64(len(keys))))
-	if err != nil {
-		return "", nil, err
+	// Get the nodes
+	nodes := make(map[string](*rsa.PublicKey))
+	for _, name := range keys {
+		pk := nc.values[name]
+		nodes[name] = pk
 	}
 
-	// Get the node
-	name := keys[randIndex.Int64()]
-	pk := nc.values[name]
-
-	return name, pk, nil
+	return nodes, nil
 }
 
 // OnionNodeRegistrationMessage: Node declares that it is willing to be a Onion transmission node.

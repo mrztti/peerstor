@@ -8,10 +8,6 @@
 package impl
 
 import (
-	"crypto"
-	"crypto/rand"
-	"crypto/rsa"
-	"encoding/json"
 	"errors"
 	"sync"
 	"time"
@@ -74,7 +70,7 @@ func (t *TrustCatalog) NewPeer(name string) error {
 	return nil
 }
 
-// Knows: Returns true if the peer is in the catalog
+// Knows: Returns true if the peer is in the trust catalog
 func (t *TrustCatalog) Knows(name string) bool {
 	t.lock.Lock()
 	defer t.lock.Unlock()
@@ -165,7 +161,11 @@ func (t *TrustCatalog) Trusts() TrustMapping {
 	return trusts
 }
 
-// GetProof: Sign the trust catalog and return the signature
+func (n *node) Trusts(name string) bool {
+	return n.trustCatalog.IsTrusted(name)
+}
+
+/* // GetProof: Sign the trust catalog and return the signature
 func (n *node) SignTrusts() ([]byte, error) {
 	trusts := n.trustCatalog.Trusts()
 
@@ -179,7 +179,7 @@ func (n *node) SignTrusts() ([]byte, error) {
 	prk := n.certificateStore.GetPrivateKey()
 	// sign the trust catalog using the private key
 	return rsa.SignPKCS1v15(rand.Reader, &prk, crypto.SHA256, data)
-}
+} */
 
 //=============================================================================
 // Security mechanisms
