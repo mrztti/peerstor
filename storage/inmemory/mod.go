@@ -13,6 +13,7 @@ func NewPersistency() storage.Storage {
 		blob:       newStore(),
 		naming:     newStore(),
 		blockchain: newStore(),
+		bans:       newStore(),
 	}
 }
 
@@ -23,6 +24,7 @@ type Storage struct {
 	blob       storage.Store
 	naming     storage.Store
 	blockchain storage.Store
+	bans       storage.Store
 }
 
 // GetDataBlobStore implements storage.Storage
@@ -38,6 +40,11 @@ func (s Storage) GetNamingStore() storage.Store {
 // GetBlockchainStore implements storage.Storage
 func (s Storage) GetBlockchainStore() storage.Store {
 	return s.blockchain
+}
+
+// GetBanStore implements storage.Storage
+func (s Storage) GetBanBlockchainStore() storage.Store {
+	return s.bans
 }
 
 func newStore() *store {

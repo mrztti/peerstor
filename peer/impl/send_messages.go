@@ -188,6 +188,20 @@ func (n *node) BroadcastTLCMessageInParallel(Step uint, Block types.BlockchainBl
 	})
 }
 
+func (n *node) BroadcastBanTLCMessageInParallel(Step uint, Block types.BlockchainBlock) {
+	if n.banPaxos.TLCSentByMe.AddWithDuplicateCheck(Step) {
+		logr.Logger.Trace().
+			Msgf("[%s]:NOT BROADCASTING (duplicate) TLC message for step %d, block %#v", n.addr, Step, Block)
+		return
+	}
+	logr.Logger.Trace().
+		Msgf("[%s]:BroadcastTLCMessage: Broadcasting TLC message for step %d, block %#v", n.addr, Step, Block)
+	go n.BroadcastTypesInParallel(&types.BanTLCMessage{
+		Step:  Step,
+		Block: Block,
+	})
+}
+
 func (n *node) sendAck(origPkt transport.Packet) error {
 	msg := types.AckMessage{
 		AckedPacketID: origPkt.Header.PacketID,

@@ -27,24 +27,24 @@ func NewPeer(conf peer.Configuration) peer.Peer {
 	}
 
 	newPeer := &node{
-		conf:                     conf,
-		quitChannel:              make(chan bool),
-		routingTable:             CreateRoutingTable(myAddr),
-		rumorManager:             CreateRumorManager(myAddr),
-		addr:                     myAddr,
-		responseManager:          CreateResponseManager(myAddr),
-		blobStore:                conf.Storage.GetDataBlobStore(),
-		namingStore:              conf.Storage.GetNamingStore(),
-		catalog:                  CreateConcurrentCatalog(myAddr),
-		paxos:                    CreateMultiPaxos(myAddr, conf, nil),
-		paxosInnerMessageChannel: make(chan PaxosMessage),
-		broadcastLock:            sync.Mutex{},
-		attemptedRumoursSent:     &AtomicCounter{count: 0},
-		certificateStore:         certificateStore,
-		certificateCatalog:       NewCertificateCatalog(),
-		trustUpdateHook:          make(chan TrustMapping),
-		isOnionNode:              false,
-		tlsManager:               CreateTLSManager(myAddr),
+		conf:                        conf,
+		quitChannel:                 make(chan bool),
+		routingTable:                CreateRoutingTable(myAddr),
+		rumorManager:                CreateRumorManager(myAddr),
+		addr:                        myAddr,
+		responseManager:             CreateResponseManager(myAddr),
+		blobStore:                   conf.Storage.GetDataBlobStore(),
+		namingStore:                 conf.Storage.GetNamingStore(),
+		catalog:                     CreateConcurrentCatalog(myAddr),
+		paxosInnerMessageChannel:    make(chan PaxosMessage),
+		banPaxosInnerMessageChannel: make(chan PaxosMessage),
+		broadcastLock:               sync.Mutex{},
+		attemptedRumoursSent:        &AtomicCounter{count: 0},
+		certificateStore:            certificateStore,
+		certificateCatalog:          NewCertificateCatalog(),
+		trustBanHook:                make(chan string),
+		isOnionNode:                 false,
+		tlsManager:                  CreateTLSManager(myAddr),
 	}
 	newPeer.paxos.node = newPeer
 	newPeer.routingTable.Set(myAddr, myAddr)
@@ -59,6 +59,10 @@ func NewPeer(conf peer.Configuration) peer.Peer {
 		logr.Logger.Error().Msgf("[%s]: Failed to create node catalog", myAddr)
 		return nil
 	}
+	// Init blockchains
+	newPeer.paxos = CreateMultiPaxos(conf, newPeer)
+	newPeer.banPaxos = CreateMultiPaxos(conf, newPeer)
+	newPeer.banList = CreateBanList(conf.Storage.GetBanBlockchainStore())
 	return newPeer
 }
 
@@ -69,26 +73,29 @@ func NewPeer(conf peer.Configuration) peer.Peer {
 type node struct {
 	peer.Peer
 	// You probably want to keep the peer.Configuration on this struct:
-	conf                     peer.Configuration
-	quitChannel              chan bool
-	routingTable             RoutingTable
-	rumorManager             RumorManager
-	responseManager          ResponseManager
-	addr                     string
-	blobStore                storage.Store
-	namingStore              storage.Store
-	catalog                  ConcurrentCatalog
-	paxos                    *MultiPaxos
-	paxosInnerMessageChannel chan PaxosMessage
-	broadcastLock            sync.Mutex
-	attemptedRumoursSent     *AtomicCounter
-	certificateStore         *CertificateStore
-	certificateCatalog       *CertificateCatalog
-	trustCatalog             *TrustCatalog
-	trustUpdateHook          chan TrustMapping
-	nodeCatalog              *NodeCatalog
-	isOnionNode              bool
-	tlsManager               *TLSManager
+	conf                        peer.Configuration
+	quitChannel                 chan bool
+	routingTable                RoutingTable
+	rumorManager                RumorManager
+	responseManager             ResponseManager
+	addr                        string
+	blobStore                   storage.Store
+	namingStore                 storage.Store
+	catalog                     ConcurrentCatalog
+	paxos                       *MultiPaxos
+	paxosInnerMessageChannel    chan PaxosMessage
+	banPaxosInnerMessageChannel chan PaxosMessage
+	broadcastLock               sync.Mutex
+	attemptedRumoursSent        *AtomicCounter
+	certificateStore            *CertificateStore
+	certificateCatalog          *CertificateCatalog
+	trustCatalog                *TrustCatalog
+	trustBanHook                chan string
+	banPaxos                    *MultiPaxos
+	banList                     *CommonBanList
+	nodeCatalog                 *NodeCatalog
+	isOnionNode                 bool
+	tlsManager                  *TLSManager
 }
 
 // Start implements peer.Service
@@ -104,6 +111,8 @@ func (n *node) Start() error {
 	go n.startListeningService()
 	// go n.startTickingService()
 	go n.startPaxosService()
+	go n.startBanPaxosService()
+	go n.startBanService()
 	if n.conf.AntiEntropyInterval > 0 {
 		go n.startAntiEntropyService()
 	}
