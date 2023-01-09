@@ -22,7 +22,7 @@ type PaxosInstance struct {
 	proposingPhase     string
 	lastUsedPaxosID    uint
 	proposedValue      *types.PaxosValue
-	phase1Responses    []*types.PaxosPromiseMessage
+	phase1Responses    []types.Message
 	phase2Responses    peer.ConcurrentMap[*AtomicCounter]
 	timeouts           peer.ConcurrentMap[*time.Timer]
 }
@@ -40,14 +40,14 @@ func CreatePaxosInstance(myAddr string, conf peer.Configuration) *PaxosInstance 
 		proposingPhase:     "none",
 		lastUsedPaxosID:    0,
 		proposedValue:      nil,
-		phase1Responses:    make([]*types.PaxosPromiseMessage, 0),
+		phase1Responses:    make([]types.Message, 0),
 		phase2Responses:    peer.CreateConcurrentMap[*AtomicCounter](),
 		timeouts:           peer.CreateConcurrentMap[*time.Timer](),
 	}
 }
 
 func (p *PaxosInstance) RetryReset() {
-	p.phase1Responses = make([]*types.PaxosPromiseMessage, 0)
+	p.phase1Responses = make([]types.Message, 0)
 	p.proposedValue = nil
 	p.acceptedID = AtomicCounter{count: 0}
 	p.acceptedValue = nil
@@ -60,7 +60,7 @@ func (p *PaxosInstance) Reset() {
 	p.proposingPhase = "none"
 	p.lastUsedPaxosID = 0
 	p.proposedValue = nil
-	p.phase1Responses = make([]*types.PaxosPromiseMessage, 0)
+	p.phase1Responses = make([]types.Message, 0)
 	p.phase2Responses = peer.CreateConcurrentMap[*AtomicCounter]()
 	p.timeouts = peer.CreateConcurrentMap[*time.Timer]()
 }
