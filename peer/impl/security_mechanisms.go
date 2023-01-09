@@ -8,10 +8,6 @@
 package impl
 
 import (
-	"crypto"
-	"crypto/rand"
-	"crypto/rsa"
-	"encoding/json"
 	"errors"
 	"sync"
 	"time"
@@ -26,7 +22,7 @@ type TrustCatalog struct {
 	lock      sync.Mutex
 	data      map[string]float32
 	threshold float32
-	hook      chan TrustMapping
+	hook      chan string
 }
 
 type TrustMapping map[string]bool
@@ -37,7 +33,7 @@ func (n *node) NewTrustCatalog(threshold float32) error {
 		return errors.New("trust catalog already initialized")
 	}
 
-	hook := n.trustUpdateHook
+	hook := n.trustBanHook
 	if hook == nil {
 		return errors.New("trust update hook not initialized")
 	}
@@ -74,7 +70,7 @@ func (t *TrustCatalog) NewPeer(name string) error {
 	return nil
 }
 
-// Knows: Returns true if the peer is in the catalog
+// Knows: Returns true if the peer is in the trust catalog
 func (t *TrustCatalog) Knows(name string) bool {
 	t.lock.Lock()
 	defer t.lock.Unlock()
@@ -106,23 +102,27 @@ func (t *TrustCatalog) UpdateTrust(name string, update func(float32) float32) er
 	if !ok {
 		return errors.New("peer " + name + " not in the trust catalog")
 	}
-
-	t.data[name] = update(value)
+	old := t.IsTrusted(name)
+	new := update(value)
+	t.data[name] = new
+	t.DetectBanCondition(name, old)
 	return nil
 }
 
 // Block: Sets the trust value to 0.0
-func (t *TrustCatalog) Block(name string) error {
+func (t *TrustCatalog) Block(name string) {
 	t.lock.Lock()
 	defer t.lock.Unlock()
 
-	_, ok := t.data[name]
-	if !ok {
-		return errors.New("peer " + name + " not in the trust catalog")
-	}
-
 	t.data[name] = 0.0
-	return nil
+	if t.hook != nil {
+		t.hook <- name
+	}
+}
+
+// Ban: Node will ban the peer locally and propose a ban to the network
+func (n *node) Ban(name string) {
+	n.trustCatalog.Block(name)
 }
 
 // Reset: Resets the trust value to 1.0
@@ -140,10 +140,11 @@ func (t *TrustCatalog) Reset(name string) error {
 }
 
 // DetectModifications: Detects a change in trust and broadcasts a new vote to the network
-func (t *TrustCatalog) DetectModifications(old bool, new bool) {
-	if old != new {
-		// Broadcast a new vote using the hook
-		t.hook <- t.Trusts()
+func (t *TrustCatalog) DetectBanCondition(addr string, old bool) {
+	new := t.IsTrusted(addr)
+	if old != new && t.hook != nil && !new {
+		// Propose a ban to the network
+		t.hook <- addr
 	}
 }
 
@@ -160,7 +161,15 @@ func (t *TrustCatalog) Trusts() TrustMapping {
 	return trusts
 }
 
-// GetProof: Sign the trust catalog and return the signature
+// Trusts: Defines if a name is trusted
+func (n *node) Trusts(name string) bool {
+	localTrust := n.trustCatalog.IsTrusted(name)
+	isBanned := n.banList.IsBanned(name)
+	isSelf := n.conf.Socket.GetAddress() == name
+	return isSelf || (localTrust && !isBanned)
+}
+
+/* // GetProof: Sign the trust catalog and return the signature
 func (n *node) SignTrusts() ([]byte, error) {
 	trusts := n.trustCatalog.Trusts()
 
@@ -174,13 +183,25 @@ func (n *node) SignTrusts() ([]byte, error) {
 	prk := n.certificateStore.GetPrivateKey()
 	// sign the trust catalog using the private key
 	return rsa.SignPKCS1v15(rand.Reader, &prk, crypto.SHA256, data)
-}
-
-// =============================================================================
-// TODO: Implement a ban list using a blockchain
+} */
 
 //=============================================================================
-// Randomized testing security mechanism
+// Security mechanisms
+
+// startBanService: Starts the ban service of the node
+func (n *node) startBanService() {
+	for {
+		select {
+		case addr := <-n.trustBanHook:
+			err := n.ProposeBan(addr)
+			if err != nil {
+				log.Error().Err(err).Msg("ban has failed")
+			}
+		case <-n.quitChannel:
+			return
+		}
+	}
+}
 
 // startSecurityMechanism: Starts the security mechanism of the node
 func (n *node) startSecurityMechanism(interval time.Duration, timeoutEffect func(float32) float32, timeout time.Duration, corruptionEffect func(float32) float32) {

@@ -30,6 +30,7 @@ func (n *node) registerRegistryCallbacks() {
 		types.SearchReplyMessage{},
 		n.execSearchReplyMessage,
 	)
+	// Paxos Messages
 	n.conf.MessageRegistry.RegisterMessageCallback(
 		types.PaxosPrepareMessage{},
 		n.execPaxosPrepareMessage,
@@ -50,12 +51,35 @@ func (n *node) registerRegistryCallbacks() {
 		types.TLCMessage{},
 		n.execTLCMessage,
 	)
+	// Ban Paxos Messages
 	n.conf.MessageRegistry.RegisterMessageCallback(
-		CertificateBroadcastMessage{},
+		types.BanPaxosPrepareMessage{},
+		n.execBanPaxosPrepareMessage,
+	)
+	n.conf.MessageRegistry.RegisterMessageCallback(
+		types.BanPaxosPromiseMessage{},
+		n.execBanPaxosPromiseMessage,
+	)
+	n.conf.MessageRegistry.RegisterMessageCallback(
+		types.BanPaxosProposeMessage{},
+		n.execBanPaxosProposeMessage,
+	)
+	n.conf.MessageRegistry.RegisterMessageCallback(
+		types.BanPaxosAcceptMessage{},
+		n.execBanPaxosAcceptMessage,
+	)
+	n.conf.MessageRegistry.RegisterMessageCallback(
+		types.BanTLCMessage{},
+		n.execBanTLCMessage,
+	)
+
+	// Certificate Messages
+	n.conf.MessageRegistry.RegisterMessageCallback(
+		types.CertificateBroadcastMessage{},
 		n.HandleCertificateBroadcastMessage,
 	)
 	n.conf.MessageRegistry.RegisterMessageCallback(
-		OnionNodeRegistrationMessage{},
+		types.OnionNodeRegistrationMessage{},
 		n.HandleOnionNodeRegistrationMessage,
 	)
 	n.conf.MessageRegistry.RegisterMessageCallback(types.TLCMessage{}, n.execTLCMessage)
@@ -142,7 +166,7 @@ func (n *node) execPrivateMessage(msg types.Message, pkt transport.Packet) error
 	}
 	_, ok = privateMessage.Recipients[n.addr]
 	if ok {
-		logr.Logger.Info().
+		logr.Logger.Trace().
 			Msgf("[%s]: Processing private message from %s. Recipients were %#v",
 				n.addr, pkt.Header.Source, privateMessage.Recipients)
 		err = n.conf.MessageRegistry.ProcessPacket(transport.Packet{
@@ -150,7 +174,7 @@ func (n *node) execPrivateMessage(msg types.Message, pkt transport.Packet) error
 			Msg:    privateMessage.Msg,
 		})
 	} else {
-		logr.Logger.Info().Msgf("[%s]: Ignoring private message from %s. Recipients were %#v",
+		logr.Logger.Trace().Msgf("[%s]: Ignoring private message from %s. Recipients were %#v",
 			n.addr, pkt.Header.Source, privateMessage.Recipients)
 	}
 	return err
@@ -407,6 +431,96 @@ func (n *node) execTLCMessage(msg types.Message, pkt transport.Packet) error {
 		logr.Logger.Trace().
 			Msgf("[%s]: Sending to inner channel: TLC from %s with contents %#v", n.addr, pkt.Header.Source, TLC)
 		n.paxosInnerMessageChannel <- TLC
+		logr.Logger.Trace().
+			Msgf("[%s]: TLC from %s has been read from the channel.", n.addr, pkt.Header.Source)
+	}()
+	return nil
+}
+
+// Banning messages
+func (n *node) execBanPaxosPrepareMessage(msg types.Message, pkt transport.Packet) error {
+	paxosPrepare, ok := msg.(*types.BanPaxosPrepareMessage)
+	if !ok {
+		localErr := fmt.Errorf("wrong type: %T", msg)
+		logr.Logger.Err(localErr).Msgf("[%s]: execPaxosPrepareMessage failed", n.addr)
+		return localErr
+	}
+	go func() {
+		logr.Logger.Trace().
+			Msgf("[%s]: Sending to inner channel: paxosPrepare from %s with contents %#v",
+				n.addr, pkt.Header.Source, paxosPrepare)
+		n.banPaxosInnerMessageChannel <- paxosPrepare
+		logr.Logger.Trace().
+			Msgf("[%s]: paxosPrepare from %s has been read from the channel.", n.addr, pkt.Header.Source)
+	}()
+	return nil
+}
+
+func (n *node) execBanPaxosProposeMessage(msg types.Message, pkt transport.Packet) error {
+	paxosPropose, ok := msg.(*types.BanPaxosProposeMessage)
+	if !ok {
+		localErr := fmt.Errorf("wrong type: %T", msg)
+		logr.Logger.Err(localErr).Msgf("[%s]: execPaxosProposeMessage failed", n.addr)
+		return localErr
+	}
+	go func() {
+		logr.Logger.Trace().
+			Msgf("[%s]: Sending to inner channel: paxosPropose from %s with contents %#v",
+				n.addr, pkt.Header.Source, paxosPropose)
+		n.banPaxosInnerMessageChannel <- paxosPropose
+		logr.Logger.Trace().
+			Msgf("[%s]: paxosPropose from %s has been read from the channel.", n.addr, pkt.Header.Source)
+	}()
+	return nil
+}
+
+func (n *node) execBanPaxosPromiseMessage(msg types.Message, pkt transport.Packet) error {
+	paxosPromise, ok := msg.(*types.BanPaxosPromiseMessage)
+	if !ok {
+		localErr := fmt.Errorf("wrong type: %T", msg)
+		logr.Logger.Err(localErr).Msgf("[%s]: execPaxosPromiseMessage failed", n.addr)
+		return localErr
+	}
+	go func() {
+		logr.Logger.Trace().
+			Msgf("[%s]: Sending to inner channel: paxosPromise from %s with contents %#v",
+				n.addr, pkt.Header.Source, paxosPromise)
+		n.banPaxosInnerMessageChannel <- paxosPromise
+		logr.Logger.Trace().
+			Msgf("[%s]: paxosPromise from %s has been read from the channel.", n.addr, pkt.Header.Source)
+	}()
+	return nil
+}
+
+func (n *node) execBanPaxosAcceptMessage(msg types.Message, pkt transport.Packet) error {
+	paxosAccept, ok := msg.(*types.BanPaxosAcceptMessage)
+	if !ok {
+		localErr := fmt.Errorf("wrong type: %T", msg)
+		logr.Logger.Err(localErr).Msgf("[%s]: faiexecPaxosAcceptMessage led", n.addr)
+		return localErr
+	}
+	go func() {
+		logr.Logger.Trace().
+			Msgf("[%s]: Sending to inner channel: paxosAccept from %s with contents %#v",
+				n.addr, pkt.Header.Source, paxosAccept)
+		n.banPaxosInnerMessageChannel <- paxosAccept
+		logr.Logger.Trace().
+			Msgf("[%s]: paxosAccept from %s has been read from the channel.", n.addr, pkt.Header.Source)
+	}()
+	return nil
+}
+
+func (n *node) execBanTLCMessage(msg types.Message, pkt transport.Packet) error {
+	TLC, ok := msg.(*types.BanTLCMessage)
+	if !ok {
+		localErr := fmt.Errorf("wrong type: %T", msg)
+		logr.Logger.Err(localErr).Msgf("[%s]: execTLCMessage failed", n.addr)
+		return localErr
+	}
+	go func() {
+		logr.Logger.Trace().
+			Msgf("[%s]: Sending to inner channel: TLC from %s with contents %#v", n.addr, pkt.Header.Source, TLC)
+		n.banPaxosInnerMessageChannel <- TLC
 		logr.Logger.Trace().
 			Msgf("[%s]: TLC from %s has been read from the channel.", n.addr, pkt.Header.Source)
 	}()

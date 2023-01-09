@@ -12,10 +12,10 @@ import (
 	"crypto"
 	"crypto/rand"
 	"crypto/rsa"
+	"crypto/sha256"
 	"crypto/x509"
 	"encoding/pem"
 	"errors"
-	"fmt"
 	"math/big"
 	"sync"
 
@@ -133,16 +133,14 @@ func (c *CertificateCatalog) Get(name string) (rsa.PublicKey, error) {
 	return publicKeyCopy, nil
 }
 
+func (n *node) GetPeerPublicKey(name string) (rsa.PublicKey, error) {
+	return n.certificateCatalog.Get(name)
+}
+
 // AddCertificate: Adds a new certificate to the catalog.
 func (c *CertificateCatalog) AddCertificate(name string, pemBytes []byte) error {
 	c.lock.Lock()
 	defer c.lock.Unlock()
-
-	// Check if the name is already in use
-	_, ok := c.catalog[name]
-	if ok {
-		log.Warn().Msg("detected probable certificate forgery attempt for " + name)
-	}
 
 	// Decode the PEM
 	block, _ := pem.Decode(pemBytes)
@@ -156,6 +154,17 @@ func (c *CertificateCatalog) AddCertificate(name string, pemBytes []byte) error 
 		return err
 	}
 
+	// Check if the name is already in use
+	val, ok := c.catalog[name]
+	// Check if the keys match
+
+	if ok {
+		match := bytes.Equal(publicKey.N.Bytes(), val.N.Bytes()) && publicKey.E == val.E
+		if !match {
+			log.Warn().Msg("detected probable certificate forgery attempt for " + name)
+		}
+	}
+
 	// Add the new certificate
 	c.catalog[name] = *publicKey
 
@@ -163,7 +172,7 @@ func (c *CertificateCatalog) AddCertificate(name string, pemBytes []byte) error 
 }
 
 // TotalKnownNodes: Returns the total number of known nodes by the peer
-func (n *node) TotalKnownNodes() uint32 {
+func (n *node) TotalCertifiedPeers() uint32 {
 	// Count the number of nodes in the catalog
 	n.certificateCatalog.lock.Lock()
 	defer n.certificateCatalog.lock.Unlock()
@@ -172,42 +181,11 @@ func (n *node) TotalKnownNodes() uint32 {
 
 }
 
-// CertificateBroadcastMessage: a message containing the name of the peer and its public key in PEM format
-//
-// - implements types.Message
-type CertificateBroadcastMessage struct {
-	Addr string
-	PEM  []byte
-}
-
-// -----------------------------------------------------------------------------
-// CertificateBroadcastMessage
-
-// NewEmpty implements types.Message.
-func (d CertificateBroadcastMessage) NewEmpty() types.Message {
-	return &CertificateBroadcastMessage{}
-}
-
-// Name implements types.Message.
-func (d CertificateBroadcastMessage) Name() string {
-	return "certificate_broadcast"
-}
-
-// String implements types.Message.
-func (d CertificateBroadcastMessage) String() string {
-	return fmt.Sprintf("certificate{name:%s, PEM:%s}", d.Addr, string(d.PEM))
-}
-
-// HTML implements types.Message.
-func (d CertificateBroadcastMessage) HTML() string {
-	return d.String()
-}
-
 // BroadcastCertificate: Broadcasts the certificate to all the peers
 // Pack the CertificateBroadcastMessage inside a RumorsMessage and broadcast it across the network
 func (n *node) BroadcastCertificate() error {
 	// Create the CertificateBroadcastMessage
-	certificateBroadcastMessage := CertificateBroadcastMessage{
+	certificateBroadcastMessage := types.CertificateBroadcastMessage{
 		Addr: n.conf.Socket.GetAddress(),
 		PEM:  n.certificateStore.GetPublicKeyPEM(),
 	}
@@ -229,23 +207,16 @@ func (n *node) BroadcastCertificate() error {
 // HandleCertificateBroadcastMessage: Handles a CertificateBroadcastMessage
 func (n *node) HandleCertificateBroadcastMessage(msg types.Message, pkt transport.Packet) error {
 	// Cast the message
-	certificateBroadcastMessage, ok := msg.(*CertificateBroadcastMessage)
+	certificateBroadcastMessage, ok := msg.(*types.CertificateBroadcastMessage)
 	if !ok {
 		return errors.New("failed to cast message to CertificateBroadcastMessage")
 	}
 
 	// SECURITY MECHANISM: Check if this is a certificate forgery attempt
-	// Message and packet address must match
-	rule1 := certificateBroadcastMessage.Addr == pkt.Header.Source
 	// If the message address is this nodes address, then the certificate must be the same as the local one
 	rule2_1 := certificateBroadcastMessage.Addr == n.conf.Socket.GetAddress()
 	rule2_2 := bytes.Equal(certificateBroadcastMessage.PEM, n.certificateStore.GetPublicKeyPEM())
 	rule2 := (rule2_1 && rule2_2) || !rule2_1
-
-	if !rule1 {
-		log.Warn().Msg("detected probable certificate forgery attempt for " + certificateBroadcastMessage.Addr)
-		return nil
-	}
 
 	if !rule2 {
 		log.Warn().Msg("node detected certificate forgery, will fight for " + certificateBroadcastMessage.Addr)
@@ -322,6 +293,34 @@ func (n *node) AddOnionNode(name string) error {
 // GetRandomOnionNode: Returns a random node from the Onion registry
 func (n *node) GetRandomOnionNode() (string, *rsa.PublicKey, error) {
 	nc := n.nodeCatalog
+
+	all, err := n.GetAllOnionNodes()
+	if err != nil {
+		return "", nil, err
+	}
+
+	// Get keys
+	var keys []string
+	for k := range all {
+		keys = append(keys, k)
+	}
+
+	// use crypto/rand to generate a random index into the keys slice
+	randIndex, err := rand.Int(rand.Reader, big.NewInt(int64(len(keys))))
+	if err != nil {
+		return "", nil, err
+	}
+
+	// Get the node
+	name := keys[randIndex.Int64()]
+	pk := nc.values[name]
+
+	return name, pk, nil
+}
+
+// GetAllOnionNodes: Returns all nodes from the Onion registry
+func (n *node) GetAllOnionNodes() (map[string](*rsa.PublicKey), error) {
+	nc := n.nodeCatalog
 	nc.lock.Lock()
 	defer nc.lock.Unlock()
 
@@ -339,52 +338,17 @@ func (n *node) GetRandomOnionNode() (string, *rsa.PublicKey, error) {
 		}
 	}
 	if len(keys) == 0 {
-		return "", nil, errors.New("no onion nodes available")
+		return nil, errors.New("no onion nodes available")
 	}
 
-	// use crypto/rand to generate a random index into the keys slice
-	randIndex, err := rand.Int(rand.Reader, big.NewInt(int64(len(keys))))
-	if err != nil {
-		return "", nil, err
+	// Get the nodes
+	nodes := make(map[string](*rsa.PublicKey))
+	for _, name := range keys {
+		pk := nc.values[name]
+		nodes[name] = pk
 	}
 
-	// Get the node
-	name := keys[randIndex.Int64()]
-	pk := nc.values[name]
-
-	return name, pk, nil
-}
-
-// OnionNodeRegistrationMessage: Node declares that it is willing to be a Onion transmission node.
-// Proof is a signature of the node's address.
-// The proof makes it harder to forge a registration message.
-// - implements types.Message
-type OnionNodeRegistrationMessage struct {
-	Addr  string
-	Proof []byte
-}
-
-// -----------------------------------------------------------------------------
-// OnionNodeRegistrationMessage
-
-// NewEmpty implements types.Message.
-func (o OnionNodeRegistrationMessage) NewEmpty() types.Message {
-	return &OnionNodeRegistrationMessage{}
-}
-
-// Name implements types.Message.
-func (o OnionNodeRegistrationMessage) Name() string {
-	return "onion_node_registration"
-}
-
-// String implements types.Message.
-func (o OnionNodeRegistrationMessage) String() string {
-	return fmt.Sprintf("onion_node_registration{name:%s, proof:%s}", o.Addr, string(o.Proof))
-}
-
-// HTML implements types.Message.
-func (o OnionNodeRegistrationMessage) HTML() string {
-	return o.String()
+	return nodes, nil
 }
 
 // -----------------------------------------------------------------------------
@@ -401,13 +365,14 @@ func (n *node) RegisterAsOnionNode() error {
 
 	// Sign the address
 	self := n.conf.Socket.GetAddress()
-	proof, err := rsa.SignPKCS1v15(rand.Reader, &prk, crypto.SHA256, []byte(self))
+	hashed := sha256.Sum256([]byte(self))
+	proof, err := rsa.SignPKCS1v15(rand.Reader, &prk, crypto.SHA256, hashed[:])
 	if err != nil {
 		return err
 	}
 
 	// Create the message
-	msg := &OnionNodeRegistrationMessage{
+	msg := &types.OnionNodeRegistrationMessage{
 		Addr:  self,
 		Proof: proof,
 	}
@@ -432,14 +397,9 @@ func (n *node) RegisterAsOnionNode() error {
 func (n *node) HandleOnionNodeRegistrationMessage(msg types.Message, pkt transport.Packet) error {
 
 	// Convert the message
-	onionNodeRegistrationMessage, ok := msg.(*OnionNodeRegistrationMessage)
+	onionNodeRegistrationMessage, ok := msg.(*types.OnionNodeRegistrationMessage)
 	if !ok {
 		return errors.New("could not convert message to onion node registration message")
-	}
-
-	// Check the address
-	if pkt.Header.Source != onionNodeRegistrationMessage.Addr {
-		return errors.New("message address does not match packet address")
 	}
 
 	// Verify the proof
@@ -448,7 +408,8 @@ func (n *node) HandleOnionNodeRegistrationMessage(msg types.Message, pkt transpo
 		return err
 	}
 
-	err = rsa.VerifyPKCS1v15(&pk, crypto.SHA256, []byte(onionNodeRegistrationMessage.Addr), onionNodeRegistrationMessage.Proof)
+	hashed := sha256.Sum256([]byte(onionNodeRegistrationMessage.Addr))
+	err = rsa.VerifyPKCS1v15(&pk, crypto.SHA256, hashed[:], onionNodeRegistrationMessage.Proof)
 	if err != nil {
 		return err
 	}
@@ -461,4 +422,21 @@ func (n *node) HandleOnionNodeRegistrationMessage(msg types.Message, pkt transpo
 
 	return nil
 
+}
+
+//=============================================================================
+// Util
+
+// GetSentMessagesByType: Returns a slice of all sent messages of a given type.
+func (n *node) GetSentMessagesByType(class types.Message) []*transport.Message {
+	messages := make([]*transport.Message, 0)
+
+	all := n.conf.Socket.GetOuts()
+	for _, br := range all {
+		if br.Msg.Type != class.Name() {
+			continue
+		}
+		messages = append(messages, br.Msg)
+	}
+	return messages
 }

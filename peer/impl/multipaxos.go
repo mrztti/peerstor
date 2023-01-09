@@ -28,14 +28,15 @@ type MultiPaxos struct {
 	skipNextResendTick   CBool
 }
 
-func CreateMultiPaxos(myAddr string, conf peer.Configuration, node *node) *MultiPaxos {
+func CreateMultiPaxos(conf peer.Configuration, node *node) *MultiPaxos {
+	addr := node.conf.Socket.GetAddress()
 	return &MultiPaxos{
-		addr:                 myAddr,
+		addr:                 addr,
 		myPaxosID:            conf.PaxosID,
 		conf:                 conf,
 		currentStep:          AtomicCounter{count: 0},
-		currentPaxosInstance: CreatePaxosInstance(myAddr, conf),
-		node:                 nil,
+		currentPaxosInstance: CreatePaxosInstance(addr, conf),
+		node:                 node,
 		blockchainStore:      conf.Storage.GetBlockchainStore(),
 		TLCCounts:            peer.CreateConcurrentMap[*AtomicCounter](),
 		TLCSentByMe:          peer.CreateConcurrentSet[uint](),
