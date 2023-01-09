@@ -3,7 +3,6 @@ package impl
 import (
 	"fmt"
 
-	"github.com/rs/zerolog/log"
 	"go.dedis.ch/cs438/logr"
 	"go.dedis.ch/cs438/types"
 )
@@ -28,12 +27,19 @@ func (n *node) handleBanPrepareMessage(prepareMessage *types.BanPaxosPrepareMess
 		return
 	}
 
+	// SPECIAL TO BAN PAXOS: Ignore messages who try to ban a node that we trust
+	if n.Trusts(prepareMessage.Target) {
+		logr.Logger.Trace().Msgf("[%s]: IGNORING PROPOSE message (Value is trusted) : %s",
+			n.banPaxos.addr, prepareMessage.Target)
+		return
+	}
+
 	// *PART 2:* Update MaxID
 	currentPaxosInstance.maxID.SetToMax(prepareMessage.ID)
 
 	// *PART 3:* Send promise message
 	promiseMessage := n.banPaxos.prepareBanPromiseMessage(prepareMessage, currentPaxosInstance)
-	logr.Logger.Info().
+	logr.Logger.Trace().
 		Msgf("[%s]: Sending promise %#v to %s, current step is: %d",
 			n.addr, promiseMessage, prepareMessage.Source, currentStep)
 
@@ -60,13 +66,6 @@ func (n *node) handleBanProposeMessage(proposeMessage *types.BanPaxosProposeMess
 		return
 	}
 
-	// SPECIAL TO BAN PAXOS: Ignore messages who try to ban a node that we trust
-	if n.trustCatalog.IsTrusted(proposeMessage.Value.Filename) {
-		log.Info().Msgf("[%s]: IGNORING PROPOSE message (Value is trusted). proposeMessage.Value: %s",
-			n.banPaxos.addr, proposeMessage.Value)
-		return
-	}
-
 	// *PART 2:* Update Accepted Values
 	currentPaxosInstance.acceptedID.Set(proposeMessage.ID)
 	currentPaxosInstance.acceptedValue = &proposeMessage.Value
@@ -77,7 +76,7 @@ func (n *node) handleBanProposeMessage(proposeMessage *types.BanPaxosProposeMess
 		ID:    proposeMessage.ID,
 		Value: proposeMessage.Value,
 	}
-	logr.Logger.Info().Msgf("[%s]: Broadcasting accept %#v", n.addr, acceptMessage)
+	logr.Logger.Trace().Msgf("[%s]: Broadcasting accept %#v", n.addr, acceptMessage)
 	// Broadcast concurrently else we will deadlock
 	go n.BroadcastTypesInParallel(acceptMessage)
 }
@@ -91,13 +90,14 @@ func (n *node) handleBanProposePhase1Message(phase1Message *BanProposePhase1Mess
 		Step:   currentStep,
 		ID:     proposedID,
 		Source: n.banPaxos.addr,
+		Target: paxosValue.Filename,
 	}
 	logr.Logger.Trace().
 		Msgf(`[%s] Handling PROPOSER_PHASE_1_REQUEST message. Current step: %d, current paxos ID: %d.
-	Current proposingPhase %s, phase1responsecount: %d. Proposing name %s for hash %s`,
+	Current proposingPhase %s, phase1responsecount: %d. Proposing name %s`,
 			n.addr, currentStep, prepareMessage.ID, currentPaxosInstance.proposingPhase,
 			len(currentPaxosInstance.phase1Responses),
-			paxosValue.Filename, paxosValue.Metahash)
+			paxosValue.Filename)
 	currentPaxosInstance.proposingPhase = phase1Const
 	currentPaxosInstance.phase1Responses = make([]types.Message, 0)
 	currentPaxosInstance.proposedValue = paxosValue
@@ -109,7 +109,7 @@ func (n *node) handleBanPromiseMessage(promiseMessage *types.BanPaxosPromiseMess
 	currentPaxosInstance := n.banPaxos.currentPaxosInstance
 	currentStep := uint(n.banPaxos.currentStep.Get())
 	myProposedID := currentPaxosInstance.lastUsedPaxosID
-	logr.Logger.Info().
+	logr.Logger.Trace().
 		Msgf(`[%s]: Starting to handle promise message. Current step is: %d, our proposed id is %d
 	we so far have %d reponses. Received message: %#v`,
 			n.addr, currentStep, myProposedID, len(currentPaxosInstance.phase1Responses), promiseMessage)
@@ -201,7 +201,7 @@ func (n *node) handleBanAcceptMessage(acceptMessage *types.BanPaxosAcceptMessage
 		acceptMessage.Value.UniqID,
 		&AtomicCounter{count: 0},
 	)
-	logr.Logger.Info().Msgf(`[%s]: Starting to handle accept message. Current step is: %d,
+	logr.Logger.Trace().Msgf(`[%s]: Starting to handle accept message. Current step is: %d,
 	we are in phase %s.
 	Proposed value ID is %s, filename %s, so far we have %d messages for this value.
 	Proposed id of this acceptMessage is %d.
@@ -218,18 +218,18 @@ func (n *node) handleBanAcceptMessage(acceptMessage *types.BanPaxosAcceptMessage
 		return
 	}
 
-	// if currentPaxosInstance.proposingPhase == "phase1" {
-	// 	logr.Logger.Trace().
-	// 		Msgf("[%s]: Ignoring ACCEPT message (in phase 1). Current phase: %s",
-	// 			n.addr, currentPaxosInstance.proposingPhase)
-	// 	return
-	// }
+	/* if currentPaxosInstance.proposingPhase == "phase1" {
+		logr.Logger.Trace().
+			Msgf("[%s]: Ignoring ACCEPT message (in phase 1). Current phase: %s",
+				n.addr, currentPaxosInstance.proposingPhase)
+		return
+	} */
 	// ! Here they say to ignore messages if we are not in phase 2 of proposing
 	// but let's see what happens if we ignore this
 
 	currentAcceptCount := currentAcceptCounter.IncrementAndGet()
 	if int(currentAcceptCount) >= n.banPaxos.conf.PaxosThreshold(n.banPaxos.conf.TotalPeers) {
-		logr.Logger.Info().
+		logr.Logger.Trace().
 			Msgf("[%s] We have reached consensus on %s. Accepted id is %d, accepted value is %#v",
 				n.addr, acceptMessage.Value.UniqID, acceptMessage.ID, acceptMessage.Value)
 		// currentPaxosInstance.acceptedID.Set(acceptMessage.ID)
@@ -264,7 +264,7 @@ func (n *node) handleBanTLCMessage(TLC *types.BanTLCMessage) {
 	n.banPaxos.TLCBlocks.Set(fmt.Sprint(tlcStep), &TLC.Block)
 	tlcsReceived := stepCounter.IncrementAndGet()
 	threshold := n.banPaxos.conf.PaxosThreshold(n.banPaxos.conf.TotalPeers)
-	logr.Logger.Info().
+	logr.Logger.Trace().
 		Msgf("[%s]: Increased TLC step (%d) counter to %d due to message received. Threshold is %d, currentStep is %d",
 			n.addr, tlcStep, tlcsReceived, threshold, currentStep)
 	if int(tlcsReceived) >= threshold && currentStep == tlcStep {
@@ -282,7 +282,7 @@ func (n *node) tryAdvanceBanTLC(catchup bool, tlcStep uint) error {
 		&AtomicCounter{count: 0},
 	)
 	messagesReceivedForTlcStep := stepCounter.Get()
-	logr.Logger.Info().
+	logr.Logger.Trace().
 		Msgf("[%s]: Trying to advance TLC from step %d. Current step is %d. Received %d TLC messages for this tlc step.",
 			n.addr, tlcStep, currentStep, messagesReceivedForTlcStep)
 	threshold := n.banPaxos.conf.PaxosThreshold(n.banPaxos.conf.TotalPeers)

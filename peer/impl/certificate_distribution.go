@@ -12,6 +12,7 @@ import (
 	"crypto"
 	"crypto/rand"
 	"crypto/rsa"
+	"crypto/sha256"
 	"crypto/x509"
 	"encoding/pem"
 	"errors"
@@ -156,9 +157,12 @@ func (c *CertificateCatalog) AddCertificate(name string, pemBytes []byte) error 
 	// Check if the name is already in use
 	val, ok := c.catalog[name]
 	// Check if the keys match
-	match := bytes.Equal(publicKey.N.Bytes(), val.N.Bytes()) && publicKey.E == val.E
-	if ok && !match {
-		log.Warn().Msg("detected probable certificate forgery attempt for " + name)
+
+	if ok {
+		match := bytes.Equal(publicKey.N.Bytes(), val.N.Bytes()) && publicKey.E == val.E
+		if !match {
+			log.Warn().Msg("detected probable certificate forgery attempt for " + name)
+		}
 	}
 
 	// Add the new certificate
@@ -168,7 +172,7 @@ func (c *CertificateCatalog) AddCertificate(name string, pemBytes []byte) error 
 }
 
 // TotalKnownNodes: Returns the total number of known nodes by the peer
-func (n *node) TotalKnownNodes() uint32 {
+func (n *node) TotalCertifiedPeers() uint32 {
 	// Count the number of nodes in the catalog
 	n.certificateCatalog.lock.Lock()
 	defer n.certificateCatalog.lock.Unlock()
@@ -209,17 +213,10 @@ func (n *node) HandleCertificateBroadcastMessage(msg types.Message, pkt transpor
 	}
 
 	// SECURITY MECHANISM: Check if this is a certificate forgery attempt
-	// Message and packet address must match
-	rule1 := certificateBroadcastMessage.Addr == pkt.Header.Source
 	// If the message address is this nodes address, then the certificate must be the same as the local one
 	rule2_1 := certificateBroadcastMessage.Addr == n.conf.Socket.GetAddress()
 	rule2_2 := bytes.Equal(certificateBroadcastMessage.PEM, n.certificateStore.GetPublicKeyPEM())
 	rule2 := (rule2_1 && rule2_2) || !rule2_1
-
-	if !rule1 {
-		log.Warn().Msg("detected probable certificate forgery attempt for " + certificateBroadcastMessage.Addr)
-		return nil
-	}
 
 	if !rule2 {
 		log.Warn().Msg("node detected certificate forgery, will fight for " + certificateBroadcastMessage.Addr)
@@ -296,8 +293,6 @@ func (n *node) AddOnionNode(name string) error {
 // GetRandomOnionNode: Returns a random node from the Onion registry
 func (n *node) GetRandomOnionNode() (string, *rsa.PublicKey, error) {
 	nc := n.nodeCatalog
-	nc.lock.Lock()
-	defer nc.lock.Unlock()
 
 	all, err := n.GetAllOnionNodes()
 	if err != nil {
@@ -370,7 +365,8 @@ func (n *node) RegisterAsOnionNode() error {
 
 	// Sign the address
 	self := n.conf.Socket.GetAddress()
-	proof, err := rsa.SignPKCS1v15(rand.Reader, &prk, crypto.SHA256, []byte(self))
+	hashed := sha256.Sum256([]byte(self))
+	proof, err := rsa.SignPKCS1v15(rand.Reader, &prk, crypto.SHA256, hashed[:])
 	if err != nil {
 		return err
 	}
@@ -406,18 +402,14 @@ func (n *node) HandleOnionNodeRegistrationMessage(msg types.Message, pkt transpo
 		return errors.New("could not convert message to onion node registration message")
 	}
 
-	// Check the address
-	if pkt.Header.Source != onionNodeRegistrationMessage.Addr {
-		return errors.New("message address does not match packet address")
-	}
-
 	// Verify the proof
 	pk, err := n.certificateCatalog.Get(onionNodeRegistrationMessage.Addr)
 	if err != nil {
 		return err
 	}
 
-	err = rsa.VerifyPKCS1v15(&pk, crypto.SHA256, []byte(onionNodeRegistrationMessage.Addr), onionNodeRegistrationMessage.Proof)
+	hashed := sha256.Sum256([]byte(onionNodeRegistrationMessage.Addr))
+	err = rsa.VerifyPKCS1v15(&pk, crypto.SHA256, hashed[:], onionNodeRegistrationMessage.Proof)
 	if err != nil {
 		return err
 	}

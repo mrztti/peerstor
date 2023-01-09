@@ -9,6 +9,7 @@ type BanPaxosPrepareMessage struct {
 	ID   uint
 	// Source is the address of the peer that sends the prepare
 	Source string
+	Target string
 }
 
 // PaxosPromiseMessage defines a promise message in Paxos
@@ -40,9 +41,11 @@ type BanPaxosProposeMessage struct {
 // - implements types.Message
 // - implemented in HW3
 type BanPaxosAcceptMessage struct {
-	Step  uint
-	ID    uint
-	Value PaxosValue
+	Step   uint
+	ID     uint
+	Value  PaxosValue
+	Source string
+	Proof  []byte
 }
 
 // TLCMessage defines a TLC message

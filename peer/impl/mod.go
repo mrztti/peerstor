@@ -46,7 +46,11 @@ func NewPeer(conf peer.Configuration) peer.Peer {
 		isOnionNode:                 false,
 		tlsManager:                  CreateTLSManager(myAddr),
 	}
-	newPeer.paxos.node = newPeer
+	// Init blockchains
+	newPeer.paxos = CreateMultiPaxos(conf, newPeer)
+	newPeer.banPaxos = CreateMultiPaxos(conf, newPeer)
+	newPeer.banList = CreateBanList(conf.Storage.GetBanBlockchainStore())
+
 	newPeer.routingTable.Set(myAddr, myAddr)
 	newPeer.registerRegistryCallbacks()
 	err = newPeer.NewTrustCatalog(0.5)
@@ -59,10 +63,7 @@ func NewPeer(conf peer.Configuration) peer.Peer {
 		logr.Logger.Error().Msgf("[%s]: Failed to create node catalog", myAddr)
 		return nil
 	}
-	// Init blockchains
-	newPeer.paxos = CreateMultiPaxos(conf, newPeer)
-	newPeer.banPaxos = CreateMultiPaxos(conf, newPeer)
-	newPeer.banList = CreateBanList(conf.Storage.GetBanBlockchainStore())
+
 	return newPeer
 }
 
@@ -103,6 +104,7 @@ func (n *node) Start() error {
 	logr.Logger.Info().Msgf("[%s]: Starting peer", n.addr)
 	myAddr := n.conf.Socket.GetAddress()
 	n.routingTable.Set(myAddr, myAddr)
+	n.certificateCatalog.AddCertificate(myAddr, n.certificateStore.GetPublicKeyPEM())
 
 	if n.conf.PrivateKey != nil && n.conf.PublicKey != nil {
 		n.tlsManager.SetOwnKeys(n.conf.PublicKey, n.conf.PrivateKey)
@@ -130,6 +132,7 @@ func (n *node) Start() error {
 
 // Stop implements peer.Service
 func (n *node) Stop() error {
+	// Check if already closed
 	close(n.quitChannel)
 	return nil
 }

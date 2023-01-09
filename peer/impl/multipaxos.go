@@ -36,7 +36,7 @@ func CreateMultiPaxos(conf peer.Configuration, node *node) *MultiPaxos {
 		conf:                 conf,
 		currentStep:          AtomicCounter{count: 0},
 		currentPaxosInstance: CreatePaxosInstance(addr, conf),
-		node:                 nil,
+		node:                 node,
 		blockchainStore:      conf.Storage.GetBlockchainStore(),
 		TLCCounts:            peer.CreateConcurrentMap[*AtomicCounter](),
 		TLCSentByMe:          peer.CreateConcurrentSet[uint](),

@@ -7,7 +7,12 @@
 
 package peer
 
-import "crypto/rsa"
+import (
+	"crypto/rsa"
+
+	"go.dedis.ch/cs438/transport"
+	"go.dedis.ch/cs438/types"
+)
 
 type TrustServices interface {
 	Trusts(name string) bool
@@ -15,8 +20,11 @@ type TrustServices interface {
 	Ban(name string)
 
 	GetPeerPublicKey(name string) (rsa.PublicKey, error)
-	TotalKnownNodes() uint32
+	TotalCertifiedPeers() uint32
 	RegisterAsOnionNode() error
 	GetRandomOnionNode() (string, *rsa.PublicKey, error)
 	GetAllOnionNodes() (map[string](*rsa.PublicKey), error)
+
+	//Utils
+	GetSentMessagesByType(class types.Message) []*transport.Message
 }

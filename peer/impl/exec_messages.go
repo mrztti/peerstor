@@ -75,11 +75,11 @@ func (n *node) registerRegistryCallbacks() {
 
 	// Certificate Messages
 	n.conf.MessageRegistry.RegisterMessageCallback(
-		CertificateBroadcastMessage{},
+		types.CertificateBroadcastMessage{},
 		n.HandleCertificateBroadcastMessage,
 	)
 	n.conf.MessageRegistry.RegisterMessageCallback(
-		OnionNodeRegistrationMessage{},
+		types.OnionNodeRegistrationMessage{},
 		n.HandleOnionNodeRegistrationMessage,
 	)
 	n.conf.MessageRegistry.RegisterMessageCallback(types.TLCMessage{}, n.execTLCMessage)
@@ -166,7 +166,7 @@ func (n *node) execPrivateMessage(msg types.Message, pkt transport.Packet) error
 	}
 	_, ok = privateMessage.Recipients[n.addr]
 	if ok {
-		logr.Logger.Info().
+		logr.Logger.Trace().
 			Msgf("[%s]: Processing private message from %s. Recipients were %#v",
 				n.addr, pkt.Header.Source, privateMessage.Recipients)
 		err = n.conf.MessageRegistry.ProcessPacket(transport.Packet{
@@ -174,7 +174,7 @@ func (n *node) execPrivateMessage(msg types.Message, pkt transport.Packet) error
 			Msg:    privateMessage.Msg,
 		})
 	} else {
-		logr.Logger.Info().Msgf("[%s]: Ignoring private message from %s. Recipients were %#v",
+		logr.Logger.Trace().Msgf("[%s]: Ignoring private message from %s. Recipients were %#v",
 			n.addr, pkt.Header.Source, privateMessage.Recipients)
 	}
 	return err

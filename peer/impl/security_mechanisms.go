@@ -161,8 +161,12 @@ func (t *TrustCatalog) Trusts() TrustMapping {
 	return trusts
 }
 
+// Trusts: Defines if a name is trusted
 func (n *node) Trusts(name string) bool {
-	return n.trustCatalog.IsTrusted(name)
+	localTrust := n.trustCatalog.IsTrusted(name)
+	isBanned := n.banList.IsBanned(name)
+	isSelf := n.conf.Socket.GetAddress() == name
+	return isSelf || (localTrust && !isBanned)
 }
 
 /* // GetProof: Sign the trust catalog and return the signature

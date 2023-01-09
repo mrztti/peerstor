@@ -11,10 +11,10 @@ package impl
 
 import (
 	"crypto/sha256"
+	"encoding/hex"
 	"time"
 
 	"github.com/rs/xid"
-	"github.com/rs/zerolog/log"
 	"go.dedis.ch/cs438/logr"
 	"go.dedis.ch/cs438/storage"
 	"go.dedis.ch/cs438/types"
@@ -103,9 +103,9 @@ func (m *MultiPaxos) prepareBanPromiseMessage(
 
 // ProposeBan: Propose a ban to the network
 func (n *node) ProposeBan(address string) error {
-	logr.Logger.Trace().Msgf("[%s]: Initiate ban: name: %s. Step is: %d",
+	logr.Logger.Info().Msgf("[%s]: Initiate ban: name: %s. Step is: %d",
 		n.addr, address, n.banPaxos.currentStep.Get())
-	defer logr.Logger.Trace().
+	defer logr.Logger.Info().
 		Msgf("[%s]: Banning proposal finished for: name: %s. Step is: %d",
 			n.addr, address, n.banPaxos.currentStep.Get())
 
@@ -113,36 +113,35 @@ func (n *node) ProposeBan(address string) error {
 	defer n.banPaxos.taggingLock.Unlock()
 	// Might need to add direct ban if no peers
 	hash := sha256.Sum256([]byte(address))
-	mh := string(hash[:])
+	// Hex encode
+	mh := hex.EncodeToString(hash[:])
 	for {
 		if n.banList.IsBanned(address) {
-			log.Warn().Msgf("[%s]: Address %s is already banned", n.addr, address)
+			logr.Logger.Info().Msgf("[%s]: Address %s is already banned", n.addr, address)
 			return nil
 		}
 		if !n.banPaxos.skipNextResendTick.Get() {
 			// time.Sleep(time.Duration((rand.Intn(9))+1) * 100 * time.Millisecond)
-			phase1Propose := ProposePhase1Message{
+			phase1Propose := BanProposePhase1Message{
 				value: &types.PaxosValue{
 					UniqID:   xid.New().String(),
 					Filename: address,
 					Metahash: mh,
 				},
 			}
-			logr.Logger.Trace().
-				Msgf("[%s]: Sending to inner channel: PROPOSER_PHASE_1_REQUEST with contents %#v", n.addr, phase1Propose)
+			logr.Logger.Info().
+				Msgf("[%s]: Sending to inner channel: BAN_PROPOSER_PHASE_1_REQUEST with contents %#v", n.addr, phase1Propose)
 			n.banPaxosInnerMessageChannel <- &phase1Propose
-			logr.Logger.Trace().
-				Msgf("[%s]: PROPOSER_PHASE_1_REQUEST has been read from the channel.", n.addr)
 		}
 		n.banPaxos.skipNextResendTick.Set(false)
 		select {
 		case consensusValue := <-n.banPaxos.consensusChannel:
 			logr.Logger.Trace().
-				Msgf("[%s]: Consensus reached for filename %s, mh %s. We proposed name %s, mh %s",
-					n.addr, consensusValue.Filename, consensusValue.Metahash, address, mh)
+				Msgf("[%s]: Consensus reached for ban of %s. We proposed name %s",
+					n.addr, consensusValue.Filename, address)
 			n.banPaxos.skipNextResendTick.Set(false)
-			if consensusValue.Filename != address || consensusValue.Metahash != mh {
-				logr.Logger.Trace().
+			if consensusValue.Filename != address {
+				logr.Logger.Info().
 					Msgf("[%s]: Consensus value is not our value, restarting. Current step is %d",
 						n.addr, n.banPaxos.currentStep.Get())
 				logr.Logger.Trace().Msgf("[%s]: Off to bed", n.addr)
@@ -150,12 +149,12 @@ func (n *node) ProposeBan(address string) error {
 				logr.Logger.Trace().Msgf("[%s]: Awake", n.addr)
 				continue
 			}
-			logr.Logger.Trace().
+			logr.Logger.Info().
 				Msgf("[%s]: Ban has been accepted, returning. Current step is %d",
 					n.addr, n.banPaxos.currentStep.Get())
 			return nil
 		case <-time.After(n.conf.PaxosProposerRetry):
-			logr.Logger.Trace().Msgf("[%s]: Timeout reached, ban not accepted. Current step is %d",
+			logr.Logger.Info().Msgf("[%s]: Timeout reached, ban not accepted. Current step is %d",
 				n.addr, n.banPaxos.currentStep.Get())
 			return nil
 		}
