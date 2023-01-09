@@ -16,6 +16,7 @@ type Peer interface {
 	Messaging
 	DataSharing
 	TLSServices
+	TorServices
 	TrustServices
 }
 

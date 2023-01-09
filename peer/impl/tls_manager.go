@@ -9,7 +9,6 @@ import (
 	"crypto/sha256"
 	"fmt"
 	"io"
-	"log"
 
 	"github.com/monnand/dhkx"
 	"go.dedis.ch/cs438/logr"
@@ -61,6 +60,15 @@ func (t *TLSManager) SetSymmKey(peerIP string, key []byte) {
 	t.symmKeyStore.Set(peerIP, key[:32])
 }
 
+func (t *TLSManager) SetSymmKeyTor(peerIP string, circuitID string, key []byte) {
+	t.symmKeyStore.Set("tor#"+circuitID+"#"+peerIP, key[:32])
+}
+
+func (t *TLSManager) GetSymmKeyTor(peerIP string, circuitID string) []byte {
+	val, _ := t.symmKeyStore.Get("tor#" + circuitID + "#" + peerIP)
+	return val
+}
+
 func (t *TLSManager) GetAsymmetricKey(peerIP string) crypto.PublicKey {
 	val, _ := t.asymmetricKeyStore.Get(peerIP)
 	return val
@@ -80,7 +88,7 @@ func (n *node) DecryptSymmetric(message *types.TLSMessage) (transport.Message, e
 
 func (t *TLSManager) EncryptSymmetric(peerIP string, message transport.Message) (types.TLSMessage, error) {
 	symmetricKey := t.GetSymmKey(peerIP)
-	log.Default().Printf("[%s]: Encrypting message for %s with key %v", t.addr, peerIP, symmetricKey)
+	// log.Default().Printf("[%s]: Encrypting message for %s with key %v", t.addr, peerIP, symmetricKey)
 	if symmetricKey == nil {
 		return types.TLSMessage{}, fmt.Errorf("no symmetric key found for peer %s", peerIP)
 	}
@@ -101,8 +109,8 @@ func (t *TLSManager) EncryptSymmetric(peerIP string, message transport.Message) 
 	// Sign then encrypt
 	signedBytes := concatenateArrays([]byte(t.addr), []byte(message.Type), initial_vect, plaintext)
 	signature, err := t.SignMessage(signedBytes)
-	log.Default().Printf("Signed bytes: %v", signedBytes)
-	log.Default().Printf("Signature: %v", signature)
+	// log.Default().Printf("Signed bytes: %v", signedBytes)
+	// log.Default().Printf("Signature: %v", signature)
 
 	plaintextWithSignature := concatenateArrays(plaintext, signature)
 	stream := cipher.NewCFBEncrypter(block, initial_vect)
@@ -146,11 +154,11 @@ func (t *TLSManager) DecryptSymmetric(message *types.TLSMessage) (transport.Mess
 	plaintext := ciphertextWithSignature[:signatureStartIndex]
 
 	signedBytes := concatenateArrays([]byte(message.Source), []byte(message.ContentType), initial_vect, plaintext)
-	log.Default().Printf("Signed lenght bytes: %d", len(signedBytes))
-	log.Default().Printf("Signed lenght bytes expected: %d", len([]byte(message.Source))+len([]byte(message.ContentType))+len(initial_vect)+len(plaintext))
+	// log.Default().Printf("Signed lenght bytes: %d", len(signedBytes))
+	// log.Default().Printf("Signed lenght bytes expected: %d", len([]byte(message.Source))+len([]byte(message.ContentType))+len(initial_vect)+len(plaintext))
 
-	log.Default().Printf("Signed bytes: %v", signedBytes)
-	log.Default().Printf("Signature: %v", signature)
+	// log.Default().Printf("Signed bytes: %v", signedBytes)
+	// log.Default().Printf("Signature: %v", signature)
 
 	signatureOk := t.VerifySignature(signedBytes, signature, peerIP)
 	if !signatureOk {
@@ -167,8 +175,16 @@ func (t *TLSManager) GetDHManagerEntry(peerIP string) *DHManager {
 	return val
 }
 
+func (t *TLSManager) GetDHManagerEntryTor(peerIP, circuitID string) *DHManager {
+	return t.GetDHManagerEntry("tor#" + circuitID + "#" + peerIP)
+}
+
 func (t *TLSManager) SetDHManagerEntry(peerIP string, dhManager *DHManager) {
 	t.dhManager.Set(peerIP, dhManager)
+}
+
+func (t *TLSManager) SetDHManagerEntryTor(peerIP, circuitID string, dhManager *DHManager) {
+	t.dhManager.Set("tor#"+circuitID+"#"+peerIP, dhManager)
 }
 
 func (n *node) GetSymKey(addr string) []byte {
@@ -207,9 +223,6 @@ func (t *TLSManager) EncryptPublic(peerIP string, message transport.Message) (ty
 
 		encryptedBytes = append(encryptedBytes, encryptedBlockBytes...)
 	}
-	// encryption, err := rsa.EncryptOAEP(sha256.New(), rand.Reader, &publicKey, plaintext, nil)
-
-	// TODO(jl): Shouldn't we sign the encrypted message? Also I think we should sign the contenttype as well.
 
 	tlsMessage := types.TLSMessageHello{
 		Source:           t.addr,
@@ -249,13 +262,13 @@ func (t *TLSManager) DecryptPublic(message *types.TLSMessageHello) (transport.Me
 	// if err != nil {
 	// 	return transport.Message{}, fmt.Errorf("decryption failed %s", t.addr)
 	// }
-	log.Default().Println("decryptedBytes", len(decryptedBytes))
+	// log.Default().Println("decryptedBytes", len(decryptedBytes))
 	signatureStartIndex := len(decryptedBytes) - SIGNATURE_SIZE_BYTES
-	log.Default().Println("signatureStartIndex", signatureStartIndex)
+	// log.Default().Println("signatureStartIndex", signatureStartIndex)
 	signature := decryptedBytes[signatureStartIndex:]
-	log.Default().Printf("signature len %d, signature %s", len(signature), signature)
+	// log.Default().Printf("signature len %d, signature %s", len(signature), signature)
 	plaintext := decryptedBytes[:signatureStartIndex]
-	log.Default().Printf("plaintext len %d; plaintext %s", len(plaintext), plaintext)
+	// log.Default().Printf("plaintext len %d; plaintext %s", len(plaintext), plaintext)
 
 	signedBytes := concatenateArrays([]byte(message.Source), []byte(message.ContentType), plaintext)
 
@@ -272,7 +285,7 @@ func (t *TLSManager) DecryptPublic(message *types.TLSMessageHello) (transport.Me
 
 func (t *TLSManager) SignMessage(messageBytes []byte) ([]byte, error) {
 	hashed := sha256.Sum256(messageBytes)
-	log.Default().Printf("hashed encrypt %v", hashed)
+	// log.Default().Printf("hashed encrypt %v", hashed)
 	privateKey, ok := t.keyManager.privateKey.(rsa.PrivateKey)
 	if !ok || privateKey.Size() == 0 {
 		return nil, fmt.Errorf("no private key found for peer %s", t.addr)
@@ -287,13 +300,13 @@ func (t *TLSManager) SignMessage(messageBytes []byte) ([]byte, error) {
 
 func (t *TLSManager) VerifySignature(messageBytes, signature []byte, peerIP string) bool {
 	hashed := sha256.Sum256(messageBytes)
-	log.Default().Printf("hashed decrypt %v", hashed)
+	// log.Default().Printf("hashed decrypt %v", hashed)
 	publicKey, ok := t.GetAsymmetricKey(peerIP).(rsa.PublicKey)
 	if !ok || publicKey == (rsa.PublicKey{}) {
 		logr.Logger.Warn().Msgf("[%s]: No public key found for %s", t.addr, peerIP)
 		return false
 	}
-	log.Default().Printf("about to verify signature")
+	// log.Default().Printf("about to verify signature")
 	err := rsa.VerifyPKCS1v15(&publicKey, crypto.SHA256, hashed[:], signature)
 	return err == nil
 }

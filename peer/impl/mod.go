@@ -18,14 +18,12 @@ type PaxosMessage interface {
 func NewPeer(conf peer.Configuration) peer.Peer {
 	myAddr := conf.Socket.GetAddress()
 	logr.Logger.Info().Msgf("[%s]: New peer", myAddr)
-
 	// Generate certificate information
 	certificateStore, err := GenerateCertificateStore(2048)
 	if err != nil {
 		logr.Logger.Error().Msgf("[%s]: Failed to generate certificate store", myAddr)
 		return nil
 	}
-
 	newPeer := &node{
 		conf:                        conf,
 		quitChannel:                 make(chan bool),
@@ -45,6 +43,7 @@ func NewPeer(conf peer.Configuration) peer.Peer {
 		trustBanHook:                make(chan string),
 		isOnionNode:                 false,
 		tlsManager:                  CreateTLSManager(myAddr),
+		torManager:                  CreateTorManager(myAddr),
 	}
 	// Init blockchains
 	newPeer.paxos = CreateMultiPaxos(conf, newPeer)
@@ -97,6 +96,7 @@ type node struct {
 	nodeCatalog                 *NodeCatalog
 	isOnionNode                 bool
 	tlsManager                  *TLSManager
+	torManager                  *TorManager
 }
 
 // Start implements peer.Service

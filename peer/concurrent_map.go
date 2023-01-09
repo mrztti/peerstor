@@ -45,6 +45,18 @@ func (m *ConcurrentMap[V]) Get(key string) (V, bool) {
 	return val, ok
 }
 
+func (m *ConcurrentMap[V]) GetKeys() []string {
+	m.RLock()
+	defer m.RUnlock()
+	keys := make([]string, len(m.Items))
+	i := 0
+	for k := range m.Items {
+		keys[i] = k
+		i++
+	}
+	return keys
+}
+
 // Count returns the number of elements within the map.
 func (m *ConcurrentMap[V]) Count() int {
 	m.RLock()

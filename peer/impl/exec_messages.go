@@ -88,7 +88,8 @@ func (n *node) registerRegistryCallbacks() {
 	n.conf.MessageRegistry.RegisterMessageCallback(types.TLSMessageHello{}, n.execTLSMessageHello)
 	n.conf.MessageRegistry.RegisterMessageCallback(types.TLSClientHello{}, n.execTLSClientHello)
 	n.conf.MessageRegistry.RegisterMessageCallback(types.TLSServerHello{}, n.execTLSServerHello)
-
+	n.conf.MessageRegistry.RegisterMessageCallback(types.TorControlMessage{}, n.execTorControlMessage)
+	n.conf.MessageRegistry.RegisterMessageCallback(types.TorRelayMessage{}, n.execTorRelayMessage)
 }
 
 func (n *node) execChatMessage(msg types.Message, pkt transport.Packet) error {
@@ -166,16 +167,16 @@ func (n *node) execPrivateMessage(msg types.Message, pkt transport.Packet) error
 	}
 	_, ok = privateMessage.Recipients[n.addr]
 	if ok {
-		logr.Logger.Trace().
-			Msgf("[%s]: Processing private message from %s. Recipients were %#v",
-				n.addr, pkt.Header.Source, privateMessage.Recipients)
+		// logr.Logger.Info().
+		// 	Msgf("[%s]: Processing private message from %s. Recipients were %#v",
+		// 		n.addr, pkt.Header.Source, privateMessage.Recipients)
 		err = n.conf.MessageRegistry.ProcessPacket(transport.Packet{
 			Header: pkt.Header,
 			Msg:    privateMessage.Msg,
 		})
 	} else {
-		logr.Logger.Trace().Msgf("[%s]: Ignoring private message from %s. Recipients were %#v",
-			n.addr, pkt.Header.Source, privateMessage.Recipients)
+		// logr.Logger.Info().Msgf("[%s]: Ignoring private message from %s. Recipients were %#v",
+		// 	n.addr, pkt.Header.Source, privateMessage.Recipients)
 	}
 	return err
 }

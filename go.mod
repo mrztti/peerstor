@@ -12,6 +12,8 @@ require (
 	golang.org/x/xerrors v0.0.0-20200804184101-5ec99f83aff1
 )
 
+require github.com/google/uuid v1.3.0 // indirect
+
 require (
 	github.com/monnand/dhkx v0.0.0-20180522003156-9e5b033f1ac4
 	gopkg.in/check.v1 v1.0.0-20201130134442-10cb98267c6c // indirect

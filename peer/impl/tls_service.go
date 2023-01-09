@@ -3,10 +3,7 @@ package impl
 import (
 	"crypto"
 	"fmt"
-	"log"
-	"math/rand"
 
-	"github.com/monnand/dhkx"
 	"go.dedis.ch/cs438/logr"
 	"go.dedis.ch/cs438/transport"
 	"go.dedis.ch/cs438/types"
@@ -62,7 +59,7 @@ func (n *node) execTLSMessageHello(msg types.Message, pkt transport.Packet) erro
 		return err
 	}
 	decryptedMessage, err := n.tlsManager.DecryptPublic(TLSMessageHello)
-	log.Default().Println("decryptedMessage", decryptedMessage.Payload)
+	// log.Default().Println("decryptedMessage", decryptedMessage.Payload)
 	if err != nil {
 		return err
 	}
@@ -72,32 +69,18 @@ func (n *node) execTLSMessageHello(msg types.Message, pkt transport.Packet) erro
 func (n *node) CreateDHSymmetricKey(addr string) error {
 	logr.Logger.Info().Msgf("[%s]: Sending TLSClientHello to %s", n.addr, addr)
 
-	// Random Group selection
-	in := []int{0, 1, 2}
-	randomIndex := rand.Intn(len(in))
-	pick := in[randomIndex]
-
-	dh, err := dhkx.GetGroup(pick)
-	if err != nil {
-		return err
-	}
-
-	priv, err := dh.GeneratePrivateKey(nil)
+	dhManager, err := n.DHfirstStep()
 
 	if err != nil {
 		return err
-	}
-	dhManager := DHManager{
-		dhGroup: dh,
-		dhKey:   priv,
 	}
 	n.tlsManager.SetDHManagerEntry(addr, &dhManager)
 
-	pub := priv.Bytes()
+	pub := dhManager.dhKey.Bytes()
 
 	msg := types.TLSClientHello{
-		GroupDH:           dh.G(),
-		PrimeDH:           dh.P(),
+		GroupDH:           dhManager.dhGroup.G(),
+		PrimeDH:           dhManager.dhGroup.P(),
 		ClientPresecretDH: pub,
 		Source:            n.addr,
 	}
@@ -131,20 +114,20 @@ func (n *node) execTLSClientHello(msg types.Message, pkt transport.Packet) error
 		logr.Logger.Err(err).Msgf("[%s]: execTLSClientHello failed", n.addr)
 		return err
 	}
-	dh := dhkx.CreateGroup(TLSClientHello.PrimeDH, TLSClientHello.GroupDH)
-	priv, _ := dh.GeneratePrivateKey(nil)
-	dhManager := DHManager{
-		dhGroup: dh,
-		dhKey:   priv,
-	}
 
-	n.tlsManager.dhManager.Set(TLSClientHello.Source, &dhManager)
-	pub := priv.Bytes()
+	dhManager, err := n.DHfirstStepWithParams(TLSClientHello.PrimeDH, TLSClientHello.GroupDH)
+	if err != nil {
+		return err
+	}
+	n.tlsManager.SetDHManagerEntry(TLSClientHello.Source, &dhManager)
+
+	pub := dhManager.dhKey.Bytes()
 
 	sm := types.TLSServerHello{
 		ServerPresecretDH: pub,
 		Source:            n.addr,
 	}
+
 	transportMessage, err := n.conf.MessageRegistry.MarshalMessage(&sm)
 	if err != nil {
 		logr.Logger.Err(err).Msgf("[%s]: Error marshaling TLSServerHello to %s", n.addr, pkt.Header.Source)
@@ -170,13 +153,12 @@ func (n *node) execTLSClientHello(msg types.Message, pkt transport.Packet) error
 
 	a := TLSClientHello.ClientPresecretDH
 
-	aPubKey := dhkx.NewPublicKey(a)
-	ck, err := dh.ComputeKey(aPubKey, priv)
+	ck, err := n.DHsecondStep(dhManager, a)
 
 	if err != nil {
 		return err
 	}
-	n.tlsManager.SetSymmKey(pkt.Header.Source, ck.Bytes())
+	n.tlsManager.SetSymmKey(pkt.Header.Source, ck)
 	return nil
 }
 
@@ -187,37 +169,21 @@ func (n *node) execTLSServerHello(msg types.Message, pkt transport.Packet) error
 		logr.Logger.Err(err).Msgf("[%s]: execTLSServerHello failed", n.addr)
 		return err
 	}
-	dhManager, ok := n.tlsManager.dhManager.Get(TLSServerHello.Source)
-	if !ok {
+	dhManager := n.tlsManager.GetDHManagerEntry(TLSServerHello.Source)
+	if dhManager == nil {
 		logr.Logger.Err(err).Msgf("[%s]: execTLSServerHello dhManager.Get failed!", n.addr)
 		return err
 	}
 	a := TLSServerHello.ServerPresecretDH
-	aPubKey := dhkx.NewPublicKey(a)
-	ck, err := dhManager.dhGroup.ComputeKey(aPubKey, dhManager.dhKey)
+	ck, err := n.DHsecondStep(*dhManager, a)
 	if err != nil {
 		logr.Logger.Err(err).Msgf("[%s]: execTLSServerHello ComputeKey failed!", n.addr)
 		return err
 	}
-	n.tlsManager.SetSymmKey(TLSServerHello.Source, ck.Bytes())
+	n.tlsManager.SetSymmKey(TLSServerHello.Source, ck)
 	return nil
 }
 
-//	func (n *node) CreateTLSHelloMessage(addr string, msg transport.Message, ct string) types.TLSMessageHello {
-//		// Create TLSHelloMessage
-//		encryptedMsg, err := n.tlsManager.EncryptPublic(addr, msg)
-//		if err != nil {
-//			logr.Logger.Err(err).Msgf("[%s]: Error encrypting message to %s", n.addr, addr)
-//			return types.TLSMessageHello{}
-//		}
-//		TLSHelloMessage := types.TLSMessageHello{
-//			Source:      n.addr,
-//			ContentType: ct,
-//			Content:     []byte(encryptedMsg),
-//			Signature:   nil,
-//		}
-//		return TLSHelloMessage
-//	}
 func (n *node) GetPublicKey() crypto.PublicKey {
 	return n.tlsManager.keyManager.publicKey
 }
