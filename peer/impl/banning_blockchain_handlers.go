@@ -15,7 +15,7 @@ import (
 
 // BuildProof: Signs a vote by using PKCS1v15 on the concatenation of the address, the target and the Paxos step
 func (n *node) BuildProof(target string, phase string) ([]byte, error) {
-	data := n.addr + target + fmt.Sprint(n.banPaxos.currentStep) + phase
+	data := n.addr + target + fmt.Sprint(n.banPaxos.currentStep.Get()) + phase
 	pk := n.certificateStore.GetPrivateKey()
 	hashed := sha256.Sum256([]byte(data))
 	//Log the hash and the node
@@ -37,7 +37,7 @@ func (n *node) VerifyProof(proof []byte, target string, addr string, phase strin
 		return false
 	}
 
-	data := addr + target + fmt.Sprint(n.banPaxos.currentStep) + phase
+	data := addr + target + fmt.Sprint(n.banPaxos.currentStep.Get()) + phase
 	pk, err := n.GetPeerPublicKey(addr)
 	if err != nil {
 		logr.Logger.Error().Err(err).Msgf("Unable to get peer public key")
