@@ -154,6 +154,8 @@ type configTemplate struct {
 
 	publicKey  crypto.PublicKey
 	privateKey crypto.PrivateKey
+
+	VerifyCertificates bool
 }
 
 func newConfigTemplate() configTemplate {
@@ -191,6 +193,8 @@ func newConfigTemplate() configTemplate {
 
 		publicKey:  nil,
 		privateKey: nil,
+
+		VerifyCertificates: false,
 	}
 }
 
@@ -307,6 +311,13 @@ func WithKeys(publicKey crypto.PublicKey, privateKey crypto.PrivateKey) Option {
 	}
 }
 
+// WithCertificateVerification sets the VerifyCertificates option to true.
+func WithCertificateVerification() Option {
+	return func(ct *configTemplate) {
+		ct.VerifyCertificates = true
+	}
+}
+
 // NewTestNode returns a new test node.
 func NewTestNode(t require.TestingT, f peer.Factory, trans transport.Transport,
 	addr string, opts ...Option) TestNode {
@@ -336,6 +347,7 @@ func NewTestNode(t require.TestingT, f peer.Factory, trans transport.Transport,
 	config.PaxosProposerRetry = template.paxosProposerRetry
 	config.PrivateKey = template.privateKey
 	config.PublicKey = template.publicKey
+	config.VerifyCertificates = template.VerifyCertificates
 	node := f(config)
 
 	require.Equal(t, len(template.messages), len(template.handlers))

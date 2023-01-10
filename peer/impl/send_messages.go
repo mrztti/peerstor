@@ -196,9 +196,18 @@ func (n *node) BroadcastBanTLCMessageInParallel(Step uint, Block types.Blockchai
 	}
 	logr.Logger.Trace().
 		Msgf("[%s]:BroadcastTLCMessage: Broadcasting TLC message for step %d, block %#v", n.addr, Step, Block)
+
+	// Generate proof
+	proof, err := n.BuildProof(Block.Value.Filename, "tlc")
+	if err != nil {
+		logr.Logger.Err(err).Msgf("[%s] Error building proof", n.addr)
+		return
+	}
 	go n.BroadcastTypesInParallel(&types.BanTLCMessage{
-		Step:  Step,
-		Block: Block,
+		Step:   Step,
+		Block:  Block,
+		Source: n.addr,
+		Proof:  proof,
 	})
 }
 

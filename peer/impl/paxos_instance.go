@@ -25,6 +25,9 @@ type PaxosInstance struct {
 	phase1Responses    []types.Message
 	phase2Responses    peer.ConcurrentMap[*AtomicCounter]
 	timeouts           peer.ConcurrentMap[*time.Timer]
+	nodesPromised      peer.ConcurrentMap[uint]
+	nodesAccepted      peer.ConcurrentMap[uint]
+	nodesTLC           peer.ConcurrentMap[struct{}]
 }
 
 func CreatePaxosInstance(myAddr string, conf peer.Configuration) *PaxosInstance {
@@ -43,6 +46,9 @@ func CreatePaxosInstance(myAddr string, conf peer.Configuration) *PaxosInstance 
 		phase1Responses:    make([]types.Message, 0),
 		phase2Responses:    peer.CreateConcurrentMap[*AtomicCounter](),
 		timeouts:           peer.CreateConcurrentMap[*time.Timer](),
+		nodesPromised:      peer.CreateConcurrentMap[uint](),
+		nodesAccepted:      peer.CreateConcurrentMap[uint](),
+		nodesTLC:           peer.CreateConcurrentMap[struct{}](),
 	}
 }
 

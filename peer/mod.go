@@ -17,6 +17,7 @@ type Peer interface {
 	DataSharing
 	TLSServices
 	TrustServices
+	Malicious
 }
 
 // Factory is the type of function we are using to create new instances of
@@ -86,6 +87,8 @@ type Configuration struct {
 
 	PublicKey  crypto.PublicKey
 	PrivateKey crypto.PrivateKey
+
+	VerifyCertificates bool
 }
 
 // Backoff describes parameters for a backoff algorithm. The initial time must

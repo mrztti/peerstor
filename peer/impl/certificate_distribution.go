@@ -17,9 +17,12 @@ import (
 	"encoding/pem"
 	"errors"
 	"math/big"
+	"strconv"
 	"sync"
+	"time"
 
 	"github.com/rs/zerolog/log"
+	"go.dedis.ch/cs438/logr"
 	"go.dedis.ch/cs438/transport"
 	"go.dedis.ch/cs438/types"
 )
@@ -107,11 +110,25 @@ type CertificateCatalog struct {
 }
 
 // NewCertificateCatalog: Creates a new CertificateCatalog
-func NewCertificateCatalog() *CertificateCatalog {
-	return &CertificateCatalog{
+func (n *node) NewCertificateCatalog() error {
+
+	if n.certificateCatalog != nil {
+		return errors.New("certificate catalog already initialized")
+	}
+
+	if n.certificateStore == nil {
+		return errors.New("certificate store not initialized")
+	}
+
+	cc := CertificateCatalog{
 		catalog: make(map[string]rsa.PublicKey),
 		lock:    sync.Mutex{},
 	}
+
+	pub := n.certificateStore.GetPublicKeyPEM()
+	cc.AddCertificate(n.addr, pub)
+	n.certificateCatalog = &cc
+	return nil
 }
 
 // Get: Returns the public key associated with the given name
@@ -137,19 +154,29 @@ func (n *node) GetPeerPublicKey(name string) (rsa.PublicKey, error) {
 	return n.certificateCatalog.Get(name)
 }
 
+// Pem to PublicKey
+func PemToPublicKey(p []byte) (*rsa.PublicKey, error) {
+	// Decode the PEM
+	block, _ := pem.Decode(p)
+	if block == nil {
+		return nil, errors.New("failed to decode PEM")
+	}
+
+	// Parse the public key
+	publicKey, err := x509.ParsePKCS1PublicKey(block.Bytes)
+	if err != nil {
+		return nil, err
+	}
+
+	return publicKey, nil
+}
+
 // AddCertificate: Adds a new certificate to the catalog.
 func (c *CertificateCatalog) AddCertificate(name string, pemBytes []byte) error {
 	c.lock.Lock()
 	defer c.lock.Unlock()
 
-	// Decode the PEM
-	block, _ := pem.Decode(pemBytes)
-	if block == nil {
-		return errors.New("failed to decode PEM")
-	}
-
-	// Parse the public key
-	publicKey, err := x509.ParsePKCS1PublicKey(block.Bytes)
+	publicKey, err := PemToPublicKey(pemBytes)
 	if err != nil {
 		return err
 	}
@@ -172,12 +199,14 @@ func (c *CertificateCatalog) AddCertificate(name string, pemBytes []byte) error 
 }
 
 // TotalKnownNodes: Returns the total number of known nodes by the peer
-func (n *node) TotalCertifiedPeers() uint32 {
+func (n *node) TotalCertifiedPeers() uint {
 	// Count the number of nodes in the catalog
 	n.certificateCatalog.lock.Lock()
 	defer n.certificateCatalog.lock.Unlock()
 
-	return uint32(len(n.certificateCatalog.catalog))
+	// Filter catalog by trusted peers
+
+	return uint(len(n.certificateCatalog.catalog))
 
 }
 
@@ -216,19 +245,130 @@ func (n *node) HandleCertificateBroadcastMessage(msg types.Message, pkt transpor
 	// If the message address is this nodes address, then the certificate must be the same as the local one
 	rule2_1 := certificateBroadcastMessage.Addr == n.conf.Socket.GetAddress()
 	rule2_2 := bytes.Equal(certificateBroadcastMessage.PEM, n.certificateStore.GetPublicKeyPEM())
-	rule2 := (rule2_1 && rule2_2) || !rule2_1
 
-	if !rule2 {
-		log.Warn().Msg("node detected certificate forgery, will fight for " + certificateBroadcastMessage.Addr)
-		n.BroadcastCertificate() // Retransmit across the network
+	if rule2_1 {
+		if !rule2_2 {
+			log.Warn().Msg("node detected certificate forgery, will fight for " + certificateBroadcastMessage.Addr)
+			n.BroadcastCertificate() // Retransmit across the network
+		}
 		return nil
 	}
 
-	// Add the certificate to the catalog
-	err := n.certificateCatalog.AddCertificate(certificateBroadcastMessage.Addr, certificateBroadcastMessage.PEM)
+	if n.conf.VerifyCertificates {
+		go n.AwaitCertificateVerification(certificateBroadcastMessage)
+	} else {
+		// Add the certificate to the catalog
+		err := n.certificateCatalog.AddCertificate(certificateBroadcastMessage.Addr, certificateBroadcastMessage.PEM)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+// AwaitCertificateVerification: async await for the certificate verification
+func (n *node) AwaitCertificateVerification(init *types.CertificateBroadcastMessage) {
+
+	target := init.Addr
+	// Create the challenge
+	challenge := []byte("CHALLENGE::" + target + "::" + strconv.FormatInt(time.Now().UnixNano(), 10))
+
+	// Create the CertificateVerifyMessage
+	certificateVerifyMessage := types.CertificateVerifyMessage{
+		Challenge: challenge,
+		Source:    n.addr,
+	}
+
+	res := make(chan []byte)
+	// Get rsa.PublicKey from BM PEM
+	// Parse the public key
+	pk, err := PemToPublicKey(init.PEM)
+	if err != nil {
+		logr.Logger.Error().Err(err).Msg("failed to parse public key")
+		return
+	}
+
+	n.certificateVerifications.Set(target, res)
+	go n.BroadcastPrivatelyInParallel(target, certificateVerifyMessage)
+	logr.Logger.Info().Msgf("[%s] sent certificate verification to %s", n.addr, target)
+
+	// Start timer
+	timer := time.NewTimer(5 * time.Second)
+	defer timer.Stop()
+
+	select {
+	case <-timer.C:
+		logr.Logger.Warn().Msg("certificate verification timed out for " + target)
+	case r := <-res:
+		if err != nil {
+			logr.Logger.Error().Err(err).Msg("failed to get peer public key")
+			return
+		}
+
+		hashed := sha256.Sum256(challenge)
+		err = rsa.VerifyPKCS1v15(pk, crypto.SHA256, hashed[:], r[:])
+		if err != nil {
+			logr.Logger.Error().Err(err).Msg("failed to verify certificate")
+			return
+		}
+
+		logr.Logger.Info().Msgf("[%s] accepted certificate for %s", n.addr, target)
+
+		// Add the certificate to the catalog
+		err = n.certificateCatalog.AddCertificate(init.Addr, init.PEM)
+		if err != nil {
+			logr.Logger.Error().Err(err).Msg("failed to add certificate to catalog")
+			return
+		}
+	}
+}
+
+// handleCertificateVerifyMessage: respond to the challenge
+func (n *node) handleCertificateVerifyMessage(msg types.Message, pkt transport.Packet) error {
+	// Cast the message
+	certificateVerifyMessage, ok := msg.(*types.CertificateVerifyMessage)
+	if !ok {
+		return errors.New("failed to cast message to CertificateVerifyMessage")
+	}
+
+	// Get private key
+	pk := n.certificateStore.GetPrivateKey()
+	hashed := sha256.Sum256(certificateVerifyMessage.Challenge)
+	// Sign the challenge
+	response, err := rsa.SignPKCS1v15(rand.Reader, &pk, crypto.SHA256, hashed[:])
 	if err != nil {
 		return err
 	}
+
+	// Create the CertificateVerifyResponseMessage
+	certificateVerifyResponseMessage := types.CertificateVerifyResponseMessage{
+		Source:   n.addr,
+		Response: response,
+	}
+
+	// Send the message
+	n.BroadcastPrivatelyInParallel(certificateVerifyMessage.Source, certificateVerifyResponseMessage)
+
+	return nil
+}
+
+// handleCertificateVerifyResponseMessage: handle the response to the challenge
+func (n *node) handleCertificateVerifyResponseMessage(msg types.Message, pkt transport.Packet) error {
+	// Cast the message
+	certificateVerifyResponseMessage, ok := msg.(*types.CertificateVerifyResponseMessage)
+	if !ok {
+		return errors.New("failed to cast message to CertificateVerifyResponseMessage")
+	}
+
+	ch, ok := n.certificateVerifications.Get(certificateVerifyResponseMessage.Source)
+	if !ok {
+		log.Info().Msg("received certificate verification response from unknown source")
+		return nil
+	}
+
+	ch <- certificateVerifyResponseMessage.Response
+	n.certificateVerifications.Remove(certificateVerifyResponseMessage.Source)
 
 	return nil
 }

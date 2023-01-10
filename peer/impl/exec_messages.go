@@ -82,6 +82,14 @@ func (n *node) registerRegistryCallbacks() {
 		types.OnionNodeRegistrationMessage{},
 		n.HandleOnionNodeRegistrationMessage,
 	)
+	n.conf.MessageRegistry.RegisterMessageCallback(
+		types.CertificateVerifyMessage{},
+		n.handleCertificateVerifyMessage,
+	)
+	n.conf.MessageRegistry.RegisterMessageCallback(
+		types.CertificateVerifyResponseMessage{},
+		n.handleCertificateVerifyResponseMessage,
+	)
 	n.conf.MessageRegistry.RegisterMessageCallback(types.TLCMessage{}, n.execTLCMessage)
 	// TLS Messages
 	n.conf.MessageRegistry.RegisterMessageCallback(types.TLSMessage{}, n.execTLSMessage)
