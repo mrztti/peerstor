@@ -113,6 +113,7 @@ func (n *node) Start() error {
 	myAddr := n.conf.Socket.GetAddress()
 	n.routingTable.Set(myAddr, myAddr)
 
+	// For testing purposes
 	if n.conf.PrivateKey != nil && n.conf.PublicKey != nil {
 		n.tlsManager.SetOwnKeys(n.conf.PublicKey, n.conf.PrivateKey)
 	}
