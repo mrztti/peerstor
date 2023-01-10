@@ -19,11 +19,11 @@ func Test_Tor_Circuit_Tor_Create_Inject(t *testing.T) {
 	handler2, _ := fake.GetHandler(t)
 
 	publicKeyN1, privateKeyN1 := GenerateKeyPair()
-	node1 := z.NewTestNode(t, peerFac, transp, "127.0.0.1:0", z.WithMessage(fake, handler1), z.WithAntiEntropy(time.Millisecond*50), z.WithKeys(publicKeyN1, privateKeyN1))
+	node1 := z.NewTestNode(t, peerFac, transp, "127.0.0.1:0", z.WithOnion(), z.WithMessage(fake, handler1), z.WithAntiEntropy(time.Millisecond*50), z.WithKeys(publicKeyN1, privateKeyN1), z.WithOnion())
 	defer node1.Stop()
 
 	publicKeyN2, privateKeyN2 := GenerateKeyPair()
-	node2 := z.NewTestNode(t, peerFac, transp, "127.0.0.1:0", z.WithMessage(fake, handler2), z.WithAntiEntropy(time.Millisecond*50), z.WithKeys(publicKeyN2, privateKeyN2))
+	node2 := z.NewTestNode(t, peerFac, transp, "127.0.0.1:0", z.WithMessage(fake, handler2), z.WithAntiEntropy(time.Millisecond*50), z.WithKeys(publicKeyN2, privateKeyN2), z.WithOnion())
 	defer node2.Stop()
 
 	// node1 <-> node2
@@ -64,10 +64,10 @@ func Test_Tor_Circuit_Tor_Create(t *testing.T) {
 	handler1, _ := fake.GetHandler(t)
 	handler2, _ := fake.GetHandler(t)
 
-	node1 := z.NewTestNode(t, peerFac, transp, "127.0.0.1:0", z.WithMessage(fake, handler1), z.WithAntiEntropy(time.Millisecond*50))
+	node1 := z.NewTestNode(t, peerFac, transp, "127.0.0.1:0", z.WithMessage(fake, handler1), z.WithAntiEntropy(time.Millisecond*50), z.WithOnion())
 	defer node1.Stop()
 
-	node2 := z.NewTestNode(t, peerFac, transp, "127.0.0.1:0", z.WithMessage(fake, handler2), z.WithAntiEntropy(time.Millisecond*50))
+	node2 := z.NewTestNode(t, peerFac, transp, "127.0.0.1:0", z.WithMessage(fake, handler2), z.WithAntiEntropy(time.Millisecond*50), z.WithOnion())
 	defer node2.Stop()
 
 	// node1 <-> node2
@@ -104,11 +104,11 @@ func Test_Tor_Circuit_Routing_Simple_Inject(t *testing.T) {
 	handler2, _ := fake.GetHandler(t)
 
 	publicKeyN1, privateKeyN1 := GenerateKeyPair()
-	node1 := z.NewTestNode(t, peerFac, transp, "127.0.0.1:0", z.WithMessage(fake, handler1), z.WithAntiEntropy(time.Millisecond*50), z.WithKeys(publicKeyN1, privateKeyN1))
+	node1 := z.NewTestNode(t, peerFac, transp, "127.0.0.1:0", z.WithMessage(fake, handler1), z.WithAntiEntropy(time.Millisecond*50), z.WithKeys(publicKeyN1, privateKeyN1), z.WithOnion())
 	defer node1.Stop()
 
 	publicKeyN2, privateKeyN2 := GenerateKeyPair()
-	node2 := z.NewTestNode(t, peerFac, transp, "127.0.0.1:0", z.WithMessage(fake, handler2), z.WithAntiEntropy(time.Millisecond*50), z.WithKeys(publicKeyN2, privateKeyN2))
+	node2 := z.NewTestNode(t, peerFac, transp, "127.0.0.1:0", z.WithMessage(fake, handler2), z.WithAntiEntropy(time.Millisecond*50), z.WithKeys(publicKeyN2, privateKeyN2), z.WithOnion())
 	defer node2.Stop()
 
 	// node1 <-> node2
@@ -153,10 +153,10 @@ func Test_Tor_Circuit_Routing_Simple(t *testing.T) {
 	handler1, _ := fake.GetHandler(t)
 	handler2, _ := fake.GetHandler(t)
 
-	node1 := z.NewTestNode(t, peerFac, transp, "127.0.0.1:0", z.WithMessage(fake, handler1), z.WithAntiEntropy(time.Millisecond*50))
+	node1 := z.NewTestNode(t, peerFac, transp, "127.0.0.1:0", z.WithMessage(fake, handler1), z.WithAntiEntropy(time.Millisecond*50), z.WithOnion())
 	defer node1.Stop()
 
-	node2 := z.NewTestNode(t, peerFac, transp, "127.0.0.1:0", z.WithMessage(fake, handler2), z.WithAntiEntropy(time.Millisecond*50))
+	node2 := z.NewTestNode(t, peerFac, transp, "127.0.0.1:0", z.WithMessage(fake, handler2), z.WithAntiEntropy(time.Millisecond*50), z.WithOnion())
 	defer node2.Stop()
 
 	// node1 <-> node2
@@ -203,11 +203,11 @@ func Test_Tor_Circuit_Public_Encryption(t *testing.T) {
 	publicKeyN2, privateKeyN2 := GenerateKeyPair()
 	publicKeyN3, privateKeyN3 := GenerateKeyPair()
 
-	alice := z.NewTestNode(t, peerFac, transp, "127.0.0.1:0", z.WithMessage(fake, handler1), z.WithAntiEntropy(time.Millisecond*50), z.WithKeys(publicKeyN1, privateKeyN1))
+	alice := z.NewTestNode(t, peerFac, transp, "127.0.0.1:0", z.WithMessage(fake, handler1), z.WithAntiEntropy(time.Millisecond*50), z.WithKeys(publicKeyN1, privateKeyN1), z.WithOnion())
 	defer alice.Stop()
-	bob := z.NewTestNode(t, peerFac, transp, "127.0.0.1:0", z.WithMessage(fake, handler2), z.WithAntiEntropy(time.Millisecond*50), z.WithKeys(publicKeyN2, privateKeyN2))
+	bob := z.NewTestNode(t, peerFac, transp, "127.0.0.1:0", z.WithMessage(fake, handler2), z.WithAntiEntropy(time.Millisecond*50), z.WithKeys(publicKeyN2, privateKeyN2), z.WithOnion())
 	defer bob.Stop()
-	charlie := z.NewTestNode(t, peerFac, transp, "127.0.0.1:0", z.WithMessage(fake, handler3), z.WithAntiEntropy(time.Millisecond*50), z.WithKeys(publicKeyN3, privateKeyN3))
+	charlie := z.NewTestNode(t, peerFac, transp, "127.0.0.1:0", z.WithMessage(fake, handler3), z.WithAntiEntropy(time.Millisecond*50), z.WithKeys(publicKeyN3, privateKeyN3), z.WithOnion())
 	defer charlie.Stop()
 
 	//node1 <-> node2 <-> node3
@@ -238,11 +238,11 @@ func Test_Tor_Circuit_Symmetric_Encryption(t *testing.T) {
 	handler2, _ := fake.GetHandler(t)
 
 	publicKeyN1, privateKeyN1 := GenerateKeyPair()
-	node1 := z.NewTestNode(t, peerFac, transp, "127.0.0.1:0", z.WithMessage(fake, handler1), z.WithAntiEntropy(time.Millisecond*50), z.WithKeys(publicKeyN1, privateKeyN1))
+	node1 := z.NewTestNode(t, peerFac, transp, "127.0.0.1:0", z.WithMessage(fake, handler1), z.WithAntiEntropy(time.Millisecond*50), z.WithKeys(publicKeyN1, privateKeyN1), z.WithOnion())
 	defer node1.Stop()
 
 	publicKeyN2, privateKeyN2 := GenerateKeyPair()
-	node2 := z.NewTestNode(t, peerFac, transp, "127.0.0.1:0", z.WithMessage(fake, handler2), z.WithAntiEntropy(time.Millisecond*50), z.WithKeys(publicKeyN2, privateKeyN2))
+	node2 := z.NewTestNode(t, peerFac, transp, "127.0.0.1:0", z.WithMessage(fake, handler2), z.WithAntiEntropy(time.Millisecond*50), z.WithKeys(publicKeyN2, privateKeyN2), z.WithOnion())
 	defer node2.Stop()
 
 	node2.AddPeer(node1.GetAddr())
@@ -295,11 +295,11 @@ func Test_Tor_Circuit_Extend_Inject(t *testing.T) {
 	publicKeyN2, privateKeyN2 := GenerateKeyPair()
 	publicKeyN3, privateKeyN3 := GenerateKeyPair()
 
-	alice := z.NewTestNode(t, peerFac, transp, "127.0.0.1:0", z.WithMessage(fake, handler1), z.WithAntiEntropy(time.Millisecond*50), z.WithKeys(publicKeyN1, privateKeyN1))
+	alice := z.NewTestNode(t, peerFac, transp, "127.0.0.1:0", z.WithOnion(), z.WithMessage(fake, handler1), z.WithAntiEntropy(time.Millisecond*50), z.WithKeys(publicKeyN1, privateKeyN1))
 	defer alice.Stop()
-	bob := z.NewTestNode(t, peerFac, transp, "127.0.0.1:0", z.WithMessage(fake, handler2), z.WithAntiEntropy(time.Millisecond*50), z.WithKeys(publicKeyN2, privateKeyN2))
+	bob := z.NewTestNode(t, peerFac, transp, "127.0.0.1:0", z.WithOnion(), z.WithMessage(fake, handler2), z.WithAntiEntropy(time.Millisecond*50), z.WithKeys(publicKeyN2, privateKeyN2))
 	defer bob.Stop()
-	charlie := z.NewTestNode(t, peerFac, transp, "127.0.0.1:0", z.WithMessage(fake, handler3), z.WithAntiEntropy(time.Millisecond*50), z.WithKeys(publicKeyN3, privateKeyN3))
+	charlie := z.NewTestNode(t, peerFac, transp, "127.0.0.1:0", z.WithOnion(), z.WithMessage(fake, handler3), z.WithAntiEntropy(time.Millisecond*50), z.WithKeys(publicKeyN3, privateKeyN3))
 	defer charlie.Stop()
 
 	bob.AddPeer(alice.GetAddr())
@@ -383,11 +383,11 @@ func Test_Tor_Circuit_Extend(t *testing.T) {
 	handler2, _ := fake.GetHandler(t)
 	handler3, _ := fake.GetHandler(t)
 
-	alice := z.NewTestNode(t, peerFac, transp, "127.0.0.1:0", z.WithMessage(fake, handler1), z.WithAntiEntropy(time.Millisecond*50))
+	alice := z.NewTestNode(t, peerFac, transp, "127.0.0.1:0", z.WithOnion(), z.WithMessage(fake, handler1), z.WithAntiEntropy(time.Millisecond*50))
 	defer alice.Stop()
-	bob := z.NewTestNode(t, peerFac, transp, "127.0.0.1:0", z.WithMessage(fake, handler2), z.WithAntiEntropy(time.Millisecond*50))
+	bob := z.NewTestNode(t, peerFac, transp, "127.0.0.1:0", z.WithOnion(), z.WithMessage(fake, handler2), z.WithAntiEntropy(time.Millisecond*50))
 	defer bob.Stop()
-	charlie := z.NewTestNode(t, peerFac, transp, "127.0.0.1:0", z.WithMessage(fake, handler3), z.WithAntiEntropy(time.Millisecond*50))
+	charlie := z.NewTestNode(t, peerFac, transp, "127.0.0.1:0", z.WithOnion(), z.WithMessage(fake, handler3), z.WithAntiEntropy(time.Millisecond*50))
 	defer charlie.Stop()
 
 	bob.AddPeer(alice.GetAddr())
@@ -469,13 +469,13 @@ func Test_Tor_Circuit_Extend_Extend_Inject(t *testing.T) {
 	publicKeyN3, privateKeyN3 := GenerateKeyPair()
 	publicKeyN4, privateKeyN4 := GenerateKeyPair()
 
-	alice := z.NewTestNode(t, peerFac, transp, "127.0.0.1:0", z.WithMessage(fake, handler1), z.WithAntiEntropy(time.Millisecond*50), z.WithKeys(publicKeyN1, privateKeyN1))
+	alice := z.NewTestNode(t, peerFac, transp, "127.0.0.1:0", z.WithOnion(), z.WithMessage(fake, handler1), z.WithAntiEntropy(time.Millisecond*50), z.WithKeys(publicKeyN1, privateKeyN1))
 	defer alice.Stop()
-	bob := z.NewTestNode(t, peerFac, transp, "127.0.0.1:0", z.WithMessage(fake, handler2), z.WithAntiEntropy(time.Millisecond*50), z.WithKeys(publicKeyN2, privateKeyN2))
+	bob := z.NewTestNode(t, peerFac, transp, "127.0.0.1:0", z.WithOnion(), z.WithMessage(fake, handler2), z.WithAntiEntropy(time.Millisecond*50), z.WithKeys(publicKeyN2, privateKeyN2))
 	defer bob.Stop()
-	charlie := z.NewTestNode(t, peerFac, transp, "127.0.0.1:0", z.WithMessage(fake, handler3), z.WithAntiEntropy(time.Millisecond*50), z.WithKeys(publicKeyN3, privateKeyN3))
+	charlie := z.NewTestNode(t, peerFac, transp, "127.0.0.1:0", z.WithOnion(), z.WithMessage(fake, handler3), z.WithAntiEntropy(time.Millisecond*50), z.WithKeys(publicKeyN3, privateKeyN3))
 	defer charlie.Stop()
-	detlef := z.NewTestNode(t, peerFac, transp, "127.0.0.1:0", z.WithMessage(fake, handler4), z.WithAntiEntropy(time.Millisecond*50), z.WithKeys(publicKeyN4, privateKeyN4))
+	detlef := z.NewTestNode(t, peerFac, transp, "127.0.0.1:0", z.WithOnion(), z.WithMessage(fake, handler4), z.WithAntiEntropy(time.Millisecond*50), z.WithKeys(publicKeyN4, privateKeyN4))
 	defer detlef.Stop()
 
 	alice.AddPeer(bob.GetAddr())
@@ -621,13 +621,13 @@ func Test_Tor_Circuit_Extend_Extend(t *testing.T) {
 	handler3, _ := fake.GetHandler(t)
 	handler4, _ := fake.GetHandler(t)
 
-	alice := z.NewTestNode(t, peerFac, transp, "127.0.0.1:0", z.WithMessage(fake, handler1), z.WithAntiEntropy(time.Millisecond*50))
+	alice := z.NewTestNode(t, peerFac, transp, "127.0.0.1:0", z.WithOnion(), z.WithMessage(fake, handler1), z.WithAntiEntropy(time.Millisecond*50))
 	defer alice.Stop()
-	bob := z.NewTestNode(t, peerFac, transp, "127.0.0.1:0", z.WithMessage(fake, handler2), z.WithAntiEntropy(time.Millisecond*50))
+	bob := z.NewTestNode(t, peerFac, transp, "127.0.0.1:0", z.WithOnion(), z.WithMessage(fake, handler2), z.WithAntiEntropy(time.Millisecond*50))
 	defer bob.Stop()
-	charlie := z.NewTestNode(t, peerFac, transp, "127.0.0.1:0", z.WithMessage(fake, handler3), z.WithAntiEntropy(time.Millisecond*50))
+	charlie := z.NewTestNode(t, peerFac, transp, "127.0.0.1:0", z.WithOnion(), z.WithMessage(fake, handler3), z.WithAntiEntropy(time.Millisecond*50))
 	defer charlie.Stop()
-	detlef := z.NewTestNode(t, peerFac, transp, "127.0.0.1:0", z.WithMessage(fake, handler4), z.WithAntiEntropy(time.Millisecond*50))
+	detlef := z.NewTestNode(t, peerFac, transp, "127.0.0.1:0", z.WithOnion(), z.WithMessage(fake, handler4), z.WithAntiEntropy(time.Millisecond*50))
 	defer detlef.Stop()
 
 	alice.AddPeer(bob.GetAddr())
@@ -766,15 +766,15 @@ func Test_Tor_Circuit_Extend_Extend_Extend_Inject(t *testing.T) {
 	publicKeyN4, privateKeyN4 := GenerateKeyPair()
 	publicKeyN5, privateKeyN5 := GenerateKeyPair()
 
-	alice := z.NewTestNode(t, peerFac, transp, "127.0.0.1:0", z.WithMessage(fake, handler1), z.WithAntiEntropy(time.Millisecond*50), z.WithKeys(publicKeyN1, privateKeyN1))
+	alice := z.NewTestNode(t, peerFac, transp, "127.0.0.1:0", z.WithOnion(), z.WithMessage(fake, handler1), z.WithAntiEntropy(time.Millisecond*50), z.WithKeys(publicKeyN1, privateKeyN1))
 	defer alice.Stop()
-	bob := z.NewTestNode(t, peerFac, transp, "127.0.0.1:0", z.WithMessage(fake, handler2), z.WithAntiEntropy(time.Millisecond*50), z.WithKeys(publicKeyN2, privateKeyN2))
+	bob := z.NewTestNode(t, peerFac, transp, "127.0.0.1:0", z.WithOnion(), z.WithMessage(fake, handler2), z.WithAntiEntropy(time.Millisecond*50), z.WithKeys(publicKeyN2, privateKeyN2))
 	defer bob.Stop()
-	charlie := z.NewTestNode(t, peerFac, transp, "127.0.0.1:0", z.WithMessage(fake, handler3), z.WithAntiEntropy(time.Millisecond*50), z.WithKeys(publicKeyN3, privateKeyN3))
+	charlie := z.NewTestNode(t, peerFac, transp, "127.0.0.1:0", z.WithOnion(), z.WithMessage(fake, handler3), z.WithAntiEntropy(time.Millisecond*50), z.WithKeys(publicKeyN3, privateKeyN3))
 	defer charlie.Stop()
-	detlef := z.NewTestNode(t, peerFac, transp, "127.0.0.1:0", z.WithMessage(fake, handler4), z.WithAntiEntropy(time.Millisecond*50), z.WithKeys(publicKeyN4, privateKeyN4))
+	detlef := z.NewTestNode(t, peerFac, transp, "127.0.0.1:0", z.WithOnion(), z.WithMessage(fake, handler4), z.WithAntiEntropy(time.Millisecond*50), z.WithKeys(publicKeyN4, privateKeyN4))
 	defer detlef.Stop()
-	eliska := z.NewTestNode(t, peerFac, transp, "127.0.0.1:0", z.WithMessage(fake, handler5), z.WithAntiEntropy(time.Millisecond*50), z.WithKeys(publicKeyN5, privateKeyN5))
+	eliska := z.NewTestNode(t, peerFac, transp, "127.0.0.1:0", z.WithOnion(), z.WithMessage(fake, handler5), z.WithAntiEntropy(time.Millisecond*50), z.WithKeys(publicKeyN5, privateKeyN5))
 	defer eliska.Stop()
 	//node1 <-> node2 <-> node3 <-> node4
 
@@ -966,15 +966,15 @@ func Test_Tor_Circuit_Extend_Extend_Extend(t *testing.T) {
 	handler4, _ := fake.GetHandler(t)
 	handler5, _ := fake.GetHandler(t)
 
-	alice := z.NewTestNode(t, peerFac, transp, "127.0.0.1:0", z.WithMessage(fake, handler1), z.WithAntiEntropy(time.Millisecond*50))
+	alice := z.NewTestNode(t, peerFac, transp, "127.0.0.1:0", z.WithOnion(), z.WithMessage(fake, handler1), z.WithAntiEntropy(time.Millisecond*50))
 	defer alice.Stop()
-	bob := z.NewTestNode(t, peerFac, transp, "127.0.0.1:0", z.WithMessage(fake, handler2), z.WithAntiEntropy(time.Millisecond*50))
+	bob := z.NewTestNode(t, peerFac, transp, "127.0.0.1:0", z.WithOnion(), z.WithMessage(fake, handler2), z.WithAntiEntropy(time.Millisecond*50))
 	defer bob.Stop()
-	charlie := z.NewTestNode(t, peerFac, transp, "127.0.0.1:0", z.WithMessage(fake, handler3), z.WithAntiEntropy(time.Millisecond*50))
+	charlie := z.NewTestNode(t, peerFac, transp, "127.0.0.1:0", z.WithOnion(), z.WithMessage(fake, handler3), z.WithAntiEntropy(time.Millisecond*50))
 	defer charlie.Stop()
-	detlef := z.NewTestNode(t, peerFac, transp, "127.0.0.1:0", z.WithMessage(fake, handler4), z.WithAntiEntropy(time.Millisecond*50))
+	detlef := z.NewTestNode(t, peerFac, transp, "127.0.0.1:0", z.WithOnion(), z.WithMessage(fake, handler4), z.WithAntiEntropy(time.Millisecond*50))
 	defer detlef.Stop()
-	eliska := z.NewTestNode(t, peerFac, transp, "127.0.0.1:0", z.WithMessage(fake, handler5), z.WithAntiEntropy(time.Millisecond*50))
+	eliska := z.NewTestNode(t, peerFac, transp, "127.0.0.1:0", z.WithOnion(), z.WithMessage(fake, handler5), z.WithAntiEntropy(time.Millisecond*50))
 	defer eliska.Stop()
 	//node1 <-> node2 <-> node3 <-> node4
 
@@ -1151,15 +1151,15 @@ func Test_Tor_Circuit_Extend_Circuit_Establish_Inject(t *testing.T) {
 	publicKeyN4, privateKeyN4 := GenerateKeyPair()
 	publicKeyN5, privateKeyN5 := GenerateKeyPair()
 
-	alice := z.NewTestNode(t, peerFac, transp, "127.0.0.1:0", z.WithMessage(fake, handler1), z.WithAntiEntropy(time.Millisecond*50), z.WithKeys(publicKeyN1, privateKeyN1))
+	alice := z.NewTestNode(t, peerFac, transp, "127.0.0.1:0", z.WithOnion(), z.WithMessage(fake, handler1), z.WithAntiEntropy(time.Millisecond*50), z.WithKeys(publicKeyN1, privateKeyN1))
 	defer alice.Stop()
-	bob := z.NewTestNode(t, peerFac, transp, "127.0.0.1:0", z.WithMessage(fake, handler2), z.WithAntiEntropy(time.Millisecond*50), z.WithKeys(publicKeyN2, privateKeyN2))
+	bob := z.NewTestNode(t, peerFac, transp, "127.0.0.1:0", z.WithOnion(), z.WithMessage(fake, handler2), z.WithAntiEntropy(time.Millisecond*50), z.WithKeys(publicKeyN2, privateKeyN2))
 	defer bob.Stop()
-	charlie := z.NewTestNode(t, peerFac, transp, "127.0.0.1:0", z.WithMessage(fake, handler3), z.WithAntiEntropy(time.Millisecond*50), z.WithKeys(publicKeyN3, privateKeyN3))
+	charlie := z.NewTestNode(t, peerFac, transp, "127.0.0.1:0", z.WithOnion(), z.WithMessage(fake, handler3), z.WithAntiEntropy(time.Millisecond*50), z.WithKeys(publicKeyN3, privateKeyN3))
 	defer charlie.Stop()
-	detlef := z.NewTestNode(t, peerFac, transp, "127.0.0.1:0", z.WithMessage(fake, handler4), z.WithAntiEntropy(time.Millisecond*50), z.WithKeys(publicKeyN4, privateKeyN4))
+	detlef := z.NewTestNode(t, peerFac, transp, "127.0.0.1:0", z.WithOnion(), z.WithMessage(fake, handler4), z.WithAntiEntropy(time.Millisecond*50), z.WithKeys(publicKeyN4, privateKeyN4))
 	defer detlef.Stop()
-	eliska := z.NewTestNode(t, peerFac, transp, "127.0.0.1:0", z.WithMessage(fake, handler5), z.WithAntiEntropy(time.Millisecond*50), z.WithKeys(publicKeyN5, privateKeyN5))
+	eliska := z.NewTestNode(t, peerFac, transp, "127.0.0.1:0", z.WithOnion(), z.WithMessage(fake, handler5), z.WithAntiEntropy(time.Millisecond*50), z.WithKeys(publicKeyN5, privateKeyN5))
 	defer eliska.Stop()
 
 	alice.AddPeer(bob.GetAddr())
@@ -1262,6 +1262,7 @@ func Test_Tor_Circuit_Extend_Circuit_Establish_Inject(t *testing.T) {
 	circuitLen := 4
 	err := alice.TorEstablishCircuit(eliska.GetAddr(), circuitLen)
 	time.Sleep(2 * time.Second)
+
 	require.NoError(t, err)
 
 	aliceAddr := alice.GetAddr()
@@ -1336,15 +1337,15 @@ func Test_Tor_Circuit_Extend_Circuit_Establish(t *testing.T) {
 	handler4, _ := fake.GetHandler(t)
 	handler5, _ := fake.GetHandler(t)
 
-	alice := z.NewTestNode(t, peerFac, transp, "127.0.0.1:0", z.WithMessage(fake, handler1), z.WithAntiEntropy(time.Millisecond*50))
+	alice := z.NewTestNode(t, peerFac, transp, "127.0.0.1:0", z.WithOnion(), z.WithMessage(fake, handler1), z.WithAntiEntropy(time.Millisecond*50))
 	defer alice.Stop()
-	bob := z.NewTestNode(t, peerFac, transp, "127.0.0.1:0", z.WithMessage(fake, handler2), z.WithAntiEntropy(time.Millisecond*50))
+	bob := z.NewTestNode(t, peerFac, transp, "127.0.0.1:0", z.WithOnion(), z.WithMessage(fake, handler2), z.WithAntiEntropy(time.Millisecond*50))
 	defer bob.Stop()
-	charlie := z.NewTestNode(t, peerFac, transp, "127.0.0.1:0", z.WithMessage(fake, handler3), z.WithAntiEntropy(time.Millisecond*50))
+	charlie := z.NewTestNode(t, peerFac, transp, "127.0.0.1:0", z.WithOnion(), z.WithMessage(fake, handler3), z.WithAntiEntropy(time.Millisecond*50))
 	defer charlie.Stop()
-	detlef := z.NewTestNode(t, peerFac, transp, "127.0.0.1:0", z.WithMessage(fake, handler4), z.WithAntiEntropy(time.Millisecond*50))
+	detlef := z.NewTestNode(t, peerFac, transp, "127.0.0.1:0", z.WithOnion(), z.WithMessage(fake, handler4), z.WithAntiEntropy(time.Millisecond*50))
 	defer detlef.Stop()
-	eliska := z.NewTestNode(t, peerFac, transp, "127.0.0.1:0", z.WithMessage(fake, handler5), z.WithAntiEntropy(time.Millisecond*50))
+	eliska := z.NewTestNode(t, peerFac, transp, "127.0.0.1:0", z.WithOnion(), z.WithMessage(fake, handler5), z.WithAntiEntropy(time.Millisecond*50))
 	defer eliska.Stop()
 
 	alice.AddPeer(bob.GetAddr())
@@ -1424,8 +1425,12 @@ func Test_Tor_Circuit_Extend_Circuit_Establish(t *testing.T) {
 	require.NotEqual(t, bob.GetSymKey(charlie.GetAddr()), charlie.GetSymKey(detlef.GetAddr()))
 	require.NotEqual(t, alice.GetSymKey(bob.GetAddr()), charlie.GetSymKey(detlef.GetAddr()))
 
+	randomNodes, err := alice.GetAllOnionNodes()
+	require.NoError(t, err)
+	log.Default().Printf("Alices onion routers: %v", randomNodes)
+
 	circuitLen := 4
-	err := alice.TorEstablishCircuit(eliska.GetAddr(), circuitLen)
+	err = alice.TorEstablishCircuit(eliska.GetAddr(), circuitLen)
 	time.Sleep(2 * time.Second)
 	require.NoError(t, err)
 

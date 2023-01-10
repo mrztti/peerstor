@@ -156,6 +156,8 @@ type configTemplate struct {
 	privateKey crypto.PrivateKey
 
 	VerifyCertificates bool
+
+	IsOnionNode bool
 }
 
 func newConfigTemplate() configTemplate {
@@ -195,6 +197,8 @@ func newConfigTemplate() configTemplate {
 		privateKey: nil,
 
 		VerifyCertificates: false,
+
+		IsOnionNode: false,
 	}
 }
 
@@ -311,6 +315,12 @@ func WithKeys(publicKey crypto.PublicKey, privateKey crypto.PrivateKey) Option {
 	}
 }
 
+func WithOnion() Option {
+	return func(ct *configTemplate) {
+		ct.IsOnionNode = true
+	}
+}
+
 // WithCertificateVerification sets the VerifyCertificates option to true.
 func WithCertificateVerification() Option {
 	return func(ct *configTemplate) {
@@ -348,6 +358,7 @@ func NewTestNode(t require.TestingT, f peer.Factory, trans transport.Transport,
 	config.PrivateKey = template.privateKey
 	config.PublicKey = template.publicKey
 	config.VerifyCertificates = template.VerifyCertificates
+	config.IsOnionNode = template.IsOnionNode
 	node := f(config)
 
 	require.Equal(t, len(template.messages), len(template.handlers))
