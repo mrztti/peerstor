@@ -1,6 +1,10 @@
 /*
 	Tests for the trust module
 
+	Includes basic unit tests as well as more advanced comprehensive tests
+	Notably, we test whether a malicious node can attack the network using
+	certificate spoofing and by trying to override the paxos mechanism
+
 	Written by Malo RANZETTI
 	January 2023
 */
