@@ -39,7 +39,7 @@ func NewPeer(conf peer.Configuration) peer.Peer {
 		broadcastLock:               sync.Mutex{},
 		attemptedRumoursSent:        &AtomicCounter{count: 0},
 		certificateStore:            certificateStore,
-		certificateCatalog:          NewCertificateCatalog(),
+		certificateVerifications:    peer.CreateConcurrentMap[chan []byte](),
 		trustBanHook:                make(chan string),
 		isOnionNode:                 false,
 		tlsManager:                  CreateTLSManager(myAddr),
@@ -60,6 +60,11 @@ func NewPeer(conf peer.Configuration) peer.Peer {
 	err = newPeer.NewNodeCatalog()
 	if err != nil {
 		logr.Logger.Error().Msgf("[%s]: Failed to create node catalog", myAddr)
+		return nil
+	}
+	err = newPeer.NewCertificateCatalog()
+	if err != nil {
+		logr.Logger.Error().Msgf("[%s]: Failed to create certificate catalog", myAddr)
 		return nil
 	}
 
@@ -89,6 +94,7 @@ type node struct {
 	attemptedRumoursSent        *AtomicCounter
 	certificateStore            *CertificateStore
 	certificateCatalog          *CertificateCatalog
+	certificateVerifications    peer.ConcurrentMap[chan []byte]
 	trustCatalog                *TrustCatalog
 	trustBanHook                chan string
 	banPaxos                    *MultiPaxos
@@ -104,7 +110,6 @@ func (n *node) Start() error {
 	logr.Logger.Info().Msgf("[%s]: Starting peer", n.addr)
 	myAddr := n.conf.Socket.GetAddress()
 	n.routingTable.Set(myAddr, myAddr)
-	n.certificateCatalog.AddCertificate(myAddr, n.certificateStore.GetPublicKeyPEM())
 
 	if n.conf.PrivateKey != nil && n.conf.PublicKey != nil {
 		n.tlsManager.SetOwnKeys(n.conf.PublicKey, n.conf.PrivateKey)

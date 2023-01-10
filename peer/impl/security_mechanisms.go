@@ -44,13 +44,8 @@ func (n *node) NewTrustCatalog(threshold float32) error {
 		threshold: threshold,
 		hook:      hook,
 	}
-
-	err := tc.NewPeer(n.conf.Socket.GetAddress())
-	if err != nil {
-		return err
-	}
-
 	n.trustCatalog = tc
+	n.Trust(n.conf.Socket.GetAddress())
 	return nil
 
 }
@@ -126,17 +121,15 @@ func (n *node) Ban(name string) {
 }
 
 // Reset: Resets the trust value to 1.0
-func (t *TrustCatalog) Reset(name string) error {
+func (t *TrustCatalog) Reset(name string) {
 	t.lock.Lock()
 	defer t.lock.Unlock()
-
-	_, ok := t.data[name]
-	if !ok {
-		return errors.New("peer " + name + " not in the trust catalog")
-	}
-
 	t.data[name] = 1.0
-	return nil
+}
+
+// Trust: Sets the trust value to 1.0
+func (n *node) Trust(name string) {
+	n.trustCatalog.Reset(name)
 }
 
 // DetectModifications: Detects a change in trust and broadcasts a new vote to the network

@@ -24,6 +24,8 @@ type BanPaxosPromiseMessage struct {
 	AcceptedID uint
 	// Must be nil if the proposer hasn't accepted any value
 	AcceptedValue *PaxosValue
+	Proof         []byte
+	Source        string
 }
 
 // PaxosProposeMessage defines a propose message in Paxos
@@ -53,6 +55,8 @@ type BanPaxosAcceptMessage struct {
 // - implements types.Message
 // - implemented in HW3
 type BanTLCMessage struct {
-	Step  uint
-	Block BlockchainBlock
+	Step   uint
+	Block  BlockchainBlock
+	Source string
+	Proof  []byte
 }

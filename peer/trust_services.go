@@ -18,9 +18,10 @@ type TrustServices interface {
 	Trusts(name string) bool
 	HasSharedBan(name string) bool
 	Ban(name string)
+	Trust(name string)
 
 	GetPeerPublicKey(name string) (rsa.PublicKey, error)
-	TotalCertifiedPeers() uint32
+	TotalCertifiedPeers() uint
 	RegisterAsOnionNode() error
 	GetRandomOnionNode() (string, *rsa.PublicKey, error)
 	GetAllOnionNodes() (map[string](*rsa.PublicKey), error)

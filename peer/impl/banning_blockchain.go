@@ -82,20 +82,27 @@ func (d BanProposePhase1Message) Name() string {
 	return "ban_proposerphase1"
 }
 
-func (m *MultiPaxos) prepareBanPromiseMessage(
+func (n *node) prepareBanPromiseMessage(
 	prepareMessage *types.BanPaxosPrepareMessage,
 	currentPaxosInstance *PaxosInstance,
-) *types.BanPaxosPromiseMessage {
+) (*types.BanPaxosPromiseMessage, error) {
 	var acceptedID uint
 	if currentPaxosInstance.acceptedValue != nil {
 		acceptedID = uint(currentPaxosInstance.acceptedID.Get())
+	}
+	proof, err := n.BuildProof(prepareMessage.Target, "promise")
+	if err != nil {
+		logr.Logger.Error().Msgf("Error while building proof: %s", err)
+		return nil, err
 	}
 	return &types.BanPaxosPromiseMessage{
 		Step:          prepareMessage.Step,
 		ID:            prepareMessage.ID,
 		AcceptedID:    acceptedID,
 		AcceptedValue: currentPaxosInstance.acceptedValue,
-	}
+		Proof:         proof,
+		Source:        n.addr,
+	}, nil
 }
 
 //=============================================================================
@@ -105,9 +112,6 @@ func (m *MultiPaxos) prepareBanPromiseMessage(
 func (n *node) ProposeBan(address string) error {
 	logr.Logger.Info().Msgf("[%s]: Initiate ban: name: %s. Step is: %d",
 		n.addr, address, n.banPaxos.currentStep.Get())
-	defer logr.Logger.Info().
-		Msgf("[%s]: Banning proposal finished for: name: %s. Step is: %d",
-			n.addr, address, n.banPaxos.currentStep.Get())
 
 	n.banPaxos.taggingLock.Lock()
 	defer n.banPaxos.taggingLock.Unlock()
@@ -150,7 +154,7 @@ func (n *node) ProposeBan(address string) error {
 				continue
 			}
 			logr.Logger.Info().
-				Msgf("[%s]: Ban has been accepted, returning. Current step is %d",
+				Msgf("[%s]: Ban has been accepted. Current step is %d",
 					n.addr, n.banPaxos.currentStep.Get())
 			return nil
 		case <-time.After(n.conf.PaxosProposerRetry):

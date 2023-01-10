@@ -1,11 +1,61 @@
 package impl
 
 import (
+	"crypto"
+	"crypto/rand"
+	"crypto/rsa"
+	"crypto/sha256"
+	"encoding/hex"
 	"fmt"
+	"strconv"
 
 	"go.dedis.ch/cs438/logr"
 	"go.dedis.ch/cs438/types"
 )
+
+// BuildProof: Signs a vote by using PKCS1v15 on the concatenation of the address, the target and the Paxos step
+func (n *node) BuildProof(target string, phase string) ([]byte, error) {
+	data := n.addr + target + fmt.Sprint(n.banPaxos.currentStep) + phase
+	pk := n.certificateStore.GetPrivateKey()
+	hashed := sha256.Sum256([]byte(data))
+	//Log the hash and the node
+	logr.Logger.Trace().Str("Hash", hex.EncodeToString(hashed[:])).Str("Node", n.addr).
+		Str("DATA", data).Msgf("Generated proof")
+	proof, err := rsa.SignPKCS1v15(rand.Reader, &pk, crypto.SHA256, hashed[:])
+	if err != nil {
+		return nil, err
+	}
+
+	return proof, nil
+}
+
+// VerifyProof: Verifies a proof by using PKCS1v15 on the concatenation of the address, the target and the Paxos step
+func (n *node) VerifyProof(proof []byte, target string, addr string, phase string) bool {
+	// Check nil values
+	if proof == nil || target == "" || addr == "" {
+		logr.Logger.Error().Msgf("Unable to verify proof - Received nil values")
+		return false
+	}
+
+	data := addr + target + fmt.Sprint(n.banPaxos.currentStep) + phase
+	pk, err := n.GetPeerPublicKey(addr)
+	if err != nil {
+		logr.Logger.Error().Err(err).Msgf("Unable to get peer public key")
+		return false
+	}
+	hashed := sha256.Sum256([]byte(data))
+	//Log the hash and the node
+
+	err = rsa.VerifyPKCS1v15(&pk, crypto.SHA256, hashed[:], proof)
+	logr.Logger.Info().Str("Hash", hex.EncodeToString(hashed[:])).Str("TARGET", target).Str("FROM", addr).
+		Str("VALID", strconv.FormatBool(err == nil)).Msgf("[%s] Verifying %s :", n.addr, phase)
+	if err != nil {
+		logr.Logger.Error().Err(err).Msgf("Unable to verify proof")
+		return false
+	}
+
+	return true
+}
 
 func (n *node) handleBanPrepareMessage(prepareMessage *types.BanPaxosPrepareMessage) {
 	currentPaxosInstance := n.banPaxos.currentPaxosInstance
@@ -29,7 +79,7 @@ func (n *node) handleBanPrepareMessage(prepareMessage *types.BanPaxosPrepareMess
 
 	// SPECIAL TO BAN PAXOS: Ignore messages who try to ban a node that we trust
 	if n.Trusts(prepareMessage.Target) {
-		logr.Logger.Trace().Msgf("[%s]: IGNORING PROPOSE message (Value is trusted) : %s",
+		logr.Logger.Trace().Msgf("[%s]: IGNORING PREPARE message (Value is trusted) : %s",
 			n.banPaxos.addr, prepareMessage.Target)
 		return
 	}
@@ -38,12 +88,17 @@ func (n *node) handleBanPrepareMessage(prepareMessage *types.BanPaxosPrepareMess
 	currentPaxosInstance.maxID.SetToMax(prepareMessage.ID)
 
 	// *PART 3:* Send promise message
-	promiseMessage := n.banPaxos.prepareBanPromiseMessage(prepareMessage, currentPaxosInstance)
+	promiseMessage, err := n.prepareBanPromiseMessage(prepareMessage, currentPaxosInstance)
+	if err != nil {
+		logr.Logger.Error().Err(err).Msgf("[%s]: Unable to prepare promise message", n.addr)
+		return
+	}
 	logr.Logger.Trace().
 		Msgf("[%s]: Sending promise %#v to %s, current step is: %d",
 			n.addr, promiseMessage, prepareMessage.Source, currentStep)
 
 	go n.BroadcastPrivatelyInParallel(prepareMessage.Source, promiseMessage)
+
 }
 
 func (n *node) handleBanProposeMessage(proposeMessage *types.BanPaxosProposeMessage) {
@@ -66,15 +121,30 @@ func (n *node) handleBanProposeMessage(proposeMessage *types.BanPaxosProposeMess
 		return
 	}
 
+	// SPECIAL TO BAN PAXOS: Ignore messages who try to ban a node that we trust
+	if n.Trusts(proposeMessage.Value.Filename) {
+		logr.Logger.Trace().Msgf("[%s]: IGNORING PROPOSE message (Value is trusted) : %s",
+			n.banPaxos.addr, proposeMessage.Value.Filename)
+		return
+	}
+
 	// *PART 2:* Update Accepted Values
 	currentPaxosInstance.acceptedID.Set(proposeMessage.ID)
 	currentPaxosInstance.acceptedValue = &proposeMessage.Value
 
+	// Generate proof
+	proof, err := n.BuildProof(proposeMessage.Value.Filename, "accept")
+	if err != nil {
+		logr.Logger.Error().Err(err).Msgf("[%s]: Unable to build proof", n.addr)
+	}
+
 	// *PART 3:* Broadcast accept message
 	acceptMessage := &types.BanPaxosAcceptMessage{
-		Step:  uint(n.banPaxos.currentStep.Get()),
-		ID:    proposeMessage.ID,
-		Value: proposeMessage.Value,
+		Step:   uint(n.banPaxos.currentStep.Get()),
+		ID:     proposeMessage.ID,
+		Value:  proposeMessage.Value,
+		Proof:  proof,
+		Source: n.addr,
 	}
 	logr.Logger.Trace().Msgf("[%s]: Broadcasting accept %#v", n.addr, acceptMessage)
 	// Broadcast concurrently else we will deadlock
@@ -137,6 +207,18 @@ func (n *node) handleBanPromiseMessage(promiseMessage *types.BanPaxosPromiseMess
 		return
 	}
 
+	// Check the proof of incoming messages and discard repeated votes.
+	val, ok := currentPaxosInstance.nodesPromised.Get(promiseMessage.Source)
+	hasAlreadyPromised := ok && val >= promiseMessage.AcceptedID
+	canProve := n.VerifyProof(promiseMessage.Proof, currentPaxosInstance.proposedValue.Filename, promiseMessage.Source, "promise")
+
+	if hasAlreadyPromised || !canProve {
+		logr.Logger.Info().
+			Msgf("[%s]: Ignoring PROMISE message (already promised or can't prove). hasAlreadyPromised: %t, canProve: %t",
+				n.addr, hasAlreadyPromised, canProve)
+		return
+	}
+	currentPaxosInstance.nodesPromised.Set(promiseMessage.Source, promiseMessage.AcceptedID)
 	// *PART 2a:* Collect promises
 	currentPaxosInstance.phase1Responses = append(
 		currentPaxosInstance.phase1Responses,
@@ -218,6 +300,19 @@ func (n *node) handleBanAcceptMessage(acceptMessage *types.BanPaxosAcceptMessage
 		return
 	}
 
+	// Check the proof of incoming messages and discard repeated votes.
+	val, ok := currentPaxosInstance.nodesAccepted.Get(acceptMessage.Source)
+	hasAlreadyAccepted := ok && val >= acceptMessage.ID
+	canProve := n.VerifyProof(acceptMessage.Proof, acceptMessage.Value.Filename,
+		acceptMessage.Source, "accept")
+
+	if hasAlreadyAccepted || !canProve {
+		logr.Logger.Info().
+			Msgf("[%s]: Ignoring ACCEPT message (already accepted or can't prove). hasAlreadyAccepted: %t, canProve: %t",
+				n.addr, hasAlreadyAccepted, canProve)
+		return
+	}
+	currentPaxosInstance.nodesAccepted.Set(acceptMessage.Source, acceptMessage.ID)
 	/* if currentPaxosInstance.proposingPhase == "phase1" {
 		logr.Logger.Trace().
 			Msgf("[%s]: Ignoring ACCEPT message (in phase 1). Current phase: %s",
@@ -226,9 +321,12 @@ func (n *node) handleBanAcceptMessage(acceptMessage *types.BanPaxosAcceptMessage
 	} */
 	// ! Here they say to ignore messages if we are not in phase 2 of proposing
 	// but let's see what happens if we ignore this
+	currentAcceptCount := currentAcceptCounter.Get()
+	if !ok {
+		currentAcceptCount = currentAcceptCounter.IncrementAndGet()
+	}
 
-	currentAcceptCount := currentAcceptCounter.IncrementAndGet()
-	if int(currentAcceptCount) >= n.banPaxos.conf.PaxosThreshold(n.banPaxos.conf.TotalPeers) {
+	if int(currentAcceptCount) >= n.banPaxos.conf.PaxosThreshold(uint(n.TotalCertifiedPeers())) {
 		logr.Logger.Trace().
 			Msgf("[%s] We have reached consensus on %s. Accepted id is %d, accepted value is %#v",
 				n.addr, acceptMessage.Value.UniqID, acceptMessage.ID, acceptMessage.Value)
@@ -257,14 +355,30 @@ func (n *node) handleBanTLCMessage(TLC *types.BanTLCMessage) {
 				n.addr, TLC.Step, currentStep)
 		return
 	}
+
+	currentPaxosInstance := n.banPaxos.currentPaxosInstance
+
+	// Check the proof of incoming messages and discard repeated votes.
+	seen := currentPaxosInstance.nodesTLC.Has(TLC.Source)
+	canProve := n.VerifyProof(TLC.Proof, TLC.Block.Value.Filename,
+		TLC.Source, "tlc")
+
+	if seen || !canProve {
+		logr.Logger.Info().
+			Msgf("[%s]: Ignoring TLC message (already seen or can't prove). seen: %t, canProve: %t",
+				n.addr, seen, canProve)
+		return
+	}
+	currentPaxosInstance.nodesTLC.Set(TLC.Source, struct{}{})
+
 	stepCounter := n.banPaxos.TLCCounts.GetOrSetIfNonExistent(
 		fmt.Sprint(tlcStep),
 		&AtomicCounter{count: 0},
 	)
 	n.banPaxos.TLCBlocks.Set(fmt.Sprint(tlcStep), &TLC.Block)
 	tlcsReceived := stepCounter.IncrementAndGet()
-	threshold := n.banPaxos.conf.PaxosThreshold(n.banPaxos.conf.TotalPeers)
-	logr.Logger.Trace().
+	threshold := n.banPaxos.conf.PaxosThreshold(n.TotalCertifiedPeers())
+	logr.Logger.Info().
 		Msgf("[%s]: Increased TLC step (%d) counter to %d due to message received. Threshold is %d, currentStep is %d",
 			n.addr, tlcStep, tlcsReceived, threshold, currentStep)
 	if int(tlcsReceived) >= threshold && currentStep == tlcStep {
@@ -318,7 +432,7 @@ func (n *node) tryAdvanceBanTLC(catchup bool, tlcStep uint) error {
 	// 2.3 Broadcast TLC if not catchup
 	// Even if we're catching up, this aint going to hurt anyone.
 	n.BroadcastBanTLCMessageInParallel(currentStep, *blockRef)
-	logr.Logger.Trace().
+	logr.Logger.Info().
 		Msgf("[%s]: TLC consensus reached for step %d. Advancing to step %d", n.addr, tlcStep, tlcStep+1)
 	// 2.4 Increase its TLC by 1
 	n.banPaxos.currentStep.SetToMax(currentStep + 1)
