@@ -259,9 +259,16 @@ func (n *node) HandleCertificateBroadcastMessage(msg types.Message, pkt transpor
 	} else {
 		// Add the certificate to the catalog
 		err := n.certificateCatalog.AddCertificate(certificateBroadcastMessage.Addr, certificateBroadcastMessage.PEM)
+
 		if err != nil {
 			return err
 		}
+		key, err := n.certificateCatalog.Get(certificateBroadcastMessage.Addr)
+
+		if err != nil {
+			return err
+		}
+		n.tlsManager.SetAsymmetricKey(certificateBroadcastMessage.Addr, key)
 	}
 
 	return nil

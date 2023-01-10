@@ -19,7 +19,9 @@ func NewPeer(conf peer.Configuration) peer.Peer {
 	myAddr := conf.Socket.GetAddress()
 	logr.Logger.Info().Msgf("[%s]: New peer", myAddr)
 	// Generate certificate information
+	tlsManager := CreateTLSManager(myAddr)
 	certificateStore, err := GenerateCertificateStore(2048)
+	tlsManager.SetOwnKeys(certificateStore.GetPublicKey(), certificateStore.GetPrivateKey())
 	if err != nil {
 		logr.Logger.Error().Msgf("[%s]: Failed to generate certificate store", myAddr)
 		return nil
@@ -42,7 +44,7 @@ func NewPeer(conf peer.Configuration) peer.Peer {
 		certificateVerifications:    peer.CreateConcurrentMap[chan []byte](),
 		trustBanHook:                make(chan string),
 		isOnionNode:                 false,
-		tlsManager:                  CreateTLSManager(myAddr),
+		tlsManager:                  tlsManager,
 		torManager:                  CreateTorManager(myAddr),
 	}
 	// Init blockchains

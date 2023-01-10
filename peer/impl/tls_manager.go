@@ -45,6 +45,7 @@ func CreateTLSManager(addr string) *TLSManager {
 		keyManager:         KeyManager{},
 	}
 }
+
 func (t *TLSManager) SetOwnKeys(publicKey crypto.PublicKey, privateKey crypto.PrivateKey) {
 	t.keyManager.publicKey = publicKey
 	t.keyManager.privateKey = privateKey
