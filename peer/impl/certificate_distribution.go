@@ -272,11 +272,11 @@ func (n *node) AwaitCertificateVerification(init *types.CertificateBroadcastMess
 
 	target := init.Addr
 	// Create the challenge
-	challenge := []byte("CHALLENGE::" + target + "::" + strconv.FormatInt(time.Now().UnixNano(), 10))
+	challenge := "CHALLENGE::" + strconv.FormatInt(time.Now().UnixNano(), 10)
 
 	// Create the CertificateVerifyMessage
 	certificateVerifyMessage := types.CertificateVerifyMessage{
-		Challenge: challenge,
+		Challenge: []byte(challenge),
 		Source:    n.addr,
 	}
 
@@ -305,8 +305,7 @@ func (n *node) AwaitCertificateVerification(init *types.CertificateBroadcastMess
 			logr.Logger.Error().Err(err).Msg("failed to get peer public key")
 			return
 		}
-
-		hashed := sha256.Sum256(challenge)
+		hashed := sha256.Sum256([]byte(challenge + "::" + target))
 		err = rsa.VerifyPKCS1v15(pk, crypto.SHA256, hashed[:], r[:])
 		if err != nil {
 			logr.Logger.Error().Err(err).Msg("failed to verify certificate")
@@ -334,7 +333,8 @@ func (n *node) handleCertificateVerifyMessage(msg types.Message, pkt transport.P
 
 	// Get private key
 	pk := n.certificateStore.GetPrivateKey()
-	hashed := sha256.Sum256(certificateVerifyMessage.Challenge)
+	full := string(certificateVerifyMessage.Challenge) + "::" + n.addr
+	hashed := sha256.Sum256([]byte(full))
 	// Sign the challenge
 	response, err := rsa.SignPKCS1v15(rand.Reader, &pk, crypto.SHA256, hashed[:])
 	if err != nil {
