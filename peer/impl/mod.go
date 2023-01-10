@@ -46,9 +46,8 @@ func NewPeer(conf peer.Configuration) peer.Peer {
 		torManager:                  CreateTorManager(myAddr),
 	}
 	// Init blockchains
-	newPeer.paxos = CreateMultiPaxos(conf, newPeer)
-	newPeer.banPaxos = CreateMultiPaxos(conf, newPeer)
-	newPeer.banList = CreateBanList(conf.Storage.GetBanBlockchainStore())
+	newPeer.paxos = CreateMultiPaxos(conf, newPeer, conf.Storage.GetBlockchainStore())
+	newPeer.banPaxos = CreateMultiPaxos(conf, newPeer, conf.Storage.GetBanBlockchainStore())
 
 	newPeer.routingTable.Set(myAddr, myAddr)
 	newPeer.registerRegistryCallbacks()
@@ -98,7 +97,6 @@ type node struct {
 	trustCatalog                *TrustCatalog
 	trustBanHook                chan string
 	banPaxos                    *MultiPaxos
-	banList                     *CommonBanList
 	nodeCatalog                 *NodeCatalog
 	isOnionNode                 bool
 	tlsManager                  *TLSManager

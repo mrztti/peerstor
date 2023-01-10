@@ -157,26 +157,10 @@ func (t *TrustCatalog) Trusts() TrustMapping {
 // Trusts: Defines if a name is trusted
 func (n *node) Trusts(name string) bool {
 	localTrust := n.trustCatalog.IsTrusted(name)
-	isBanned := n.banList.IsBanned(name)
+	isBanned := n.HasSharedBan(name)
 	isSelf := n.conf.Socket.GetAddress() == name
 	return isSelf || (localTrust && !isBanned)
 }
-
-/* // GetProof: Sign the trust catalog and return the signature
-func (n *node) SignTrusts() ([]byte, error) {
-	trusts := n.trustCatalog.Trusts()
-
-	// Serialize the map to a JSON string
-	data, err := json.Marshal(trusts)
-	if err != nil {
-		return nil, err
-	}
-
-	// get private key
-	prk := n.certificateStore.GetPrivateKey()
-	// sign the trust catalog using the private key
-	return rsa.SignPKCS1v15(rand.Reader, &prk, crypto.SHA256, data)
-} */
 
 //=============================================================================
 // Security mechanisms

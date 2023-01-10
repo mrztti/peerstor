@@ -16,60 +16,31 @@ import (
 
 	"github.com/rs/xid"
 	"go.dedis.ch/cs438/logr"
-	"go.dedis.ch/cs438/storage"
 	"go.dedis.ch/cs438/types"
 )
 
-//=============================================================================
-// CommonBanList
-
-type CommonBanList struct {
-	storage.Store
-	storage storage.Store
-	banList map[string]struct{}
-}
-
-// Interface definitions
-func (b *CommonBanList) Get(key string) []byte {
-	return b.storage.Get(key)
-}
-
-func (b *CommonBanList) Set(key string, val []byte) {
-	b.storage.Set(key, val)
-	b.banList[key] = struct{}{}
-}
-
-func (b *CommonBanList) Delete(key string) {
-	// Deleting from the storage is not allowed
-	logr.Logger.Error().Msgf("Deleting from the ban list is not allowed")
-}
-
-func (b *CommonBanList) Len() int {
-	return b.storage.Len()
-}
-
-func (b *CommonBanList) ForEach(f func(key string, val []byte) bool) {
-	b.storage.ForEach(f)
-}
-
-// CreateBanList creates a new ban list from the storage
-func CreateBanList(storage storage.Store) *CommonBanList {
-	return &CommonBanList{
-		storage: storage,
-		banList: make(map[string]struct{}),
-	}
-}
-
-// IsBanned returns true if the address is banned
-// TODO : Check if the address is banned by traversing the blockchain
-func (b *CommonBanList) IsBanned(address string) bool {
-	_, ok := b.banList[address]
-	return ok
-}
-
+// HasSharedBan: Check if the node has a shared ban with the given address
 func (n *node) HasSharedBan(address string) bool {
-	return n.banList.IsBanned(address)
+	bans, err := n.banPaxos.traverseBlockchain()
+	if err != nil {
+		logr.Logger.Error().Msgf("Error while traversing the blockchain: %s", err)
+		return false
+	}
+
+	// Check if the address is in the ban list
+	for _, ban := range bans {
+		if ban == address {
+			return true
+		}
+	}
+
+	return false
 }
+
+/* // VerifyBans: Verify the bans in the blockchain
+func (n *node) VerifyBans() {
+	bc := n.banPaxos.blockchainStore
+} */
 
 //=============================================================================
 
@@ -120,7 +91,7 @@ func (n *node) ProposeBan(address string) error {
 	// Hex encode
 	mh := hex.EncodeToString(hash[:])
 	for {
-		if n.banList.IsBanned(address) {
+		if n.HasSharedBan(address) {
 			logr.Logger.Info().Msgf("[%s]: Address %s is already banned", n.addr, address)
 			return nil
 		}

@@ -428,7 +428,7 @@ func (n *node) tryAdvanceBanTLC(catchup bool, tlcStep uint) error {
 		logr.Logger.Err(err).Msgf("[%s]: Error adding block %#v to chain", n.addr, tlcBlock)
 	}
 	// 2.2 Set name association in naming store and notify the client
-	n.banList.Set(tlcBlock.Value.Filename, []byte(tlcBlock.Value.Metahash))
+	/* n.banPaxos.blockchainStore.Set(tlcBlock.Value.Filename, []byte(tlcBlock.Value.Metahash)) */
 	// 2.3 Broadcast TLC if not catchup
 	// Even if we're catching up, this aint going to hurt anyone.
 	n.BroadcastBanTLCMessageInParallel(currentStep, *blockRef)
