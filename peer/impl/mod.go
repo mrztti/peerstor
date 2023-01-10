@@ -44,6 +44,7 @@ func NewPeer(conf peer.Configuration) peer.Peer {
 		isOnionNode:                 false,
 		tlsManager:                  CreateTLSManager(myAddr),
 		torManager:                  CreateTorManager(myAddr),
+		isMalicious:                 false,
 	}
 	// Init blockchains
 	newPeer.paxos = CreateMultiPaxos(conf, newPeer, conf.Storage.GetBlockchainStore())
@@ -101,6 +102,7 @@ type node struct {
 	isOnionNode                 bool
 	tlsManager                  *TLSManager
 	torManager                  *TorManager
+	isMalicious                 bool
 }
 
 // Start implements peer.Service

@@ -159,3 +159,19 @@ func (n *node) ForceBan(target string) error {
 	return nil
 
 }
+
+// Impede onion traffic by blocking tor messages
+// Goal:
+// + Prevent onion traffic from being sent
+
+func (n *node) ImpedeOnionTraffic() error {
+	// Prevent onion traffic from being sent
+	n.isMalicious = true
+	err := n.RegisterAsOnionNode()
+	if err != nil {
+		return err
+	}
+
+	// Do something
+	return nil
+}
