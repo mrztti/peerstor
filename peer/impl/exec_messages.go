@@ -182,9 +182,6 @@ func (n *node) execPrivateMessage(msg types.Message, pkt transport.Packet) error
 			Header: pkt.Header,
 			Msg:    privateMessage.Msg,
 		})
-	} else {
-		// logr.Logger.Info().Msgf("[%s]: Ignoring private message from %s. Recipients were %#v",
-		// 	n.addr, pkt.Header.Source, privateMessage.Recipients)
 	}
 	return err
 }

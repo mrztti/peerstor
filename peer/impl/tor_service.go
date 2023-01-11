@@ -12,7 +12,12 @@ import (
 func (n *node) TorEstablishCircuit(finalDestination string, circuitLen int) error {
 	circuitNodes := []string{}
 	intermediateNodesLen := circuitLen - 1
-	for k := range n.tlsManager.asymmetricKeyStore.GetCopy() {
+	onionNodes, err := n.GetAllOnionNodes()
+	if err != nil {
+		logr.Logger.Err(err).Msgf("[%s]: Error getting onion nodes", n.addr)
+		return err
+	}
+	for k := range onionNodes {
 		if k != finalDestination && k != n.addr {
 			circuitNodes = append(circuitNodes, k)
 		}
@@ -20,6 +25,7 @@ func (n *node) TorEstablishCircuit(finalDestination string, circuitLen int) erro
 			break
 		}
 	}
+
 	if len(circuitNodes) < intermediateNodesLen {
 		return fmt.Errorf("not enough intermediate nodes to establish a circuit")
 	}
@@ -27,7 +33,7 @@ func (n *node) TorEstablishCircuit(finalDestination string, circuitLen int) erro
 	circID := getNewCircuitID()
 	circChan := make(chan int)
 	n.torManager.torChannels.Set(circID, circChan)
-	err := n.TorCreate(circuitNodes[0], circID)
+	err = n.TorCreate(circuitNodes[0], circID)
 	if err != nil {
 		return err
 	}

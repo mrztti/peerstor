@@ -90,6 +90,8 @@ type Configuration struct {
 	PrivateKey crypto.PrivateKey
 
 	VerifyCertificates bool
+
+	IsOnionNode bool
 }
 
 // Backoff describes parameters for a backoff algorithm. The initial time must

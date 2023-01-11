@@ -67,8 +67,8 @@ func (n *node) DecryptPublicTor(ciphertext []byte) ([]byte, error) {
 }
 
 func (t *TLSManager) EncryptPublicTor(peerIP string, plaintext []byte) ([]byte, error) {
-	publicKey, ok := t.GetAsymmetricKey(peerIP).(rsa.PublicKey)
-	if !ok || publicKey == (rsa.PublicKey{}) {
+	publicKey := t.GetAsymmetricKey(peerIP).(rsa.PublicKey)
+	if publicKey == (rsa.PublicKey{}) {
 		return []byte{}, fmt.Errorf("no public key found for peer %s", peerIP)
 	}
 	hash := sha256.New()
@@ -150,9 +150,9 @@ func (t *TLSManager) EncryptSymmetricTor(torID string, plaintext []byte) ([]byte
 	stream := cipher.NewCFBEncrypter(block, initial_vect)
 	stream.XORKeyStream(ciphertext[aes.BlockSize:], plaintext)
 
-	if err != nil {
-		return []byte{}, fmt.Errorf("signing failed %s", torID)
-	}
+	// if err != nil {
+	// 	return []byte{}, fmt.Errorf("signing failed %s", torID)
+	// }
 
 	return ciphertext, nil
 }
