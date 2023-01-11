@@ -12,7 +12,7 @@ import (
 	"go.dedis.ch/cs438/transport/channel"
 )
 
-func Test_Tor_Circuit_Tor_Create_Inject(t *testing.T) {
+func Test_Tor_Circuit_Create_Inject(t *testing.T) {
 	transp := channel.NewTransport()
 	fake := z.NewFakeMessage(t)
 	handler1, _ := fake.GetHandler(t)
@@ -58,7 +58,7 @@ func Test_Tor_Circuit_Tor_Create_Inject(t *testing.T) {
 	require.Greater(t, len(node1.GetCircuitIDs()), 0)
 
 }
-func Test_Tor_Circuit_Tor_Create(t *testing.T) {
+func Test_Tor_Circuit_Create(t *testing.T) {
 	transp := channel.NewTransport()
 	fake := z.NewFakeMessage(t)
 	handler1, _ := fake.GetHandler(t)

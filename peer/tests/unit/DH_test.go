@@ -10,7 +10,7 @@ import (
 	"go.dedis.ch/cs438/transport/channel"
 )
 
-func Test_DH_TwoNodeSetupFail(t *testing.T) {
+func Test_Tor_DH_TwoNodeSetupFail(t *testing.T) {
 	transp := channel.NewTransport()
 	fake := z.NewFakeMessage(t)
 	handler1, _ := fake.GetHandler(t)
@@ -32,7 +32,7 @@ func Test_DH_TwoNodeSetupFail(t *testing.T) {
 	require.Error(t, err)
 }
 
-func Test_DH_TwoNodeSetup_Inject(t *testing.T) {
+func Test_Tor_DH_TwoNodeSetup_Inject(t *testing.T) {
 	transp := channel.NewTransport()
 	fake := z.NewFakeMessage(t)
 	handler1, _ := fake.GetHandler(t)
@@ -75,7 +75,7 @@ func Test_DH_TwoNodeSetup_Inject(t *testing.T) {
 	require.Equal(t, n1key, n2key)
 }
 
-func Test_DH_TwoNodeSetup(t *testing.T) {
+func Test_Tor_DH_TwoNodeSetup(t *testing.T) {
 	transp := channel.NewTransport()
 	fake := z.NewFakeMessage(t)
 	handler1, _ := fake.GetHandler(t)
@@ -109,7 +109,7 @@ func Test_DH_TwoNodeSetup(t *testing.T) {
 
 	require.Equal(t, n1key, n2key)
 }
-func Test_DH_ThreeNodeSetup_Inject_Keys(t *testing.T) {
+func Test_Tor_DH_ThreeNodeSetup_Inject_Keys(t *testing.T) {
 	transp := channel.NewTransport()
 	fake := z.NewFakeMessage(t)
 	handler1, _ := fake.GetHandler(t)
@@ -165,7 +165,7 @@ func Test_DH_ThreeNodeSetup_Inject_Keys(t *testing.T) {
 	require.NotEqual(t, node1.GetSymKey(node2.GetAddr()), node1.GetSymKey(node3.GetAddr()))
 
 }
-func Test_DH_ThreeNodeSetup_CA_Keys(t *testing.T) {
+func Test_Tor_DH_ThreeNodeSetup_CA_Keys(t *testing.T) {
 	transp := channel.NewTransport()
 	fake := z.NewFakeMessage(t)
 	handler1, _ := fake.GetHandler(t)

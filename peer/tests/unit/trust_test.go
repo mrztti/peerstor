@@ -21,7 +21,7 @@ import (
 	"go.dedis.ch/cs438/transport/channel"
 )
 
-func Test_Trust_NoError(t *testing.T) {
+func Test_Tor_Trust_NoError(t *testing.T) {
 	transp := channel.NewTransport()
 	fake := z.NewFakeMessage(t)
 	handler1, _ := fake.GetHandler(t)
@@ -92,7 +92,7 @@ func Test_Trust_NoError(t *testing.T) {
 
 }
 
-func Test_Trust_Ban(t *testing.T) {
+func Test_Tor_Trust_Ban(t *testing.T) {
 	transp := channel.NewTransport()
 
 	node1 := z.NewTestNode(t, peerFac, transp, "127.0.0.1:0", z.WithAntiEntropy(time.Millisecond*50),
@@ -144,7 +144,7 @@ func Test_Trust_Ban(t *testing.T) {
 
 }
 
-func Test_Trust_Scenario(t *testing.T) {
+func Test_Tor_Trust_Scenario(t *testing.T) {
 	transp := channel.NewTransport()
 	num_nodes := 10
 	nodes := make([]z.TestNode, num_nodes)
@@ -224,7 +224,7 @@ func Test_Trust_Scenario(t *testing.T) {
 
 }
 
-func Test_Trust_Attack_Spoof(t *testing.T) {
+func Test_Tor_Trust_Attack_Spoof(t *testing.T) {
 	transp := channel.NewTransport()
 	num_nodes := 10
 	nodes := make([]z.TestNode, num_nodes)
@@ -284,7 +284,7 @@ func Test_Trust_Attack_Spoof(t *testing.T) {
 
 }
 
-func Test_Trust_Verify_Certificates(t *testing.T) {
+func Test_Tor_Trust_Verify_Certificates(t *testing.T) {
 	transp := channel.NewTransport()
 
 	node1 := z.NewTestNode(t, peerFac, transp, "127.0.0.1:0", z.WithAntiEntropy(time.Millisecond*50),
@@ -319,7 +319,7 @@ func Test_Trust_Verify_Certificates(t *testing.T) {
 
 }
 
-func Test_Trust_Resist_Spoof(t *testing.T) {
+func Test_Tor_Trust_Resist_Spoof(t *testing.T) {
 	transp := channel.NewTransport()
 	num_nodes := 10
 	nodes := make([]z.TestNode, num_nodes)
@@ -387,7 +387,7 @@ func Test_Trust_Resist_Spoof(t *testing.T) {
 
 }
 
-func Test_Trust_Resist_Forced_Ban(t *testing.T) {
+func Test_Tor_Trust_Resist_Forced_Ban(t *testing.T) {
 	transp := channel.NewTransport()
 
 	node1 := z.NewTestNode(t, peerFac, transp, "127.0.0.1:0", z.WithAntiEntropy(time.Millisecond*50),

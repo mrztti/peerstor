@@ -3,7 +3,7 @@ export BINLOG = warn
 export HTTPLOG = warn
 export GORACE = halt_on_error=1
 
-test: test_hw0 test_hw1 test_hw2 test_hw3
+test: test_hw0 test_hw1 test_hw2 test_hw3 test_tor
 
 xtest: setbin test
 
@@ -16,6 +16,10 @@ test_hw0: test_unit_hw0 test_int_hw0
 test_hw1: test_unit_hw1 test_int_hw1
 test_hw2: test_unit_hw2 test_int_hw2
 test_hw3: test_unit_hw3 test_int_hw3
+test_tor : test_unit_tor
+
+test_unit_tor:
+	go test -v -race -run Test_Tor ./peer/tests/unit
 
 test_unit_hw0:
 	go test -v -race -run Test_HW0 ./peer/tests/unit
