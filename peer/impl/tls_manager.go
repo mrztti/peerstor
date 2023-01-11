@@ -79,7 +79,10 @@ func (t *TLSManager) SetAsymmetricKey(peerIP string, key crypto.PublicKey) {
 	t.asymmetricKeyStore.Set(peerIP, key)
 }
 
-func (n *node) EncryptSymmetric(peerIP string, message transport.Message) (types.TLSMessage, error) {
+func (n *node) EncryptSymmetric(
+	peerIP string,
+	message transport.Message,
+) (types.TLSMessage, error) {
 	return n.tlsManager.EncryptSymmetric(peerIP, message)
 }
 
@@ -87,7 +90,10 @@ func (n *node) DecryptSymmetric(message *types.TLSMessage) (transport.Message, e
 	return n.tlsManager.DecryptSymmetric(message)
 }
 
-func (t *TLSManager) EncryptSymmetric(peerIP string, message transport.Message) (types.TLSMessage, error) {
+func (t *TLSManager) EncryptSymmetric(
+	peerIP string,
+	message transport.Message,
+) (types.TLSMessage, error) {
 	symmetricKey := t.GetSymmKey(peerIP)
 	// log.Default().Printf("[%s]: Encrypting message for %s with key %v", t.addr, peerIP, symmetricKey)
 	if symmetricKey == nil {
@@ -140,7 +146,11 @@ func (t *TLSManager) DecryptSymmetric(message *types.TLSMessage) (transport.Mess
 
 	cipherTextWithIVAndSignature := message.SignedCiphertext
 	if len(cipherTextWithIVAndSignature) < aes.BlockSize {
-		return transport.Message{}, fmt.Errorf("[%s]: Cannot decrypt message from %s, ciphertext too short", t.addr, peerIP)
+		return transport.Message{}, fmt.Errorf(
+			"[%s]: Cannot decrypt message from %s, ciphertext too short",
+			t.addr,
+			peerIP,
+		)
 	}
 	initial_vect := cipherTextWithIVAndSignature[:aes.BlockSize]
 	ciphertextWithSignature := cipherTextWithIVAndSignature[aes.BlockSize:]
@@ -154,12 +164,12 @@ func (t *TLSManager) DecryptSymmetric(message *types.TLSMessage) (transport.Mess
 	signature := ciphertextWithSignature[signatureStartIndex:]
 	plaintext := ciphertextWithSignature[:signatureStartIndex]
 
-	signedBytes := concatenateArrays([]byte(message.Source), []byte(message.ContentType), initial_vect, plaintext)
-	// log.Default().Printf("Signed lenght bytes: %d", len(signedBytes))
-	// log.Default().Printf("Signed lenght bytes expected: %d", len([]byte(message.Source))+len([]byte(message.ContentType))+len(initial_vect)+len(plaintext))
-
-	// log.Default().Printf("Signed bytes: %v", signedBytes)
-	// log.Default().Printf("Signature: %v", signature)
+	signedBytes := concatenateArrays(
+		[]byte(message.Source),
+		[]byte(message.ContentType),
+		initial_vect,
+		plaintext,
+	)
 
 	signatureOk := t.VerifySignature(signedBytes, signature, peerIP)
 	if !signatureOk {
@@ -192,14 +202,19 @@ func (n *node) GetSymKey(addr string) []byte {
 	return n.tlsManager.GetSymmKey(addr)
 }
 
-func (t *TLSManager) EncryptPublic(peerIP string, message transport.Message) (types.TLSMessageHello, error) {
+func (t *TLSManager) EncryptPublic(
+	peerIP string,
+	message transport.Message,
+) (types.TLSMessageHello, error) {
 	publicKey, ok := t.GetAsymmetricKey(peerIP).(rsa.PublicKey)
 	if !ok || publicKey == (rsa.PublicKey{}) {
 		return types.TLSMessageHello{}, fmt.Errorf("no public key found for peer %s", peerIP)
 	}
 
 	plaintext := []byte(message.Payload)
-	signature, err := t.SignMessage(concatenateArrays([]byte(t.addr), []byte(message.Type), plaintext))
+	signature, err := t.SignMessage(
+		concatenateArrays([]byte(t.addr), []byte(message.Type), plaintext),
+	)
 	if err != nil {
 		return types.TLSMessageHello{}, fmt.Errorf("signing failed %s", peerIP)
 	}
@@ -216,7 +231,13 @@ func (t *TLSManager) EncryptPublic(peerIP string, message transport.Message) (ty
 			finish = msgLen
 		}
 
-		encryptedBlockBytes, err := rsa.EncryptOAEP(hash, rand, &publicKey, plaintextWithSignature[start:finish], nil)
+		encryptedBlockBytes, err := rsa.EncryptOAEP(
+			hash,
+			rand,
+			&publicKey,
+			plaintextWithSignature[start:finish],
+			nil,
+		)
 		if err != nil {
 			return types.TLSMessageHello{}, fmt.Errorf("encryption failed %s %v", peerIP, err)
 
@@ -252,7 +273,13 @@ func (t *TLSManager) DecryptPublic(message *types.TLSMessageHello) (transport.Me
 			finish = msgLen
 		}
 
-		decryptedBlockBytes, err := rsa.DecryptOAEP(hash, rand, &privateKey, ciphertext[start:finish], nil)
+		decryptedBlockBytes, err := rsa.DecryptOAEP(
+			hash,
+			rand,
+			&privateKey,
+			ciphertext[start:finish],
+			nil,
+		)
 		if err != nil {
 			return transport.Message{}, fmt.Errorf("decryption failed %s", t.addr)
 		}
@@ -312,7 +339,10 @@ func (t *TLSManager) VerifySignature(messageBytes, signature []byte, peerIP stri
 	return err == nil
 }
 
-func (n *node) EncryptPublic(peerIP string, message transport.Message) (types.TLSMessageHello, error) {
+func (n *node) EncryptPublic(
+	peerIP string,
+	message transport.Message,
+) (types.TLSMessageHello, error) {
 	return n.tlsManager.EncryptPublic(peerIP, message)
 }
 

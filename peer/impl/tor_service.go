@@ -128,15 +128,6 @@ func (n *node) TorExtend(addr string, circID string) error {
 		return err
 	}
 	encryptedPayload, err = n.TorEncrypt(circID, encryptedPayload)
-	// iterate in reverse order
-	// for i := len(nodesAddress) - 1; i >= 0; i-- {
-	// 	logr.Logger.Info().Msgf("[%s]: Encrypting TLSClientHello to %s", n.addr, nodesAddress[i])
-	// 	encryptedPayload, err = n.tlsManager.EncryptSymmetricTor(n.createTorEntryName(nodesAddress[i], circID), encryptedPayload)
-	// 	if err != nil {
-	// 		logr.Logger.Err(err).Msgf("[%s]: Error Encrypting TLSClientHello to %s", n.addr, addr)
-	// 		return err
-	// 	}
-	// }
 
 	if err != nil {
 		logr.Logger.Err(err).Msgf("[%s]: Error Encrypting TLSClientHello to %s", n.addr, addr)
@@ -168,9 +159,13 @@ func (n *node) TorEncrypt(circID string, data []byte) ([]byte, error) {
 	}
 	for i := len(nodesAddress) - 1; i >= 0; i-- {
 		logr.Logger.Info().Msgf("[%s]: Encrypting TLSClientHello to %s", n.addr, nodesAddress[i])
-		data, err = n.tlsManager.EncryptSymmetricTor(n.createTorEntryName(nodesAddress[i], circID), data)
+		data, err = n.tlsManager.EncryptSymmetricTor(
+			n.createTorEntryName(nodesAddress[i], circID),
+			data,
+		)
 		if err != nil {
-			logr.Logger.Err(err).Msgf("[%s]: Error Encrypting TLSClientHello to %s", n.addr, nodesAddress[i])
+			logr.Logger.Err(err).
+				Msgf("[%s]: Error Encrypting TLSClientHello to %s", n.addr, nodesAddress[i])
 			return []byte{}, err
 		}
 	}
@@ -186,9 +181,13 @@ func (n *node) TorDecrypt(circID string, data []byte) ([]byte, error) {
 	}
 	for i := 0; i < len(nodesAddress); i++ {
 		logr.Logger.Info().Msgf("[%s]: Decrypting TLSClientHello to %s", n.addr, nodesAddress[i])
-		data, err = n.tlsManager.DecryptSymmetricTor(n.createTorEntryName(nodesAddress[i], circID), data)
+		data, err = n.tlsManager.DecryptSymmetricTor(
+			n.createTorEntryName(nodesAddress[i], circID),
+			data,
+		)
 		if err != nil {
-			logr.Logger.Err(err).Msgf("[%s]: Error Decrypting TLSClientHello to %s", n.addr, nodesAddress[i])
+			logr.Logger.Err(err).
+				Msgf("[%s]: Error Decrypting TLSClientHello to %s", n.addr, nodesAddress[i])
 			return []byte{}, err
 		}
 	}

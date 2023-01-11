@@ -197,7 +197,12 @@ func (n *node) startBanService() {
 }
 
 // startSecurityMechanism: Starts the security mechanism of the node
-func (n *node) startSecurityMechanism(interval time.Duration, timeoutEffect func(float32) float32, timeout time.Duration, corruptionEffect func(float32) float32) {
+func (n *node) startSecurityMechanism(
+	interval time.Duration,
+	timeoutEffect func(float32) float32,
+	timeout time.Duration,
+	corruptionEffect func(float32) float32,
+) {
 	//myAddr := n.conf.Socket.GetAddress()
 	ticker := time.NewTicker(interval)
 
