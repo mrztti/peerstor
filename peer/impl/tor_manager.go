@@ -150,9 +150,9 @@ func (t *TLSManager) EncryptSymmetricTor(torID string, plaintext []byte) ([]byte
 	stream := cipher.NewCFBEncrypter(block, initial_vect)
 	stream.XORKeyStream(ciphertext[aes.BlockSize:], plaintext)
 
-	if err != nil {
-		return []byte{}, fmt.Errorf("signing failed %s", torID)
-	}
+	// if err != nil {
+	// 	return []byte{}, fmt.Errorf("signing failed %s", torID)
+	// }
 
 	return ciphertext, nil
 }

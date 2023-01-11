@@ -567,10 +567,6 @@ func Test_Tor_Circuit_Extend_Extend_Inject(t *testing.T) {
 	err = alice.TorExtend(detlef.GetAddr(), alice.GetCircuitIDs()[0])
 	require.NoError(t, err)
 	time.Sleep(time.Second)
-	bobsSymKeys = []string{}
-	for k := range bob.GetSymKeys() {
-		bobsSymKeys = append(bobsSymKeys, k)
-	}
 
 	aliceAddr := alice.GetAddr()
 	bobAddr := bob.GetAddr()
@@ -706,10 +702,6 @@ func Test_Tor_Circuit_Extend_Extend(t *testing.T) {
 	err = alice.TorExtend(detlef.GetAddr(), alice.GetCircuitIDs()[0])
 	require.NoError(t, err)
 	time.Sleep(time.Second)
-	bobsSymKeys = []string{}
-	for k := range bob.GetSymKeys() {
-		bobsSymKeys = append(bobsSymKeys, k)
-	}
 
 	aliceAddr := alice.GetAddr()
 	bobAddr := bob.GetAddr()
@@ -897,10 +889,6 @@ func Test_Tor_Circuit_Extend_Extend_Extend_Inject(t *testing.T) {
 	time.Sleep(time.Second)
 	alice.TorExtend(eliska.GetAddr(), alice.GetCircuitIDs()[0])
 	time.Sleep(time.Second)
-	bobsSymKeys = []string{}
-	for k := range bob.GetSymKeys() {
-		bobsSymKeys = append(bobsSymKeys, k)
-	}
 
 	aliceAddr := alice.GetAddr()
 	bobAddr := bob.GetAddr()
@@ -1076,10 +1064,6 @@ func Test_Tor_Circuit_Extend_Extend_Extend(t *testing.T) {
 	time.Sleep(time.Second)
 	alice.TorExtend(eliska.GetAddr(), alice.GetCircuitIDs()[0])
 	time.Sleep(time.Second)
-	bobsSymKeys = []string{}
-	for k := range bob.GetSymKeys() {
-		bobsSymKeys = append(bobsSymKeys, k)
-	}
 
 	aliceAddr := alice.GetAddr()
 	bobAddr := bob.GetAddr()
@@ -1312,23 +1296,23 @@ func Test_Tor_Circuit_Extend_Circuit_Establish_Inject(t *testing.T) {
 			for _, value := range bobKeys {
 				require.Equal(t, val, value)
 			}
-			circuitKeysCounter += 1
+			circuitKeysCounter++
 		} else if strings.Contains(dictKey, charlieAddr) {
 			for charKey, value := range charlieKeys {
 				log.Default().Println(charKey)
 				require.Equal(t, val, value)
 			}
-			circuitKeysCounter += 1
+			circuitKeysCounter++
 		} else if strings.Contains(dictKey, detlefAddr) {
 			for _, value := range detlefKeys {
 				require.Equal(t, val, value)
 			}
-			circuitKeysCounter += 1
+			circuitKeysCounter++
 		} else if strings.Contains(dictKey, eliskaAddr) {
 			for _, value := range eliskaKeys {
 				require.Equal(t, val, value)
 			}
-			circuitKeysCounter += 1
+			circuitKeysCounter++
 		}
 	}
 
@@ -1486,23 +1470,23 @@ func Test_Tor_Circuit_Extend_Circuit_Establish(t *testing.T) {
 			for _, value := range bobKeys {
 				require.Equal(t, val, value)
 			}
-			circuitKeysCounter += 1
+			circuitKeysCounter++
 		} else if strings.Contains(dictKey, charlieAddr) {
 			for charKey, value := range charlieKeys {
 				log.Default().Println(charKey)
 				require.Equal(t, val, value)
 			}
-			circuitKeysCounter += 1
+			circuitKeysCounter++
 		} else if strings.Contains(dictKey, detlefAddr) {
 			for _, value := range detlefKeys {
 				require.Equal(t, val, value)
 			}
-			circuitKeysCounter += 1
+			circuitKeysCounter++
 		} else if strings.Contains(dictKey, eliskaAddr) {
 			for _, value := range eliskaKeys {
 				require.Equal(t, val, value)
 			}
-			circuitKeysCounter += 1
+			circuitKeysCounter++
 		}
 	}
 

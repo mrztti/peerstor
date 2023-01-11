@@ -140,7 +140,7 @@ func (n *node) Start() error {
 		err := n.RegisterAsOnionNode()
 		if err != nil {
 			logr.Logger.Error().Msgf("[%s]: Failed to add our node as onion", myAddr)
-			return nil
+			return err
 		}
 	}
 
