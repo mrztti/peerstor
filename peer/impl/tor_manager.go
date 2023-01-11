@@ -33,7 +33,11 @@ func CreateTorManager(addr string) *TorManager {
 func (t *TorManager) GetNextHop(circuitID string) (peer.TorRoutingEntry, error) {
 	routingEntry, ok := t.torRoutingTable.Get(circuitID)
 	if !ok {
-		return peer.TorRoutingEntry{}, fmt.Errorf("[%s]: circuitID %s does not exist", t.addr, circuitID)
+		return peer.TorRoutingEntry{}, fmt.Errorf(
+			"[%s]: circuitID %s does not exist",
+			t.addr,
+			circuitID,
+		)
 	}
 	return routingEntry, nil
 }
@@ -42,7 +46,10 @@ func (n *node) GetTorRoutingEntry(circuitID string) (peer.TorRoutingEntry, error
 	return n.torManager.GetNextHop(circuitID)
 }
 
-func (t *TorManager) AddTorRoutingEntry(incomingCircuitID string, routingEntry peer.TorRoutingEntry) {
+func (t *TorManager) AddTorRoutingEntry(
+	incomingCircuitID string,
+	routingEntry peer.TorRoutingEntry,
+) {
 	t.torRoutingTable.Set(incomingCircuitID, routingEntry)
 }
 
@@ -82,7 +89,13 @@ func (t *TLSManager) EncryptPublicTor(peerIP string, plaintext []byte) ([]byte, 
 			finish = msgLen
 		}
 
-		encryptedBlockBytes, err := rsa.EncryptOAEP(hash, rand, &publicKey, plaintext[start:finish], nil)
+		encryptedBlockBytes, err := rsa.EncryptOAEP(
+			hash,
+			rand,
+			&publicKey,
+			plaintext[start:finish],
+			nil,
+		)
 		if err != nil {
 			return []byte{}, fmt.Errorf("encryption failed %s %v", peerIP, err)
 
@@ -109,7 +122,13 @@ func (t *TLSManager) DecryptPublicTor(ciphertext []byte) ([]byte, error) {
 			finish = msgLen
 		}
 
-		decryptedBlockBytes, err := rsa.DecryptOAEP(hash, rand, &privateKey, ciphertext[start:finish], nil)
+		decryptedBlockBytes, err := rsa.DecryptOAEP(
+			hash,
+			rand,
+			&privateKey,
+			ciphertext[start:finish],
+			nil,
+		)
 		if err != nil {
 			return []byte{}, fmt.Errorf("decryption failed %s", t.addr)
 		}
@@ -166,7 +185,11 @@ func (t *TLSManager) DecryptSymmetricTor(torID string, cipherText []byte) ([]byt
 	}
 
 	if len(cipherText) < aes.BlockSize {
-		return []byte{}, fmt.Errorf("[%s]: Cannot decrypt message from %s, ciphertext too short", t.addr, torID)
+		return []byte{}, fmt.Errorf(
+			"[%s]: Cannot decrypt message from %s, ciphertext too short",
+			t.addr,
+			torID,
+		)
 	}
 	initial_vect := cipherText[:aes.BlockSize]
 	plaintext := cipherText[aes.BlockSize:]

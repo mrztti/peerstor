@@ -47,8 +47,12 @@ func (n *node) VerifyProof(proof []byte, target string, addr string, phase strin
 	//Log the hash and the node
 
 	err = rsa.VerifyPKCS1v15(&pk, crypto.SHA256, hashed[:], proof)
-	logr.Logger.Info().Str("Hash", hex.EncodeToString(hashed[:])).Str("TARGET", target).Str("FROM", addr).
-		Str("VALID", strconv.FormatBool(err == nil)).Msgf("[%s] Verifying %s :", n.addr, phase)
+	logr.Logger.Info().
+		Str("Hash", hex.EncodeToString(hashed[:])).
+		Str("TARGET", target).
+		Str("FROM", addr).
+		Str("VALID", strconv.FormatBool(err == nil)).
+		Msgf("[%s] Verifying %s :", n.addr, phase)
 	if err != nil {
 		logr.Logger.Error().Err(err).Msgf("Unable to verify proof")
 		return false
@@ -210,7 +214,12 @@ func (n *node) handleBanPromiseMessage(promiseMessage *types.BanPaxosPromiseMess
 	// Check the proof of incoming messages and discard repeated votes.
 	val, ok := currentPaxosInstance.nodesPromised.Get(promiseMessage.Source)
 	hasAlreadyPromised := ok && val >= promiseMessage.AcceptedID
-	canProve := n.VerifyProof(promiseMessage.Proof, currentPaxosInstance.proposedValue.Filename, promiseMessage.Source, "promise")
+	canProve := n.VerifyProof(
+		promiseMessage.Proof,
+		currentPaxosInstance.proposedValue.Filename,
+		promiseMessage.Source,
+		"promise",
+	)
 
 	if hasAlreadyPromised || !canProve {
 		logr.Logger.Info().
