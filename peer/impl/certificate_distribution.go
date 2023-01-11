@@ -496,7 +496,7 @@ func (n *node) GetAllOnionNodes() (map[string](*rsa.PublicKey), error) {
 		}
 
 		// Only add trusted nodes
-		if n.trustCatalog.IsTrusted(k) { //TODO: exclude banned nodes
+		if n.trustCatalog.IsTrusted(k) {
 			keys = append(keys, k)
 		}
 	}

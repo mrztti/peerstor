@@ -363,7 +363,7 @@ func (n *node) execTorServerHello(msg types.Message, circuitID string) error {
 	if ok {
 		circChan <- len(nodesAddress)
 	}
-	// TODO(Jirka, Aamir): Fix error message. This error is legit in a normal run of the program, but it ruins our tests which is why we have removed it for now.
+	// Fix error message. This error is legit in a normal run of the program, but it ruins our tests which is why we have removed it for now.
 	// if !ok {
 	// 	err := fmt.Errorf("[%s]: execTorServerHello torChannels.Get failed", n.addr)
 	// 	logr.Logger.Err(err).Msgf("[%s]: execTorServerHello torChannels.Get failed!", n.addr)
