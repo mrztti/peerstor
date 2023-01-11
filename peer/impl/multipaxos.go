@@ -28,7 +28,7 @@ type MultiPaxos struct {
 	skipNextResendTick   CBool
 }
 
-func CreateMultiPaxos(conf peer.Configuration, node *node) *MultiPaxos {
+func CreateMultiPaxos(conf peer.Configuration, node *node, store storage.Store) *MultiPaxos {
 	addr := node.conf.Socket.GetAddress()
 	return &MultiPaxos{
 		addr:                 addr,
@@ -37,7 +37,7 @@ func CreateMultiPaxos(conf peer.Configuration, node *node) *MultiPaxos {
 		currentStep:          AtomicCounter{count: 0},
 		currentPaxosInstance: CreatePaxosInstance(addr, conf),
 		node:                 node,
-		blockchainStore:      conf.Storage.GetBlockchainStore(),
+		blockchainStore:      store,
 		TLCCounts:            peer.CreateConcurrentMap[*AtomicCounter](),
 		TLCSentByMe:          peer.CreateConcurrentSet[uint](),
 		TLCBlocks:            peer.CreateConcurrentMap[*types.BlockchainBlock](),
@@ -89,4 +89,26 @@ func createBlockHash(value types.PaxosValue, index uint, prevhash []byte) []byte
 	hash := sha256.New()
 	hash.Write(bytesToHash)
 	return hash.Sum(nil)
+}
+
+// Traverse the blockchain and return a list of all the values
+func (m *MultiPaxos) traverseBlockchain() ([]string, error) {
+	res := make([]string, 0)
+	nextBlockHash := m.blockchainStore.Get(storage.LastBlockKey)
+	for nextBlockHash != nil {
+
+		blockBytes := m.blockchainStore.Get(hex.EncodeToString(nextBlockHash))
+		block := types.BlockchainBlock{}
+		err := block.Unmarshal(blockBytes)
+		if err != nil {
+			logr.Logger.Err(err).
+				Msgf("[%s]: traverseBlockchain, error unmarshaling block %#v", m.addr, blockBytes)
+			return res, err
+		}
+		res = append(res, block.Value.Filename)
+		nextHash := string(block.Hash)
+		nextBlockHash = m.blockchainStore.Get(nextHash)
+	}
+	return res, nil
+
 }

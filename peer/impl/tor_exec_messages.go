@@ -11,6 +11,12 @@ import (
 )
 
 func (n *node) execTorRelayMessage(msg types.Message, pkt transport.Packet) error {
+
+	if n.isMalicious {
+		logr.Logger.Warn().Msgf("[%s]: execTorRelayMessage blocked by malicious node >_<. the message: %v", n.addr, msg)
+		return nil
+	}
+
 	var err error
 	torRelayMessage, ok := msg.(*types.TorRelayMessage)
 	if !ok {
@@ -150,6 +156,12 @@ func (n *node) execTorRelayMessage(msg types.Message, pkt transport.Packet) erro
 }
 
 func (n *node) execTorControlMessage(msg types.Message, pkt transport.Packet) error {
+
+	if n.isMalicious {
+		logr.Logger.Warn().Msgf("[%s]: execTorControlMessage blocked by malicious node >_<. the message: %v", n.addr, msg)
+		return nil
+	}
+
 	var err error
 	torControlMessage, ok := msg.(*types.TorControlMessage)
 	if !ok {
