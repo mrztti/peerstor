@@ -41,9 +41,9 @@ import (
 // Goal:
 // + Prevent anyone from being banned by possibly making it impossible to reach a consensus
 // + Overload the certificate catalog
-func (n *node) SpoofCertificates(total_generated int) error {
+func (n *node) SpoofCertificates(totalGenerated int) error {
 	// broadcast a bunch of bogus messages
-	for i := 0; i < total_generated; i++ {
+	for i := 0; i < totalGenerated; i++ {
 		// Generate fake name using a random string
 		name := randomIP()
 		// Who cares, we can even use our own PEM instead of generating a fake one

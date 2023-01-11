@@ -35,7 +35,7 @@ type Malicious interface {
 	ImpedeOnionTraffic() error
 
 	// Overload the certificate catalog by spoofing certificates
-	SpoofCertificates(total_generated int) error
+	SpoofCertificates(totalGenerated int) error
 
 	// Attempt to force a ban
 	ForceBan(target string) error

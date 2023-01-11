@@ -269,7 +269,11 @@ func (n *node) InitializeBanPhase2(promiseMessage *types.BanPaxosPromiseMessage)
 	var valueToSend = currentPaxosInstance.proposedValue
 	var highestAcceptedID uint
 	for _, promise := range currentPaxosInstance.phase1Responses {
-		cast := promise.(*types.BanPaxosPromiseMessage)
+		cast, ok := promise.(*types.BanPaxosPromiseMessage)
+		if !ok {
+			logr.Logger.Error().Msgf("[%s]: Failed to cast to BanPaxosPromiseMessage", n.addr)
+			continue
+		}
 		if cast.AcceptedValue != nil && cast.AcceptedID > highestAcceptedID {
 			valueToSend = cast.AcceptedValue
 			highestAcceptedID = cast.AcceptedID

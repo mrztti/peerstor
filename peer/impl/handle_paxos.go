@@ -170,7 +170,11 @@ func (n *node) InitializePhase2(promiseMessage *types.PaxosPromiseMessage) {
 	var valueToSend = currentPaxosInstance.proposedValue
 	var highestAcceptedID uint
 	for _, promise := range currentPaxosInstance.phase1Responses {
-		cast := promise.(*types.PaxosPromiseMessage)
+		cast, ok := promise.(*types.PaxosPromiseMessage)
+		if !ok {
+			logr.Logger.Error().Msgf("[%s]: Failed to cast message to PaxosPromiseMessage", n.addr)
+			continue
+		}
 		if cast.AcceptedValue != nil && cast.AcceptedID > highestAcceptedID {
 			valueToSend = cast.AcceptedValue
 			highestAcceptedID = cast.AcceptedID

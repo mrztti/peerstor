@@ -103,7 +103,7 @@ func (c *CertificateStore) GetPublicKeyPEM() []byte {
 }
 
 // =============================================================================
-// CertificateCatalog: A thread safe map between a name and a rsa.PublicKey. 
+// CertificateCatalog: A thread safe map between a name and a rsa.PublicKey.
 // We do not allow changes to a certificate once it is inscribed to prevent certificate forgery.
 type CertificateCatalog struct {
 	catalog map[string]rsa.PublicKey
@@ -127,7 +127,10 @@ func (n *node) NewCertificateCatalog() error {
 	}
 
 	pub := n.certificateStore.GetPublicKeyPEM()
-	cc.AddCertificate(n.addr, pub)
+	err := cc.AddCertificate(n.addr, pub)
+	if err != nil {
+		return err
+	}
 	n.certificateCatalog = &cc
 	return nil
 }
@@ -253,7 +256,10 @@ func (n *node) HandleCertificateBroadcastMessage(msg types.Message, pkt transpor
 		if !rule2_2 {
 			log.Warn().
 				Msg("node detected certificate forgery, will fight for " + certificateBroadcastMessage.Addr)
-			n.BroadcastCertificate() // Retransmit across the network
+			err := n.BroadcastCertificate() // Retransmit across the network
+			if err != nil {
+				return err
+			}
 		}
 		return nil
 	}
