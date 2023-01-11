@@ -28,7 +28,7 @@ func GenerateKeyPair() (rsa.PublicKey, rsa.PrivateKey) {
 	return key.PublicKey, *key
 }
 
-func Test_Tor_Encryption_Asym_KeyConfig(t *testing.T) {
+func Test_Encryption_Asym_KeyConfig(t *testing.T) {
 	transp := channel.NewTransport()
 	fake := z.NewFakeMessage(t)
 	handler1, _ := fake.GetHandler(t)
@@ -52,7 +52,7 @@ func Test_Tor_Encryption_Asym_KeyConfig(t *testing.T) {
 	require.Equal(t, node2.GetPublicKeyFromAddr(node1.GetAddr()), node1.GetPublicKey())
 }
 
-func Test_Tor_Encryption_Asym_Encryption_Decryption(t *testing.T) {
+func Test_Encryption_Asym_Encryption_Decryption(t *testing.T) {
 	transp := channel.NewTransport()
 	fake := z.NewFakeMessage(t)
 	handler1, _ := fake.GetHandler(t)
@@ -82,7 +82,7 @@ func Test_Tor_Encryption_Asym_Encryption_Decryption(t *testing.T) {
 	require.Equal(t, msg.Payload, decMsg.Payload)
 }
 
-func Test_Tor_Encryption_Asym_Encryption_Two_Nodes(t *testing.T) {
+func Test_Encryption_Asym_Encryption_Two_Nodes(t *testing.T) {
 	transp := channel.NewTransport()
 	fake := z.NewFakeMessage(t)
 	handler1, _ := fake.GetHandler(t)
@@ -121,7 +121,7 @@ func Test_Tor_Encryption_Asym_Encryption_Two_Nodes(t *testing.T) {
 
 }
 
-func Test_Tor_Encryption_BreakSign(t *testing.T) {
+func Test_Encryption_BreakSign(t *testing.T) {
 	transp := channel.NewTransport()
 	fake := z.NewFakeMessage(t)
 	handler1, _ := fake.GetHandler(t)
@@ -153,7 +153,7 @@ func Test_Tor_Encryption_BreakSign(t *testing.T) {
 	require.NotEqual(t, msg.Payload, decMsg.Payload)
 }
 
-func Test_Tor_Signature_Is_Correct_Size(t *testing.T) {
+func Test_Encryption_Signature_Is_Correct_Size(t *testing.T) {
 	transp := channel.NewTransport()
 	fake := z.NewFakeMessage(t)
 	handler1, _ := fake.GetHandler(t)
@@ -174,7 +174,7 @@ func Test_Tor_Signature_Is_Correct_Size(t *testing.T) {
 	}
 }
 
-func Test_Tor_DH_Asym_BreakSign_TwoNodes(t *testing.T) {
+func Test_Encryption_Asym_BreakSign_TwoNodes(t *testing.T) {
 	transp := channel.NewTransport()
 	fake := z.NewFakeMessage(t)
 	handler1, _ := fake.GetHandler(t)
@@ -216,7 +216,7 @@ func Test_Tor_DH_Asym_BreakSign_TwoNodes(t *testing.T) {
 	require.NotEqual(t, msg.Payload, decMsg.Payload)
 }
 
-func Test_Tor_TLS_Message_Is_Received_Injected_Keys(t *testing.T) {
+func Test_TLS_Message_Is_Received_Injected_Keys(t *testing.T) {
 	transp := channel.NewTransport()
 	fake := z.NewFakeMessage(t)
 	handler1, _ := fake.GetHandler(t)
@@ -295,7 +295,7 @@ func Test_Tor_TLS_Message_Is_Received_Injected_Keys(t *testing.T) {
 	// require.Equal(t, chat.Name(), lastMessage.Msg.Type)
 }
 
-func Test_Tor_TLS_Message_Is_Received_CA_Keys(t *testing.T) {
+func Test_TLS_Message_Is_Received_CA_Keys(t *testing.T) {
 	transp := channel.NewTransport()
 	fake := z.NewFakeMessage(t)
 	handler1, _ := fake.GetHandler(t)
@@ -363,7 +363,7 @@ func Test_Tor_TLS_Message_Is_Received_CA_Keys(t *testing.T) {
 	// require.Equal(t, chat.Name(), lastMessage.Msg.Type)
 }
 
-func Test_Tor_TLS_Message_Is_Reliably_Delivered_Injected_Keys(t *testing.T) {
+func Test_TLS_Message_Is_Reliably_Delivered_Injected_Keys(t *testing.T) {
 	transp := channel.NewTransport()
 	fake := z.NewFakeMessage(t)
 	handler1, _ := fake.GetHandler(t)
@@ -444,7 +444,7 @@ func Test_Tor_TLS_Message_Is_Reliably_Delivered_Injected_Keys(t *testing.T) {
 	require.Equal(t, chat, *chatMsg)
 }
 
-func Test_Tor_TLS_Message_Is_Reliably_Delivered_CA_Keys(t *testing.T) {
+func Test_TLS_Message_Is_Reliably_Delivered_CA_Keys(t *testing.T) {
 	transp := channel.NewTransport()
 	fake := z.NewFakeMessage(t)
 	handler1, _ := fake.GetHandler(t)
@@ -525,7 +525,7 @@ func Test_Tor_TLS_Message_Is_Reliably_Delivered_CA_Keys(t *testing.T) {
 	require.Equal(t, chat, *chatMsg)
 }
 
-func Test_Tor_TLS_SymmetricEncryption_Simple_CA_Keys(t *testing.T) {
+func Test_TLS_SymmetricEncryption_Simple_CA_Keys(t *testing.T) {
 	transp := channel.NewTransport()
 	fake := z.NewFakeMessage(t)
 	handler1, _ := fake.GetHandler(t)
@@ -569,7 +569,7 @@ func Test_Tor_TLS_SymmetricEncryption_Simple_CA_Keys(t *testing.T) {
 	require.Equal(t, messageToEncrypt, []byte(decrypted.Payload))
 }
 
-func Test_Tor_TLS_SymmetricEncryption_Simple_Injected_Keys(t *testing.T) {
+func Test_TLS_SymmetricEncryption_Simple_Injected_Keys(t *testing.T) {
 	transp := channel.NewTransport()
 	fake := z.NewFakeMessage(t)
 	handler1, _ := fake.GetHandler(t)
@@ -620,7 +620,7 @@ func Test_Tor_TLS_SymmetricEncryption_Simple_Injected_Keys(t *testing.T) {
 	require.Equal(t, messageToEncrypt, []byte(decrypted.Payload))
 }
 
-func Test_Tor_TLS_SymmetricEncryption_BreakSign_CA_Keys(t *testing.T) {
+func Test_TLS_SymmetricEncryption_BreakSign_CA_Keys(t *testing.T) {
 	transp := channel.NewTransport()
 	fake := z.NewFakeMessage(t)
 	handler1, _ := fake.GetHandler(t)
@@ -676,7 +676,7 @@ func Test_Tor_TLS_SymmetricEncryption_BreakSign_CA_Keys(t *testing.T) {
 	require.NotEqual(t, msg.Payload, decrypted.Payload)
 }
 
-func Test_Tor_TLS_SymmetricEncryption_BreakSign_Injected_Keys(t *testing.T) {
+func Test_TLS_SymmetricEncryption_BreakSign_Injected_Keys(t *testing.T) {
 	transp := channel.NewTransport()
 	fake := z.NewFakeMessage(t)
 	handler1, _ := fake.GetHandler(t)
