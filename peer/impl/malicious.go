@@ -59,7 +59,10 @@ func (n *node) SpoofCertificates(totalGenerated int) error {
 		if err != nil {
 			return err
 		}
-		n.Broadcast(m)
+		err = n.Broadcast(m)
+		if err != nil {
+			return err
+		}
 	}
 	return nil
 }
@@ -107,7 +110,10 @@ func (n *node) ForceBan(target string) error {
 		if err != nil {
 			return err
 		}
-		n.Broadcast(m)
+		err = n.Broadcast(m)
+		if err != nil {
+			return err
+		}
 	}
 
 	// Attempt 2: Spam TLC messages
@@ -132,7 +138,10 @@ func (n *node) ForceBan(target string) error {
 		if err != nil {
 			return err
 		}
-		n.Broadcast(m)
+		err = n.Broadcast(m)
+		if err != nil {
+			return err
+		}
 	}
 
 	// Attempt 3: Spam TLC messages with a fake source
@@ -159,7 +168,10 @@ func (n *node) ForceBan(target string) error {
 		if err != nil {
 			return err
 		}
-		n.Broadcast(m)
+		err = n.Broadcast(m)
+		if err != nil {
+			return err
+		}
 	}
 
 	return nil
