@@ -7,7 +7,7 @@ import (
 	"go.dedis.ch/cs438/types"
 )
 
-type TLSServices interface {
+type KeyExchangeServices interface {
 	CreateDHSymmetricKey(addr string) error
 	GetSymKey(addr string) []byte
 	EncryptSymmetric(peerIP string, message transport.Message) (types.TLSMessage, error)
@@ -16,6 +16,8 @@ type TLSServices interface {
 	GetPrivateKey() crypto.PrivateKey
 	SetAsmKey(addr string, publicKey crypto.PublicKey)
 	GetPublicKeyFromAddr(addr string) crypto.PublicKey
+}
+type TLSServices interface {
 	EncryptPublic(peerIP string, message transport.Message) (types.TLSMessageHello, error)
 	DecryptPublic(message *types.TLSMessageHello) (transport.Message, error)
 	SendTLSMessage(peerIP string, message types.Message) error

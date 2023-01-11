@@ -52,8 +52,8 @@ func (n *node) execTorRelayMessage(msg types.Message, pkt transport.Packet) erro
 		torRelayMessage.LastHop = n.addr
 		torRelayMessage.CircuitID = nextRoutingEntry.CircuitID
 
-		n.SendTLSMessage(nextRoutingEntry.NextHop, torRelayMessage)
-		return nil
+		err := n.SendTLSMessage(nextRoutingEntry.NextHop, torRelayMessage)
+		return err
 	}
 	switch torRelayMessage.Cmd {
 	case types.RelayExtend:
@@ -80,7 +80,8 @@ func (n *node) execTorRelayMessage(msg types.Message, pkt transport.Packet) erro
 			NextHop:   torRelayMessage.Relay,
 		})
 
-		n.SendTLSMessage(torRelayMessage.Relay, torConMsg)
+		err = n.SendTLSMessage(torRelayMessage.Relay, torConMsg)
+		return err
 
 	case types.RelayExtended:
 		nodesAddress, ok := n.torManager.myCircuits.Get(torRelayMessage.CircuitID)
@@ -101,8 +102,14 @@ func (n *node) execTorRelayMessage(msg types.Message, pkt transport.Packet) erro
 			Type:    types.TorServerHello{}.Name(),
 		}
 		var newMessage types.TorServerHello
-		n.conf.MessageRegistry.UnmarshalMessage(&transportMessage, &newMessage)
-		n.execTorServerHello(newMessage, torRelayMessage.CircuitID)
+		err = n.conf.MessageRegistry.UnmarshalMessage(&transportMessage, &newMessage)
+		if err != nil {
+			return err
+		}
+		err = n.execTorServerHello(newMessage, torRelayMessage.CircuitID)
+		if err != nil {
+			return err
+		}
 	case types.RelayRequest:
 		torRelayMessage.Data, err = n.tlsManager.DecryptSymmetricTor(
 			n.createTorEntryName(torRelayMessage.LastHop, torRelayMessage.CircuitID),
@@ -129,7 +136,8 @@ func (n *node) execTorRelayMessage(msg types.Message, pkt transport.Packet) erro
 			Cmd:       types.RelayResponse,
 			Data:      encryptedData,
 		}
-		n.SendTLSMessage(torRelayMessage.LastHop, sampleResponse)
+		err = n.SendTLSMessage(torRelayMessage.LastHop, sampleResponse)
+		return err
 	case types.RelayResponse:
 		torRelayMessage.Data, err = n.TorDecrypt(torRelayMessage.CircuitID, torRelayMessage.Data)
 		if err != nil {
@@ -185,13 +193,19 @@ func (n *node) execTorControlMessage(msg types.Message, pkt transport.Packet) er
 			Type:    types.TorClientHello{}.Name(),
 		}
 		var newMessage types.TorClientHello
-		n.conf.MessageRegistry.UnmarshalMessage(&transportMessage, &newMessage)
+		err = n.conf.MessageRegistry.UnmarshalMessage(&transportMessage, &newMessage)
+		if err != nil {
+			return err
+		}
 		logr.Logger.Info().Msgf("[%s]: execTorControlMessage %s", n.addr, torControlMessage.LastHop)
-		n.execTorClientHelloMessage(
+		err = n.execTorClientHelloMessage(
 			newMessage,
 			torControlMessage.LastHop,
 			torControlMessage.CircuitID,
 		)
+		if err != nil {
+			return err
+		}
 
 	case types.Created:
 		nextEntry, err := n.torManager.GetNextHop(torControlMessage.CircuitID)
@@ -218,15 +232,24 @@ func (n *node) execTorControlMessage(msg types.Message, pkt transport.Packet) er
 				Relay:     nextEntry.NextHop,
 				Data:      encryptedData,
 			}
-			n.SendTLSMessage(nextEntry.NextHop, torRelay)
+			err = n.SendTLSMessage(nextEntry.NextHop, torRelay)
+			if err != nil {
+				return err
+			}
 		} else {
 			transportMessage := transport.Message{
 				Payload: torControlMessage.Data,
 				Type:    types.TorServerHello{}.Name(),
 			}
 			var newMessage types.TorServerHello
-			n.conf.MessageRegistry.UnmarshalMessage(&transportMessage, &newMessage)
-			n.execTorServerHello(newMessage, torControlMessage.CircuitID)
+			err = n.conf.MessageRegistry.UnmarshalMessage(&transportMessage, &newMessage)
+			if err != nil {
+				return err
+			}
+			err = n.execTorServerHello(newMessage, torControlMessage.CircuitID)
+			if err != nil {
+				return err
+			}
 		}
 
 	}
@@ -303,7 +326,8 @@ func (n *node) execTorServerHello(msg types.Message, circuitID string) error {
 		Msgf("[%s]: execTorServerHello Source:%s CircID: %s", n.addr, torServerHello.Source, circuitID)
 	if dhManager == nil {
 		logr.Logger.Err(err).
-			Msgf("[%s]: execTorServerHello dhManager.Get failed! Trying to get Source:%s CircID: %s", n.addr, torServerHello.Source, circuitID)
+			Msgf("[%s]: execTorServerHello dhManager.Get failed! Trying to get Source:%s CircID: %s",
+				n.addr, torServerHello.Source, circuitID)
 		return fmt.Errorf("[%s]: execTorServerHello dhManager. Get failed", n.addr)
 	}
 	ck, err := n.DHsecondStep(*dhManager, torServerHello.ServerPresecretDH)

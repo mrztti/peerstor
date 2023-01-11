@@ -74,8 +74,8 @@ func (n *node) DecryptPublicTor(ciphertext []byte) ([]byte, error) {
 }
 
 func (t *TLSManager) EncryptPublicTor(peerIP string, plaintext []byte) ([]byte, error) {
-	publicKey := t.GetAsymmetricKey(peerIP).(rsa.PublicKey)
-	if publicKey == (rsa.PublicKey{}) {
+	publicKey, ok := t.GetAsymmetricKey(peerIP).(rsa.PublicKey)
+	if publicKey == (rsa.PublicKey{}) || !ok {
 		return []byte{}, fmt.Errorf("no public key found for peer %s", peerIP)
 	}
 	hash := sha256.New()
@@ -97,7 +97,7 @@ func (t *TLSManager) EncryptPublicTor(peerIP string, plaintext []byte) ([]byte, 
 			nil,
 		)
 		if err != nil {
-			return []byte{}, fmt.Errorf("encryption failed %s %v", peerIP, err)
+			return []byte{}, fmt.Errorf("encryption failed %s %w", peerIP, err)
 
 		}
 
@@ -161,12 +161,12 @@ func (t *TLSManager) EncryptSymmetricTor(torID string, plaintext []byte) ([]byte
 
 	// The IV needs to be unique, but not secure: we will put it at the beginning of the ciphertext unencrypted.
 	ciphertext := make([]byte, aes.BlockSize+len(plaintext))
-	initial_vect := ciphertext[:aes.BlockSize]
-	if _, err := io.ReadFull(rand.Reader, initial_vect); err != nil {
+	initialVect := ciphertext[:aes.BlockSize]
+	if _, err := io.ReadFull(rand.Reader, initialVect); err != nil {
 		return []byte{}, err
 	}
 
-	stream := cipher.NewCFBEncrypter(block, initial_vect)
+	stream := cipher.NewCFBEncrypter(block, initialVect)
 	stream.XORKeyStream(ciphertext[aes.BlockSize:], plaintext)
 
 	// if err != nil {
@@ -191,10 +191,10 @@ func (t *TLSManager) DecryptSymmetricTor(torID string, cipherText []byte) ([]byt
 			torID,
 		)
 	}
-	initial_vect := cipherText[:aes.BlockSize]
+	initialVect := cipherText[:aes.BlockSize]
 	plaintext := cipherText[aes.BlockSize:]
 
-	stream := cipher.NewCFBDecrypter(block, initial_vect)
+	stream := cipher.NewCFBDecrypter(block, initialVect)
 
 	stream.XORKeyStream(plaintext, plaintext)
 
