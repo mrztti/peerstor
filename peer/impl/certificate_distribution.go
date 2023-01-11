@@ -103,7 +103,8 @@ func (c *CertificateStore) GetPublicKeyPEM() []byte {
 }
 
 // =============================================================================
-// CertificateCatalog: A thread safe map between a name and a rsa.PublicKey. We allow changes to a certificate once it is inscribed to prevent certificate forgery
+// CertificateCatalog: A thread safe map between a name and a rsa.PublicKey. 
+// We do not allow changes to a certificate once it is inscribed to prevent certificate forgery.
 type CertificateCatalog struct {
 	catalog map[string]rsa.PublicKey
 	lock    sync.Mutex
@@ -190,6 +191,8 @@ func (c *CertificateCatalog) AddCertificate(name string, pemBytes []byte) error 
 		if !match {
 			log.Warn().Msg("detected probable certificate forgery attempt for " + name)
 		}
+		// Do not allow a certificate to be changed once it is inscribed
+		return nil
 	}
 
 	// Add the new certificate
