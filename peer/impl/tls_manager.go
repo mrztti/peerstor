@@ -17,7 +17,7 @@ import (
 	"go.dedis.ch/cs438/types"
 )
 
-const SIGNATURE_SIZE_BYTES = 256
+const SignatureSizeBytes = 256
 
 type DHManager struct {
 	dhGroup *dhkx.DHGroup
@@ -107,20 +107,20 @@ func (t *TLSManager) EncryptSymmetric(
 	}
 
 	// The IV needs to be unique, but not secure: we will put it at the beginning of the ciphertext unencrypted.
-	ciphertext := make([]byte, aes.BlockSize+len(plaintext)+SIGNATURE_SIZE_BYTES)
-	initial_vect := ciphertext[:aes.BlockSize]
-	if _, err := io.ReadFull(rand.Reader, initial_vect); err != nil {
+	ciphertext := make([]byte, aes.BlockSize+len(plaintext)+SignatureSizeBytes)
+	initialVect := ciphertext[:aes.BlockSize]
+	if _, err := io.ReadFull(rand.Reader, initialVect); err != nil {
 		return types.TLSMessage{}, err
 	}
 
 	// Sign then encrypt
-	signedBytes := concatenateArrays([]byte(t.addr), []byte(message.Type), initial_vect, plaintext)
+	signedBytes := concatenateArrays([]byte(t.addr), []byte(message.Type), initialVect, plaintext)
 	signature, err := t.SignMessage(signedBytes)
 	// log.Default().Printf("Signed bytes: %v", signedBytes)
 	// log.Default().Printf("Signature: %v", signature)
 
 	plaintextWithSignature := concatenateArrays(plaintext, signature)
-	stream := cipher.NewCFBEncrypter(block, initial_vect)
+	stream := cipher.NewCFBEncrypter(block, initialVect)
 	stream.XORKeyStream(ciphertext[aes.BlockSize:], plaintextWithSignature)
 
 	if err != nil {
@@ -152,22 +152,22 @@ func (t *TLSManager) DecryptSymmetric(message *types.TLSMessage) (transport.Mess
 			peerIP,
 		)
 	}
-	initial_vect := cipherTextWithIVAndSignature[:aes.BlockSize]
+	initialVect := cipherTextWithIVAndSignature[:aes.BlockSize]
 	ciphertextWithSignature := cipherTextWithIVAndSignature[aes.BlockSize:]
 
-	stream := cipher.NewCFBDecrypter(block, initial_vect)
+	stream := cipher.NewCFBDecrypter(block, initialVect)
 
 	stream.XORKeyStream(ciphertextWithSignature, ciphertextWithSignature)
 
 	// Check integrity
-	signatureStartIndex := len(ciphertextWithSignature) - SIGNATURE_SIZE_BYTES
+	signatureStartIndex := len(ciphertextWithSignature) - SignatureSizeBytes
 	signature := ciphertextWithSignature[signatureStartIndex:]
 	plaintext := ciphertextWithSignature[:signatureStartIndex]
 
 	signedBytes := concatenateArrays(
 		[]byte(message.Source),
 		[]byte(message.ContentType),
-		initial_vect,
+		initialVect,
 		plaintext,
 	)
 
@@ -239,7 +239,7 @@ func (t *TLSManager) EncryptPublic(
 			nil,
 		)
 		if err != nil {
-			return types.TLSMessageHello{}, fmt.Errorf("encryption failed %s %v", peerIP, err)
+			return types.TLSMessageHello{}, fmt.Errorf("encryption failed %s %w", peerIP, err)
 
 		}
 
@@ -291,7 +291,7 @@ func (t *TLSManager) DecryptPublic(message *types.TLSMessageHello) (transport.Me
 	// 	return transport.Message{}, fmt.Errorf("decryption failed %s", t.addr)
 	// }
 	// log.Default().Println("decryptedBytes", len(decryptedBytes))
-	signatureStartIndex := len(decryptedBytes) - SIGNATURE_SIZE_BYTES
+	signatureStartIndex := len(decryptedBytes) - SignatureSizeBytes
 	// log.Default().Println("signatureStartIndex", signatureStartIndex)
 	signature := decryptedBytes[signatureStartIndex:]
 	// log.Default().Printf("signature len %d, signature %s", len(signature), signature)

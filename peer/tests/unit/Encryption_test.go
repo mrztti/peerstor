@@ -169,7 +169,7 @@ func Test_Encryption_Signature_Is_Correct_Size(t *testing.T) {
 		signature, err := node1.SignMessage(testMessage)
 		require.NoError(t, err)
 		require.Less(t, lastMessageLength, len(testMessage))
-		require.Equal(t, impl.SIGNATURE_SIZE_BYTES, len(signature))
+		require.Equal(t, impl.SignatureSizeBytes, len(signature))
 		lastMessageLength = len(testMessage)
 	}
 }

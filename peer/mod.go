@@ -16,7 +16,9 @@ type Peer interface {
 	Messaging
 	DataSharing
 	TLSServices
-	TorServices
+	KeyExchangeServices
+	TorRoutingServices
+	TorEncryptServices
 	TrustServices
 	Malicious
 }
