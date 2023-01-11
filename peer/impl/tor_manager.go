@@ -67,7 +67,7 @@ func (n *node) DecryptPublicTor(ciphertext []byte) ([]byte, error) {
 }
 
 func (t *TLSManager) EncryptPublicTor(peerIP string, plaintext []byte) ([]byte, error) {
-	publicKey := t.GetAsymmetricKey(peerIP)
+	publicKey := t.GetAsymmetricKey(peerIP).(rsa.PublicKey)
 	if publicKey == (rsa.PublicKey{}) {
 		return []byte{}, fmt.Errorf("no public key found for peer %s", peerIP)
 	}
