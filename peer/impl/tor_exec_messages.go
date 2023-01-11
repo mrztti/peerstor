@@ -21,22 +21,35 @@ func (n *node) execTorRelayMessage(msg types.Message, pkt transport.Packet) erro
 	torRelayMessage, ok := msg.(*types.TorRelayMessage)
 	if !ok {
 		err = fmt.Errorf("wrong type: %T", msg)
-		logr.Logger.Err(err).Msgf("[%s]: execTorRelayMessage failed, the message is not of the expected type. the message: %v", n.addr, torRelayMessage)
+		logr.Logger.Err(err).
+			Msgf("[%s]: execTorRelayMessage failed, the message is not of the expected type. the message: %v",
+				n.addr, torRelayMessage)
 		return err
 	}
 	nextRoutingEntry, err := n.torManager.GetNextHop(torRelayMessage.CircuitID)
 	if err != nil {
-		logr.Logger.Err(err).Msgf("[%s]: execTorRelayMessage failed, the circuit does not exist. the message: %v", n.addr, torRelayMessage)
+		logr.Logger.Err(err).
+			Msgf("[%s]: execTorRelayMessage failed, the circuit does not exist. the message: %v", n.addr, torRelayMessage)
 		// circuit does not exist
 		return err
 	}
 	if nextRoutingEntry.CircuitID != torRelayMessage.CircuitID {
-		log.Default().Printf("[%s]: about to forward a message for circuit ID: %s, last hop was %s; next circuit ID will be :%s, next hop will be: %s, type of message:%v", n.addr, torRelayMessage.CircuitID, torRelayMessage.LastHop, nextRoutingEntry.CircuitID, nextRoutingEntry.NextHop, torRelayMessage.Cmd)
+		log.Default().
+			Printf("[%s]: about to forward a message for circuit ID: %s, last hop was %s; next circuit ID will be :%s"+
+				", next hop will be: %s, type of message:%v",
+				n.addr, torRelayMessage.CircuitID, torRelayMessage.LastHop,
+				nextRoutingEntry.CircuitID, nextRoutingEntry.NextHop, torRelayMessage.Cmd)
 		switch torRelayMessage.Cmd {
 		case types.RelayExtend, types.RelayRequest:
-			torRelayMessage.Data, err = n.tlsManager.DecryptSymmetricTor(n.createTorEntryName(torRelayMessage.LastHop, torRelayMessage.CircuitID), torRelayMessage.Data)
+			torRelayMessage.Data, err = n.tlsManager.DecryptSymmetricTor(
+				n.createTorEntryName(torRelayMessage.LastHop, torRelayMessage.CircuitID),
+				torRelayMessage.Data,
+			)
 		case types.RelayExtended, types.RelayResponse:
-			torRelayMessage.Data, err = n.tlsManager.EncryptSymmetricTor(n.createTorEntryName(nextRoutingEntry.NextHop, nextRoutingEntry.CircuitID), torRelayMessage.Data)
+			torRelayMessage.Data, err = n.tlsManager.EncryptSymmetricTor(
+				n.createTorEntryName(nextRoutingEntry.NextHop, nextRoutingEntry.CircuitID),
+				torRelayMessage.Data,
+			)
 		}
 		if err != nil {
 			return err
@@ -45,12 +58,15 @@ func (n *node) execTorRelayMessage(msg types.Message, pkt transport.Packet) erro
 		torRelayMessage.LastHop = n.addr
 		torRelayMessage.CircuitID = nextRoutingEntry.CircuitID
 
-		n.SendTLSMessage(nextRoutingEntry.NextHop, torRelayMessage)
-		return nil
+		err := n.SendTLSMessage(nextRoutingEntry.NextHop, torRelayMessage)
+		return err
 	}
 	switch torRelayMessage.Cmd {
 	case types.RelayExtend:
-		torRelayMessage.Data, err = n.tlsManager.DecryptSymmetricTor(n.createTorEntryName(torRelayMessage.LastHop, torRelayMessage.CircuitID), torRelayMessage.Data)
+		torRelayMessage.Data, err = n.tlsManager.DecryptSymmetricTor(
+			n.createTorEntryName(torRelayMessage.LastHop, torRelayMessage.CircuitID),
+			torRelayMessage.Data,
+		)
 		if err != nil {
 			return err
 		}
@@ -70,7 +86,8 @@ func (n *node) execTorRelayMessage(msg types.Message, pkt transport.Packet) erro
 			NextHop:   torRelayMessage.Relay,
 		})
 
-		n.SendTLSMessage(torRelayMessage.Relay, torConMsg)
+		err = n.SendTLSMessage(torRelayMessage.Relay, torConMsg)
+		return err
 
 	case types.RelayExtended:
 		nodesAddress, ok := n.torManager.myCircuits.Get(torRelayMessage.CircuitID)
@@ -78,7 +95,10 @@ func (n *node) execTorRelayMessage(msg types.Message, pkt transport.Packet) erro
 			return fmt.Errorf("circuit does not exist")
 		}
 		for _, node := range nodesAddress {
-			torRelayMessage.Data, err = n.tlsManager.DecryptSymmetricTor(n.createTorEntryName(node, torRelayMessage.CircuitID), torRelayMessage.Data)
+			torRelayMessage.Data, err = n.tlsManager.DecryptSymmetricTor(
+				n.createTorEntryName(node, torRelayMessage.CircuitID),
+				torRelayMessage.Data,
+			)
 			if err != nil {
 				return err
 			}
@@ -88,16 +108,31 @@ func (n *node) execTorRelayMessage(msg types.Message, pkt transport.Packet) erro
 			Type:    types.TorServerHello{}.Name(),
 		}
 		var newMessage types.TorServerHello
-		n.conf.MessageRegistry.UnmarshalMessage(&transportMessage, &newMessage)
-		n.execTorServerHello(newMessage, torRelayMessage.CircuitID)
-	case types.RelayRequest:
-		torRelayMessage.Data, err = n.tlsManager.DecryptSymmetricTor(n.createTorEntryName(torRelayMessage.LastHop, torRelayMessage.CircuitID), torRelayMessage.Data)
+		err = n.conf.MessageRegistry.UnmarshalMessage(&transportMessage, &newMessage)
 		if err != nil {
 			return err
 		}
-		logr.Logger.Warn().Msgf("[%s]: Received the following request: %s", n.addr, string(torRelayMessage.Data))
-		responseDataPlaintext := "wrapped response " + string(torRelayMessage.Data) + " from " + n.addr
-		encryptedData, err := n.tlsManager.EncryptSymmetricTor(n.createTorEntryName(torRelayMessage.LastHop, torRelayMessage.CircuitID), []byte(responseDataPlaintext))
+		err = n.execTorServerHello(newMessage, torRelayMessage.CircuitID)
+		if err != nil {
+			return err
+		}
+	case types.RelayRequest:
+		torRelayMessage.Data, err = n.tlsManager.DecryptSymmetricTor(
+			n.createTorEntryName(torRelayMessage.LastHop, torRelayMessage.CircuitID),
+			torRelayMessage.Data,
+		)
+		if err != nil {
+			return err
+		}
+		logr.Logger.Warn().
+			Msgf("[%s]: Received the following request: %s", n.addr, string(torRelayMessage.Data))
+		responseDataPlaintext := "wrapped response " + string(
+			torRelayMessage.Data,
+		) + " from " + n.addr
+		encryptedData, err := n.tlsManager.EncryptSymmetricTor(
+			n.createTorEntryName(torRelayMessage.LastHop, torRelayMessage.CircuitID),
+			[]byte(responseDataPlaintext),
+		)
 		if err != nil {
 			return err
 		}
@@ -107,13 +142,15 @@ func (n *node) execTorRelayMessage(msg types.Message, pkt transport.Packet) erro
 			Cmd:       types.RelayResponse,
 			Data:      encryptedData,
 		}
-		n.SendTLSMessage(torRelayMessage.LastHop, sampleResponse)
+		err = n.SendTLSMessage(torRelayMessage.LastHop, sampleResponse)
+		return err
 	case types.RelayResponse:
 		torRelayMessage.Data, err = n.TorDecrypt(torRelayMessage.CircuitID, torRelayMessage.Data)
 		if err != nil {
 			return err
 		}
-		logr.Logger.Warn().Msgf("[%s]: Received the following response: %s", n.addr, string(torRelayMessage.Data))
+		logr.Logger.Warn().
+			Msgf("[%s]: Received the following response: %s", n.addr, string(torRelayMessage.Data))
 	}
 	return nil
 }
@@ -129,7 +166,9 @@ func (n *node) execTorControlMessage(msg types.Message, pkt transport.Packet) er
 	torControlMessage, ok := msg.(*types.TorControlMessage)
 	if !ok {
 		err = fmt.Errorf("wrong type: %T", msg)
-		logr.Logger.Err(err).Msgf("[%s]: execTorControlMessage failed, the message is not of the expected type. the message: %v", n.addr, torControlMessage)
+		logr.Logger.Err(err).
+			Msgf("[%s]: execTorControlMessage failed, the message is not of the expected type. the message: %v",
+				n.addr, torControlMessage)
 		return err
 	}
 
@@ -149,7 +188,13 @@ func (n *node) execTorControlMessage(msg types.Message, pkt transport.Packet) er
 		// He knows he is the destination
 		log.Default().Printf("[%s]: Ive received msg of type create", n.addr)
 		// log.Default().Printf("[%s]: Enc: %v", n.addr, torControlMessage.Data)
-		n.torManager.torRoutingTable.Set(torControlMessage.CircuitID, peer.TorRoutingEntry{CircuitID: torControlMessage.CircuitID, NextHop: torControlMessage.LastHop})
+		n.torManager.torRoutingTable.Set(
+			torControlMessage.CircuitID,
+			peer.TorRoutingEntry{
+				CircuitID: torControlMessage.CircuitID,
+				NextHop:   torControlMessage.LastHop,
+			},
+		)
 		torClientHelloMessageBytes, err := n.tlsManager.DecryptPublicTor(torControlMessage.Data)
 		if err != nil {
 			logr.Logger.Err(err).Msgf("[%s]", n.addr)
@@ -160,21 +205,36 @@ func (n *node) execTorControlMessage(msg types.Message, pkt transport.Packet) er
 			Type:    types.TorClientHello{}.Name(),
 		}
 		var newMessage types.TorClientHello
-		n.conf.MessageRegistry.UnmarshalMessage(&transportMessage, &newMessage)
+		err = n.conf.MessageRegistry.UnmarshalMessage(&transportMessage, &newMessage)
+		if err != nil {
+			return err
+		}
 		logr.Logger.Info().Msgf("[%s]: execTorControlMessage %s", n.addr, torControlMessage.LastHop)
-		n.execTorClientHelloMessage(newMessage, torControlMessage.LastHop, torControlMessage.CircuitID)
+		err = n.execTorClientHelloMessage(
+			newMessage,
+			torControlMessage.LastHop,
+			torControlMessage.CircuitID,
+		)
+		if err != nil {
+			return err
+		}
 
 	case types.Created:
 		nextEntry, err := n.torManager.GetNextHop(torControlMessage.CircuitID)
 		if err != nil {
-			logr.Logger.Err(err).Msgf("[%s]: execTorControlMessage failed. the message: %v", n.addr, torControlMessage)
+			logr.Logger.Err(err).
+				Msgf("[%s]: execTorControlMessage failed. the message: %v", n.addr, torControlMessage)
 			return err
 		}
 
 		if nextEntry.CircuitID != torControlMessage.CircuitID {
-			encryptedData, err := n.tlsManager.EncryptSymmetricTor(n.createTorEntryName(nextEntry.NextHop, nextEntry.CircuitID), torControlMessage.Data)
+			encryptedData, err := n.tlsManager.EncryptSymmetricTor(
+				n.createTorEntryName(nextEntry.NextHop, nextEntry.CircuitID),
+				torControlMessage.Data,
+			)
 			if err != nil {
-				logr.Logger.Err(err).Msgf("[%s]: execTorControlMessage failed. the message: %v", n.addr, torControlMessage)
+				logr.Logger.Err(err).
+					Msgf("[%s]: execTorControlMessage failed. the message: %v", n.addr, torControlMessage)
 				return err
 			}
 			torRelay := types.TorRelayMessage{
@@ -184,15 +244,24 @@ func (n *node) execTorControlMessage(msg types.Message, pkt transport.Packet) er
 				Relay:     nextEntry.NextHop,
 				Data:      encryptedData,
 			}
-			n.SendTLSMessage(nextEntry.NextHop, torRelay)
+			err = n.SendTLSMessage(nextEntry.NextHop, torRelay)
+			if err != nil {
+				return err
+			}
 		} else {
 			transportMessage := transport.Message{
 				Payload: torControlMessage.Data,
 				Type:    types.TorServerHello{}.Name(),
 			}
 			var newMessage types.TorServerHello
-			n.conf.MessageRegistry.UnmarshalMessage(&transportMessage, &newMessage)
-			n.execTorServerHello(newMessage, torControlMessage.CircuitID)
+			err = n.conf.MessageRegistry.UnmarshalMessage(&transportMessage, &newMessage)
+			if err != nil {
+				return err
+			}
+			err = n.execTorServerHello(newMessage, torControlMessage.CircuitID)
+			if err != nil {
+				return err
+			}
 		}
 
 	}
@@ -205,11 +274,19 @@ func (n *node) execTorClientHelloMessage(msg types.Message, lastHop, circuitID s
 	logr.Logger.Info().Msgf("[%s]: execTorClientHelloMessage %s", n.addr, lastHop)
 	torClientHelloMessage, ok := msg.(types.TorClientHello)
 	if !ok {
-		err = fmt.Errorf("execTorClientHelloMessage failed, the message is not of the expected type. the message: %v", torClientHelloMessage)
-		logr.Logger.Err(err).Msgf("[%s]: execTorClientHelloMessage failed, the message is not of the expected type. the message: %v", n.addr, torClientHelloMessage)
+		err = fmt.Errorf(
+			"execTorClientHelloMessage failed, the message is not of the expected type. the message: %v",
+			torClientHelloMessage,
+		)
+		logr.Logger.Err(err).
+			Msgf("[%s]: execTorClientHelloMessage failed, the message is not of the expected type. the message: %v",
+				n.addr, torClientHelloMessage)
 		return err
 	}
-	dhManager, err := n.DHfirstStepWithParams(torClientHelloMessage.PrimeDH, torClientHelloMessage.GroupDH)
+	dhManager, err := n.DHfirstStepWithParams(
+		torClientHelloMessage.PrimeDH,
+		torClientHelloMessage.GroupDH,
+	)
 	if err != nil {
 		return err
 	}
@@ -257,9 +334,12 @@ func (n *node) execTorServerHello(msg types.Message, circuitID string) error {
 		return err
 	}
 	dhManager := n.tlsManager.GetDHManagerEntryTor(torServerHello.Source, circuitID)
-	logr.Logger.Err(err).Msgf("[%s]: execTorServerHello Source:%s CircID: %s", n.addr, torServerHello.Source, circuitID)
+	logr.Logger.Err(err).
+		Msgf("[%s]: execTorServerHello Source:%s CircID: %s", n.addr, torServerHello.Source, circuitID)
 	if dhManager == nil {
-		logr.Logger.Err(err).Msgf("[%s]: execTorServerHello dhManager.Get failed! Trying to get Source:%s CircID: %s", n.addr, torServerHello.Source, circuitID)
+		logr.Logger.Err(err).
+			Msgf("[%s]: execTorServerHello dhManager.Get failed! Trying to get Source:%s CircID: %s",
+				n.addr, torServerHello.Source, circuitID)
 		return fmt.Errorf("[%s]: execTorServerHello dhManager. Get failed", n.addr)
 	}
 	ck, err := n.DHsecondStep(*dhManager, torServerHello.ServerPresecretDH)

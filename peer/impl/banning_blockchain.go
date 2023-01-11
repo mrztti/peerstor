@@ -6,8 +6,7 @@ Metahash -> Hash of the banned address
 
 Written by Malo RANZETTI
 January 2023
-*/
-package impl
+*/package impl
 
 import (
 	"crypto/sha256"

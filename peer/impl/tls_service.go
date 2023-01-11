@@ -9,7 +9,10 @@ import (
 	"go.dedis.ch/cs438/types"
 )
 
-func (n *node) processDecryptedTLSMessage(transportMessage transport.Message, pkt transport.Packet) error {
+func (n *node) processDecryptedTLSMessage(
+	transportMessage transport.Message,
+	pkt transport.Packet,
+) error {
 	newPkt := transport.Packet{
 		Header: pkt.Header,
 		Msg:    &transportMessage,
@@ -130,24 +133,28 @@ func (n *node) execTLSClientHello(msg types.Message, pkt transport.Packet) error
 
 	transportMessage, err := n.conf.MessageRegistry.MarshalMessage(&sm)
 	if err != nil {
-		logr.Logger.Err(err).Msgf("[%s]: Error marshaling TLSServerHello to %s", n.addr, pkt.Header.Source)
+		logr.Logger.Err(err).
+			Msgf("[%s]: Error marshaling TLSServerHello to %s", n.addr, pkt.Header.Source)
 		return err
 	}
 	encryptedMessage, err := n.tlsManager.EncryptPublic(pkt.Header.Source, transportMessage)
 	if err != nil {
-		logr.Logger.Err(err).Msgf("[%s]: Error Encrypting TLSServerHello to %s", n.addr, pkt.Header.Source)
+		logr.Logger.Err(err).
+			Msgf("[%s]: Error Encrypting TLSServerHello to %s", n.addr, pkt.Header.Source)
 		return err
 	}
 	tlsTransportMessage, err := n.conf.MessageRegistry.MarshalMessage(&encryptedMessage)
 
 	if err != nil {
-		logr.Logger.Err(err).Msgf("[%s]: Error marshaling TLSServerHello to %s", n.addr, pkt.Header.Source)
+		logr.Logger.Err(err).
+			Msgf("[%s]: Error marshaling TLSServerHello to %s", n.addr, pkt.Header.Source)
 		return err
 	}
 
 	err = n.Unicast(TLSClientHello.Source, tlsTransportMessage)
 	if err != nil {
-		logr.Logger.Err(err).Msgf("[%s]: Error sending TLSServerHello to %s", n.addr, pkt.Header.Source)
+		logr.Logger.Err(err).
+			Msgf("[%s]: Error sending TLSServerHello to %s", n.addr, pkt.Header.Source)
 		return err
 	}
 

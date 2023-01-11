@@ -251,7 +251,8 @@ func (n *node) HandleCertificateBroadcastMessage(msg types.Message, pkt transpor
 
 	if rule2_1 {
 		if !rule2_2 {
-			log.Warn().Msg("node detected certificate forgery, will fight for " + certificateBroadcastMessage.Addr)
+			log.Warn().
+				Msg("node detected certificate forgery, will fight for " + certificateBroadcastMessage.Addr)
 			n.BroadcastCertificate() // Retransmit across the network
 		}
 		return nil
@@ -262,9 +263,16 @@ func (n *node) HandleCertificateBroadcastMessage(msg types.Message, pkt transpor
 	} else {
 		// Add the certificate to the catalog
 		err := n.certificateCatalog.AddCertificate(certificateBroadcastMessage.Addr, certificateBroadcastMessage.PEM)
+
 		if err != nil {
 			return err
 		}
+		key, err := n.certificateCatalog.Get(certificateBroadcastMessage.Addr)
+
+		if err != nil {
+			return err
+		}
+		n.tlsManager.SetAsymmetricKey(certificateBroadcastMessage.Addr, key)
 	}
 
 	return nil
@@ -351,13 +359,19 @@ func (n *node) handleCertificateVerifyMessage(msg types.Message, pkt transport.P
 	}
 
 	// Send the message
-	n.BroadcastPrivatelyInParallel(certificateVerifyMessage.Source, certificateVerifyResponseMessage)
+	n.BroadcastPrivatelyInParallel(
+		certificateVerifyMessage.Source,
+		certificateVerifyResponseMessage,
+	)
 
 	return nil
 }
 
 // handleCertificateVerifyResponseMessage: handle the response to the challenge
-func (n *node) handleCertificateVerifyResponseMessage(msg types.Message, pkt transport.Packet) error {
+func (n *node) handleCertificateVerifyResponseMessage(
+	msg types.Message,
+	pkt transport.Packet,
+) error {
 	// Cast the message
 	certificateVerifyResponseMessage, ok := msg.(*types.CertificateVerifyResponseMessage)
 	if !ok {

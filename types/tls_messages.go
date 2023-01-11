@@ -92,7 +92,7 @@ func (t TLSServerHello) Name() string {
 
 // String implements types.Message.
 func (t TLSServerHello) String() string {
-	return fmt.Sprintf("tlsserverhello{}")
+	return "tlsserverhello{}"
 }
 
 // HTML implements types.Message.

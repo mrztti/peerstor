@@ -65,7 +65,13 @@ func (n *node) SpoofCertificates(total_generated int) error {
 }
 
 func randomIP() string {
-	return fmt.Sprintf("%d.%d.%d.%d", rand.Intn(255), rand.Intn(255), rand.Intn(255), rand.Intn(255))
+	return fmt.Sprintf(
+		"%d.%d.%d.%d",
+		rand.Intn(255),
+		rand.Intn(255),
+		rand.Intn(255),
+		rand.Intn(255),
+	)
 }
 
 // Attempt to force a ban
