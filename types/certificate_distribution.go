@@ -49,7 +49,7 @@ type CertificateVerifyMessage struct {
 }
 
 // -----------------------------------------------------------------------------
-// CertificateVerifyMessag
+// CertificateVerifyMessage
 
 // NewEmpty implements types.Message.
 func (d CertificateVerifyMessage) NewEmpty() Message {

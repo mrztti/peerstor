@@ -2,6 +2,7 @@ package impl
 
 import (
 	"sync"
+	"time"
 
 	"go.dedis.ch/cs438/logr"
 	"go.dedis.ch/cs438/peer"
@@ -46,11 +47,11 @@ func NewPeer(conf peer.Configuration) peer.Peer {
 		isOnionNode:                 false,
 		tlsManager:                  tlsManager,
 		torManager:                  CreateTorManager(myAddr),
+		isMalicious:                 false,
 	}
 	// Init blockchains
-	newPeer.paxos = CreateMultiPaxos(conf, newPeer)
-	newPeer.banPaxos = CreateMultiPaxos(conf, newPeer)
-	newPeer.banList = CreateBanList(conf.Storage.GetBanBlockchainStore())
+	newPeer.paxos = CreateMultiPaxos(conf, newPeer, conf.Storage.GetBlockchainStore())
+	newPeer.banPaxos = CreateMultiPaxos(conf, newPeer, conf.Storage.GetBanBlockchainStore())
 
 	newPeer.routingTable.Set(myAddr, myAddr)
 	newPeer.registerRegistryCallbacks()
@@ -100,11 +101,11 @@ type node struct {
 	trustCatalog                *TrustCatalog
 	trustBanHook                chan string
 	banPaxos                    *MultiPaxos
-	banList                     *CommonBanList
 	nodeCatalog                 *NodeCatalog
 	isOnionNode                 bool
 	tlsManager                  *TLSManager
 	torManager                  *TorManager
+	isMalicious                 bool
 }
 
 // Start implements peer.Service
@@ -123,6 +124,7 @@ func (n *node) Start() error {
 	go n.startPaxosService()
 	go n.startBanPaxosService()
 	go n.startBanService()
+	go n.startSecurityMechanism(5*time.Second, 5*time.Second)
 	if n.conf.AntiEntropyInterval > 0 {
 		go n.startAntiEntropyService()
 	}

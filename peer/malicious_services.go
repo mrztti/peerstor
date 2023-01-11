@@ -32,7 +32,7 @@ package peer
 type Malicious interface {
 
 	// Register as an Onion node and block all traffic coming through
-	//ImpedeOnionTraffic() error
+	ImpedeOnionTraffic() error
 
 	// Overload the certificate catalog by spoofing certificates
 	SpoofCertificates(total_generated int) error
