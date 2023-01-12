@@ -8,13 +8,10 @@
 package impl
 
 import (
-	"crypto/rsa"
 	"errors"
 	"sync"
-	"time"
 
 	"github.com/rs/zerolog/log"
-	"go.dedis.ch/cs438/logr"
 )
 
 // =============================================================================
@@ -182,7 +179,7 @@ func (n *node) startBanService() {
 	}
 }
 
-// startSecurityMechanism: Starts the security mechanism of the node
+/* // startSecurityMechanism: Starts the security mechanism of the node
 func (n *node) startSecurityMechanism(interval time.Duration, timeout time.Duration) {
 
 	//myAddr := n.conf.Socket.GetAddress()
@@ -199,20 +196,15 @@ func (n *node) startSecurityMechanism(interval time.Duration, timeout time.Durat
 
 			go n.trustTestOnionNode(name, pk, timeout)
 
-			/* case <-n.quitChannel:
+			case <-n.quitChannel:
 			ticker.Stop()
-			return */
+			return
 		}
 	}
 }
 
 // trustTestOnionNode: Test whether an onion node does return the correct message, no timeouts or corruptions
 func (n *node) trustTestOnionNode(target string, pk *rsa.PublicKey, timeout time.Duration) {
-	/*
-		TODO:
-		- Pretend we are a middle node and send a message to ourself through the selected exit node
-		- If the message is not received after a timeout, update the trust value of the exit node using the timeoutEffect function
-		- If the message is corrupted, update the trust value of the exit node using the corruptionEffect function
-	*/
+
 	logr.Logger.Info().Msg("trust test for " + target)
-}
+} */

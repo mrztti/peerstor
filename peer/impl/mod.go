@@ -2,7 +2,6 @@ package impl
 
 import (
 	"sync"
-	"time"
 
 	"go.dedis.ch/cs438/logr"
 	"go.dedis.ch/cs438/peer"
@@ -124,7 +123,6 @@ func (n *node) Start() error {
 	go n.startPaxosService()
 	go n.startBanPaxosService()
 	go n.startBanService()
-	go n.startSecurityMechanism(5*time.Second, 5*time.Second)
 	if n.conf.AntiEntropyInterval > 0 {
 		go n.startAntiEntropyService()
 	}
