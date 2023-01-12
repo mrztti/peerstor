@@ -97,8 +97,8 @@ func (t *TrustCatalog) UpdateTrust(name string, update func(float32) float32) er
 		return errors.New("peer " + name + " not in the trust catalog")
 	}
 	old := t.IsTrusted(name)
-	new := update(value)
-	t.data[name] = new
+	n := update(value)
+	t.data[name] = n
 	t.DetectBanCondition(name, old)
 	return nil
 }
@@ -166,15 +166,10 @@ func (n *node) Trusts(name string) bool {
 
 // startBanService: Starts the ban service of the node
 func (n *node) startBanService() {
-	for {
-		select {
-		case addr := <-n.trustBanHook:
-			err := n.ProposeBan(addr)
-			if err != nil {
-				log.Error().Err(err).Msg("ban has failed")
-			}
-			/* case <-n.quitChannel:
-			return */
+	for addr := range n.trustBanHook {
+		err := n.ProposeBan(addr)
+		if err != nil {
+			log.Error().Err(err).Msg("ban has failed")
 		}
 	}
 }

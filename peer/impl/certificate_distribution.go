@@ -323,10 +323,7 @@ func (n *node) AwaitCertificateVerification(init *types.CertificateBroadcastMess
 	case <-timer.C:
 		logr.Logger.Warn().Msg("certificate verification timed out for " + target)
 	case r := <-res:
-		if err != nil {
-			logr.Logger.Error().Err(err).Msg("failed to get peer public key")
-			return
-		}
+
 		hashed := sha256.Sum256([]byte(challenge + "::" + target))
 		err = rsa.VerifyPKCS1v15(pk, crypto.SHA256, hashed[:], r[:])
 		if err != nil {
