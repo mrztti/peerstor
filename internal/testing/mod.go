@@ -196,7 +196,7 @@ func newConfigTemplate() configTemplate {
 		publicKey:  nil,
 		privateKey: nil,
 
-		VerifyCertificates: false,
+		VerifyCertificates: true,
 
 		IsOnionNode: false,
 	}

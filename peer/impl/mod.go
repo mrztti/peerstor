@@ -152,7 +152,7 @@ func (n *node) Start() error {
 // Stop implements peer.Service
 func (n *node) Stop() error {
 	// Check if already closed
-	close(n.quitChannel)
+	n.quitChannel <- true
 	return nil
 }
 

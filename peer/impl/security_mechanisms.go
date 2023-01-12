@@ -176,8 +176,8 @@ func (n *node) startBanService() {
 			if err != nil {
 				log.Error().Err(err).Msg("ban has failed")
 			}
-		case <-n.quitChannel:
-			return
+			/* case <-n.quitChannel:
+			return */
 		}
 	}
 }
@@ -199,9 +199,9 @@ func (n *node) startSecurityMechanism(interval time.Duration, timeout time.Durat
 
 			go n.trustTestOnionNode(name, pk, timeout)
 
-		case <-n.quitChannel:
+			/* case <-n.quitChannel:
 			ticker.Stop()
-			return
+			return */
 		}
 	}
 }

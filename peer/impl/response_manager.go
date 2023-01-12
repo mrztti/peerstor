@@ -75,7 +75,8 @@ func (r *ResponseManager) StopAckTimeout(ackID string) {
 	defer r.ackStore.Unlock()
 	ticker, ok := r.ackStore.Items[ackID]
 	if !ok {
-		logr.Logger.Error().Msgf("[%s]: ResponseManager: ackID %s does not exist", r.addr, ackID)
+		//logr.Logger.Error().Msgf("[%s]: ResponseManager: ackID %s does not exist", r.addr, ackID)
+		return
 	}
 	ticker.Stop()
 	delete(r.ackStore.Items, ackID)

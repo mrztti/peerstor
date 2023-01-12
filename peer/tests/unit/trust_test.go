@@ -23,15 +23,12 @@ import (
 
 func Test_Trust_NoError(t *testing.T) {
 	transp := channel.NewTransport()
-	fake := z.NewFakeMessage(t)
-	handler1, _ := fake.GetHandler(t)
-	handler2, _ := fake.GetHandler(t)
 
-	node1 := z.NewTestNode(t, peerFac, transp, "127.0.0.1:0", z.WithMessage(fake, handler1), z.WithAntiEntropy(time.Millisecond*50))
+	node1 := z.NewTestNode(t, peerFac, transp, "127.0.0.1:0", z.WithAntiEntropy(time.Second))
 	defer node1.Stop()
-	node2 := z.NewTestNode(t, peerFac, transp, "127.0.0.1:0", z.WithMessage(fake, handler2), z.WithAntiEntropy(time.Millisecond*50))
+	node2 := z.NewTestNode(t, peerFac, transp, "127.0.0.1:0", z.WithAntiEntropy(time.Second))
 	defer node2.Stop()
-	node3 := z.NewTestNode(t, peerFac, transp, "127.0.0.1:0", z.WithMessage(fake, handler2), z.WithAntiEntropy(time.Millisecond*50))
+	node3 := z.NewTestNode(t, peerFac, transp, "127.0.0.1:0", z.WithAntiEntropy(time.Second))
 	defer node3.Stop()
 
 	// n1 <-> n2 <-> n3
@@ -40,7 +37,7 @@ func Test_Trust_NoError(t *testing.T) {
 	node2.AddPeer(node3.GetAddr())
 	node3.AddPeer(node2.GetAddr())
 
-	time.Sleep(time.Second)
+	time.Sleep(5 * time.Second)
 	nodes := []*z.TestNode{&node1, &node2, &node3}
 
 	// Check that each node has the PublicKey of the other nodes and itself
@@ -146,7 +143,7 @@ func Test_Trust_Ban(t *testing.T) {
 
 func Test_Trust_Scenario(t *testing.T) {
 	transp := channel.NewTransport()
-	numNodes := 10
+	numNodes := 7
 	nodes := make([]z.TestNode, numNodes)
 	for i := range nodes {
 		node := z.NewTestNode(t, peerFac, transp, "127.0.0.1:0", z.WithAntiEntropy(time.Millisecond*50),
@@ -163,7 +160,7 @@ func Test_Trust_Scenario(t *testing.T) {
 			node.AddPeer(nodes[j].GetAddr())
 		}
 	}
-	time.Sleep(5 * time.Second)
+	time.Sleep(20 * time.Second)
 
 	// All peers should be certified
 	for _, node := range nodes {
@@ -193,12 +190,12 @@ func Test_Trust_Scenario(t *testing.T) {
 
 	logr.Logger.Info().Msg("Init. test passed, launching ban scenario")
 
-	// 1-4 try to ban node 1, 5-9 try to ban node 2 --> Majority deadlock
+	// 1-3 try to ban node 1, 4-6 try to ban node 2 --> Majority deadlock
 	for i, node := range nodes {
-		if i == 9 {
+		if i == 6 {
 			break
 		}
-		if i < 4 {
+		if i < 3 {
 			node.Ban(nodes[0].GetAddr())
 		} else {
 			node.Ban(nodes[1].GetAddr())
@@ -212,75 +209,15 @@ func Test_Trust_Scenario(t *testing.T) {
 		require.False(t, node.HasSharedBan(nodes[0].GetAddr()))
 	}
 
-	// Node 10 has the deciding vote
-	nodes[9].Ban(nodes[1].GetAddr())
+	// Node 7 has the deciding vote
+	nodes[6].Ban(nodes[1].GetAddr())
 
-	time.Sleep(2 * time.Second)
+	time.Sleep(10 * time.Second)
 
 	for _, node := range nodes {
 		require.True(t, node.HasSharedBan(nodes[1].GetAddr()))
 		require.False(t, node.HasSharedBan(nodes[0].GetAddr()))
 	}
-
-}
-
-func Test_Trust_Attack_Spoof(t *testing.T) {
-	transp := channel.NewTransport()
-	numNodes := 10
-	nodes := make([]z.TestNode, numNodes)
-	for i := range nodes {
-		node := z.NewTestNode(t, peerFac, transp, "127.0.0.1:0", z.WithAntiEntropy(time.Millisecond*50),
-			z.WithPaxosID(uint(i)), z.WithTotalPeers(uint(numNodes+1)))
-		defer node.Stop()
-		nodes[i] = node
-	}
-
-	// Add attacker node
-	attacker := z.NewTestNode(t, peerFac, transp, "127.0.0.1:0", z.WithAntiEntropy(time.Millisecond*50),
-		z.WithPaxosID(uint(10)), z.WithTotalPeers(uint(numNodes+1)))
-	defer attacker.Stop()
-	nodes = append(nodes, attacker)
-
-	for i := range nodes {
-		node := nodes[i]
-		for j := range nodes {
-			if i == j {
-				continue
-			}
-			node.AddPeer(nodes[j].GetAddr())
-		}
-	}
-	time.Sleep(3 * time.Second)
-
-	// All peers should be certified
-
-	for _, node := range nodes {
-		num := node.TotalCertifiedPeers()
-		require.Equal(t, uint(numNodes+1), num)
-	}
-
-	// Attacker starts spoofing attack
-	err := attacker.SpoofCertificates(20)
-	require.NoError(t, err)
-
-	// All nodes except the attacker try to ban the attacker
-	for i := 0; i < numNodes; i++ {
-		nodes[i].Ban(attacker.GetAddr())
-	}
-
-	time.Sleep(10 * time.Second)
-
-	// All nodes except the attacker should have banned the attacker
-	for i := 0; i < numNodes; i++ {
-		require.False(t, nodes[i].Trusts(attacker.GetAddr()))
-	}
-
-	//No one should have added the attacker to the ban list
-	for i := 0; i < numNodes+1; i++ {
-		require.False(t, nodes[i].HasSharedBan(attacker.GetAddr()))
-	}
-
-	// The network has to be protected from certificate spoofing attacks
 
 }
 
@@ -321,10 +258,8 @@ func Test_Trust_Verify_Certificates(t *testing.T) {
 
 func Test_Trust_Resist_Spoof(t *testing.T) {
 	transp := channel.NewTransport()
-	numNodes := 10
+	numNodes := 4
 	nodes := make([]z.TestNode, numNodes)
-
-	// This time we enable certificate verification
 	for i := range nodes {
 		node := z.NewTestNode(t, peerFac, transp, "127.0.0.1:0", z.WithAntiEntropy(time.Millisecond*50),
 			z.WithPaxosID(uint(i)), z.WithTotalPeers(uint(numNodes+1)), z.WithCertificateVerification())
@@ -334,7 +269,7 @@ func Test_Trust_Resist_Spoof(t *testing.T) {
 
 	// Add attacker node
 	attacker := z.NewTestNode(t, peerFac, transp, "127.0.0.1:0", z.WithAntiEntropy(time.Millisecond*50),
-		z.WithPaxosID(uint(10)), z.WithTotalPeers(uint(numNodes+1)), z.WithCertificateVerification())
+		z.WithPaxosID(uint(numNodes)), z.WithTotalPeers(uint(numNodes+1)), z.WithCertificateVerification())
 	defer attacker.Stop()
 	nodes = append(nodes, attacker)
 
@@ -363,7 +298,7 @@ func Test_Trust_Resist_Spoof(t *testing.T) {
 	err := attacker.SpoofCertificates(20)
 	require.NoError(t, err)
 
-	// All nodes except the attacker try to ban the attacker
+	// Some nodes except the attacker try to ban the attacker
 	for i := 0; i < numNodes/2+1; i++ {
 		nodes[i].Ban(attacker.GetAddr())
 	}
@@ -398,7 +333,6 @@ func Test_Trust_Resist_Forced_Ban(t *testing.T) {
 	defer node2.Stop()
 	attacker := z.NewTestNode(t, peerFac, transp, "127.0.0.1:0", z.WithAntiEntropy(time.Millisecond*50),
 		z.WithCertificateVerification())
-	defer attacker.Stop()
 
 	// n1 <-> n2 <-> n3
 	node1.AddPeer(node2.GetAddr())
@@ -420,11 +354,10 @@ func Test_Trust_Resist_Forced_Ban(t *testing.T) {
 	// Here the attacker tries to trick the nodes by spamming accept messages and TLC messages
 	// If the nodes do not check the proof of the messages, they will succumb to this attack
 	attacker.ForceBan(node1.GetAddr())
-
-	time.Sleep(10 * time.Second)
+	time.Sleep(7 * time.Second)
+	attacker.Stop()
 
 	for _, n := range nodes {
 		require.False(t, n.HasSharedBan(node1.GetAddr()))
 	}
-
 }

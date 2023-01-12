@@ -273,12 +273,17 @@ func (n *node) HandleCertificateBroadcastMessage(msg types.Message, pkt transpor
 		if err != nil {
 			return err
 		}
-		key, err := n.certificateCatalog.Get(certificateBroadcastMessage.Addr)
 
+		key, err := n.certificateCatalog.Get(certificateBroadcastMessage.Addr)
 		if err != nil {
 			return err
 		}
 		n.tlsManager.SetAsymmetricKey(certificateBroadcastMessage.Addr, key)
+
+		err = n.CreateDHSymmetricKey(certificateBroadcastMessage.Addr)
+		if err != nil {
+			logr.Logger.Error().Err(err).Msg("failed to create DH symmetric key")
+		}
 	}
 
 	return nil
@@ -311,7 +316,7 @@ func (n *node) AwaitCertificateVerification(init *types.CertificateBroadcastMess
 	logr.Logger.Info().Msgf("[%s] sent certificate verification to %s", n.addr, target)
 
 	// Start timer
-	timer := time.NewTimer(5 * time.Second)
+	timer := time.NewTimer(20 * time.Second)
 	defer timer.Stop()
 
 	select {
@@ -337,6 +342,16 @@ func (n *node) AwaitCertificateVerification(init *types.CertificateBroadcastMess
 			logr.Logger.Error().Err(err).Msg("failed to add certificate to catalog")
 			return
 		}
+
+		key, err := n.certificateCatalog.Get(target)
+		if err != nil {
+			logr.Logger.Error().Err(err).Msg("failed to get certificate from catalog")
+		}
+		n.tlsManager.SetAsymmetricKey(target, key)
+		/* err = n.CreateDHSymmetricKey(target)
+		if err != nil {
+			logr.Logger.Error().Err(err).Msg("failed to create DH symmetric key")
+		} */
 	}
 }
 
@@ -347,6 +362,8 @@ func (n *node) handleCertificateVerifyMessage(msg types.Message, pkt transport.P
 	if !ok {
 		return errors.New("failed to cast message to CertificateVerifyMessage")
 	}
+
+	logr.Logger.Info().Msgf("[%s] received certificate verification from %s", n.addr, certificateVerifyMessage.Source)
 
 	// Get private key
 	pk := n.certificateStore.GetPrivateKey()

@@ -140,8 +140,12 @@ func (n *node) TorExtend(addr string, circID string) error {
 		CircuitID: circID,
 		Relay:     addr,
 		Cmd:       types.RelayExtend,
-		Data:      encryptedPayload}
+		Data:      encryptedPayload,
+	}
 
+	if len(nodesAddress) == 0 {
+		return fmt.Errorf("no nodes in circuit")
+	}
 	err = n.SendTLSMessage(nodesAddress[0], torControlMessage)
 	if err != nil {
 		logr.Logger.Err(err).Msgf("[%s]: Error sending TLSClientHello to %s", n.addr, addr)

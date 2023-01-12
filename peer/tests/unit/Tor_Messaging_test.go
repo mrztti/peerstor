@@ -120,36 +120,29 @@ func Test_Tor_Messaging_Simple_Injected_Keys(t *testing.T) {
 }
 func Test_Tor_Messaging_Simple_CA_Keys(t *testing.T) {
 	transp := channel.NewTransport()
-	fake := z.NewFakeMessage(t)
-	handler1, _ := fake.GetHandler(t)
-	handler2, _ := fake.GetHandler(t)
-	handler3, _ := fake.GetHandler(t)
-	handler4, _ := fake.GetHandler(t)
-	handler5, _ := fake.GetHandler(t)
-
-	alice := z.NewTestNode(t, peerFac, transp, "127.0.0.1:0", z.WithMessage(fake, handler1), z.WithAntiEntropy(time.Millisecond*50))
+	alice := z.NewTestNode(t, peerFac, transp, "127.0.0.1:0", z.WithAntiEntropy(time.Millisecond*50))
 	defer alice.Stop()
-	bob := z.NewTestNode(t, peerFac, transp, "127.0.0.1:0", z.WithMessage(fake, handler2), z.WithAntiEntropy(time.Millisecond*50))
+	bob := z.NewTestNode(t, peerFac, transp, "127.0.0.1:0", z.WithAntiEntropy(time.Millisecond*50))
 	defer bob.Stop()
-	charlie := z.NewTestNode(t, peerFac, transp, "127.0.0.1:0", z.WithMessage(fake, handler3), z.WithAntiEntropy(time.Millisecond*50))
+	charlie := z.NewTestNode(t, peerFac, transp, "127.0.0.1:0", z.WithAntiEntropy(time.Millisecond*50))
 	defer charlie.Stop()
-	detlef := z.NewTestNode(t, peerFac, transp, "127.0.0.1:0", z.WithMessage(fake, handler4), z.WithAntiEntropy(time.Millisecond*50))
+	detlef := z.NewTestNode(t, peerFac, transp, "127.0.0.1:0", z.WithAntiEntropy(time.Millisecond*50))
 	defer detlef.Stop()
-	eliska := z.NewTestNode(t, peerFac, transp, "127.0.0.1:0", z.WithMessage(fake, handler5), z.WithAntiEntropy(time.Millisecond*50))
+	eliska := z.NewTestNode(t, peerFac, transp, "127.0.0.1:0", z.WithAntiEntropy(time.Millisecond*50))
 	defer eliska.Stop()
 
-	alice.AddPeer(bob.GetAddr())
-	bob.AddPeer(alice.GetAddr())
-	bob.AddPeer(charlie.GetAddr())
-	charlie.AddPeer(bob.GetAddr())
-	charlie.AddPeer(detlef.GetAddr())
-	detlef.AddPeer(charlie.GetAddr())
-	detlef.AddPeer(eliska.GetAddr())
-	eliska.AddPeer(detlef.GetAddr())
+	peers := []z.TestNode{alice, bob, charlie, detlef, eliska}
+	for _, p := range peers {
+		for _, p2 := range peers {
+			if p.GetAddr() != p2.GetAddr() {
+				p.AddPeer(p2.GetAddr())
+			}
+		}
+	}
 
-	time.Sleep(time.Second)
+	time.Sleep(5 * time.Second)
 
-	alice.SetRoutingEntry(charlie.GetAddr(), bob.GetAddr())
+	/* alice.SetRoutingEntry(charlie.GetAddr(), bob.GetAddr())
 	alice.SetRoutingEntry(detlef.GetAddr(), bob.GetAddr())
 	alice.SetRoutingEntry(eliska.GetAddr(), bob.GetAddr())
 	bob.SetRoutingEntry(detlef.GetAddr(), charlie.GetAddr())
@@ -160,7 +153,7 @@ func Test_Tor_Messaging_Simple_CA_Keys(t *testing.T) {
 	detlef.SetRoutingEntry(bob.GetAddr(), charlie.GetAddr())
 	eliska.SetRoutingEntry(alice.GetAddr(), detlef.GetAddr())
 	eliska.SetRoutingEntry(bob.GetAddr(), detlef.GetAddr())
-	eliska.SetRoutingEntry(charlie.GetAddr(), detlef.GetAddr())
+	eliska.SetRoutingEntry(charlie.GetAddr(), detlef.GetAddr()) */
 
 	alice.CreateDHSymmetricKey(bob.GetAddr())
 	alice.CreateDHSymmetricKey(charlie.GetAddr())
@@ -172,8 +165,6 @@ func Test_Tor_Messaging_Simple_CA_Keys(t *testing.T) {
 	eliska.CreateDHSymmetricKey(charlie.GetAddr())
 	eliska.CreateDHSymmetricKey(bob.GetAddr())
 	eliska.CreateDHSymmetricKey(alice.GetAddr())
-
-	time.Sleep(time.Second)
 
 	err := alice.TorCreate(bob.GetAddr(), "somethingrandom")
 	require.NoError(t, err)

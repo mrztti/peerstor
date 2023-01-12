@@ -34,6 +34,7 @@ import (
 	"math/rand"
 
 	"github.com/rs/xid"
+	"go.dedis.ch/cs438/logr"
 	"go.dedis.ch/cs438/types"
 )
 
@@ -90,6 +91,8 @@ func (n *node) ForceBan(target string) error {
 		Filename: target,
 		Metahash: "",
 	}
+
+	logr.Logger.Warn().Msgf("Attempting to ban %v", pv)
 
 	n.Ban(target)
 
@@ -173,7 +176,6 @@ func (n *node) ForceBan(target string) error {
 			return err
 		}
 	}
-
 	return nil
 
 }
