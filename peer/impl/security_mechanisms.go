@@ -133,8 +133,8 @@ func (n *node) Trust(name string) {
 
 // DetectModifications: Detects a change in trust and broadcasts a new vote to the network
 func (t *TrustCatalog) DetectBanCondition(addr string, old bool) {
-	new := t.IsTrusted(addr)
-	if old != new && t.hook != nil && !new {
+	n := t.IsTrusted(addr)
+	if old != n && t.hook != nil && !n {
 		// Propose a ban to the network
 		t.hook <- addr
 	}
