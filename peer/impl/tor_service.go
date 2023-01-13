@@ -9,9 +9,9 @@ import (
 	"go.dedis.ch/cs438/types"
 )
 
-func (n *node) TorEstablishCircuit(finalDestination string, circuitLen int) error {
+func (n *node) TorEstablishCircuit(finalDestination string, desiredCircLen int) error {
 	circuitNodes := []string{}
-	intermediateNodesLen := circuitLen - 1
+	intermediateNodesLen := desiredCircLen - 1
 	onionNodes, err := n.GetAllOnionNodes()
 	if err != nil {
 		logr.Logger.Err(err).Msgf("[%s]: Error getting onion nodes", n.addr)
@@ -39,12 +39,12 @@ func (n *node) TorEstablishCircuit(finalDestination string, circuitLen int) erro
 	}
 	for {
 		select {
-		case circLenght := <-circChan:
-			if circLenght == circuitLen {
+		case currentCircLen := <-circChan:
+			if currentCircLen == desiredCircLen {
 				n.torManager.torChannels.Remove(circID)
 				return nil
 			}
-			err = n.TorExtend(circuitNodes[circLenght], circID)
+			err = n.TorExtend(circuitNodes[currentCircLen], circID)
 			if err != nil {
 				return err
 			}
