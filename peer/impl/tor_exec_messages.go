@@ -10,57 +10,8 @@ import (
 	"go.dedis.ch/cs438/types"
 )
 
-func (n *node) execTorRelayMessage(msg types.Message, pkt transport.Packet) error {
-
-	if n.isMalicious {
-		logr.Logger.Warn().Msgf("[%s]: execTorRelayMessage blocked by malicious node >_<. the message: %v", n.addr, msg)
-		return nil
-	}
-
+func (n *node) execTorRelayCmd(torRelayMessage *types.TorRelayMessage) error {
 	var err error
-	torRelayMessage, ok := msg.(*types.TorRelayMessage)
-	if !ok {
-		err = fmt.Errorf("wrong type: %T", msg)
-		logr.Logger.Err(err).
-			Msgf("[%s]: execTorRelayMessage failed, the message is not of the expected type. the message: %v",
-				n.addr, torRelayMessage)
-		return err
-	}
-	nextRoutingEntry, err := n.torManager.GetNextHop(torRelayMessage.CircuitID)
-	if err != nil {
-		logr.Logger.Err(err).
-			Msgf("[%s]: execTorRelayMessage failed, the circuit does not exist. the message: %v", n.addr, torRelayMessage)
-		// circuit does not exist
-		return err
-	}
-	if nextRoutingEntry.CircuitID != torRelayMessage.CircuitID {
-		log.Default().
-			Printf("[%s]: about to forward a message for circuit ID: %s, last hop was %s; next circuit ID will be :%s"+
-				", next hop will be: %s, type of message:%v",
-				n.addr, torRelayMessage.CircuitID, torRelayMessage.LastHop,
-				nextRoutingEntry.CircuitID, nextRoutingEntry.NextHop, torRelayMessage.Cmd)
-		switch torRelayMessage.Cmd {
-		case types.RelayExtend, types.RelayRequest:
-			torRelayMessage.Data, err = n.tlsManager.DecryptSymmetricTor(
-				n.createTorEntryName(torRelayMessage.LastHop, torRelayMessage.CircuitID),
-				torRelayMessage.Data,
-			)
-		case types.RelayExtended, types.RelayResponse:
-			torRelayMessage.Data, err = n.tlsManager.EncryptSymmetricTor(
-				n.createTorEntryName(nextRoutingEntry.NextHop, nextRoutingEntry.CircuitID),
-				torRelayMessage.Data,
-			)
-		}
-		if err != nil {
-			return err
-		}
-		// message is not for us if we have to change circuitID
-		torRelayMessage.LastHop = n.addr
-		torRelayMessage.CircuitID = nextRoutingEntry.CircuitID
-
-		err := n.SendTLSMessage(nextRoutingEntry.NextHop, torRelayMessage)
-		return err
-	}
 	switch torRelayMessage.Cmd {
 	case types.RelayExtend:
 		torRelayMessage.Data, err = n.tlsManager.DecryptSymmetricTor(
@@ -152,11 +103,64 @@ func (n *node) execTorRelayMessage(msg types.Message, pkt transport.Packet) erro
 		logr.Logger.Warn().
 			Msgf("[%s]: Received the following response: %s", n.addr, string(torRelayMessage.Data))
 	}
-	return nil
+	return err
+}
+
+func (n *node) execTorRelayMessage(msg types.Message, pkt transport.Packet) error {
+
+	if n.isMalicious {
+		logr.Logger.Warn().Msgf("[%s]: execTorRelayMessage blocked by malicious node >_<. the message: %v", n.addr, msg)
+		return nil
+	}
+
+	var err error
+	torRelayMessage, ok := msg.(*types.TorRelayMessage)
+	if !ok {
+		err = fmt.Errorf("wrong type: %T", msg)
+		logr.Logger.Err(err).
+			Msgf("[%s]: execTorRelayMessage failed, the message is not of the expected type. the message: %v",
+				n.addr, torRelayMessage)
+		return err
+	}
+	nextRoutingEntry, err := n.torManager.GetNextHop(torRelayMessage.CircuitID)
+	if err != nil {
+		logr.Logger.Err(err).
+			Msgf("[%s]: execTorRelayMessage failed, the circuit does not exist. the message: %v", n.addr, torRelayMessage)
+		// circuit does not exist
+		return err
+	}
+	if nextRoutingEntry.CircuitID != torRelayMessage.CircuitID {
+		log.Default().
+			Printf("[%s]: about to forward a message for circuit ID: %s, last hop was %s; next circuit ID will be :%s"+
+				", next hop will be: %s, type of message:%v",
+				n.addr, torRelayMessage.CircuitID, torRelayMessage.LastHop,
+				nextRoutingEntry.CircuitID, nextRoutingEntry.NextHop, torRelayMessage.Cmd)
+		switch torRelayMessage.Cmd {
+		case types.RelayExtend, types.RelayRequest:
+			torRelayMessage.Data, err = n.tlsManager.DecryptSymmetricTor(
+				n.createTorEntryName(torRelayMessage.LastHop, torRelayMessage.CircuitID),
+				torRelayMessage.Data,
+			)
+		case types.RelayExtended, types.RelayResponse:
+			torRelayMessage.Data, err = n.tlsManager.EncryptSymmetricTor(
+				n.createTorEntryName(nextRoutingEntry.NextHop, nextRoutingEntry.CircuitID),
+				torRelayMessage.Data,
+			)
+		}
+		if err != nil {
+			return err
+		}
+		// message is not for us if we have to change circuitID
+		torRelayMessage.LastHop = n.addr
+		torRelayMessage.CircuitID = nextRoutingEntry.CircuitID
+
+		err := n.SendTLSMessage(nextRoutingEntry.NextHop, torRelayMessage)
+		return err
+	}
+	return n.execTorRelayCmd(torRelayMessage)
 }
 
 func (n *node) execTorControlMessage(msg types.Message, pkt transport.Packet) error {
-
 	if n.isMalicious {
 		logr.Logger.Warn().Msgf("[%s]: execTorControlMessage blocked by malicious node >_<. the message: %v", n.addr, msg)
 		return nil
@@ -174,20 +178,7 @@ func (n *node) execTorControlMessage(msg types.Message, pkt transport.Packet) er
 
 	switch torControlMessage.Cmd {
 	case types.Create:
-		// Alice (1) -> Bob (2) -> Charlie
-		// Bob's table: 1->(2, Charlie); 2->(1, Alice)
-		// Alice (1) -> Bob
-		// Bob's table: 1->(1, ALICE)
-		// Bob knows the message is for him because he is not changing circuitID
-		// Bob knows to respond to Alice
-		// ....
-		// Alice (1) -> Bob [EXTEND]
-		// Bob's table becomes: (1->2, Charlie)
-		// Bob now knows to forward the message
-		// Charlie's table: (2, Bob)
-		// He knows he is the destination
 		log.Default().Printf("[%s]: Ive received msg of type create", n.addr)
-		// log.Default().Printf("[%s]: Enc: %v", n.addr, torControlMessage.Data)
 		n.torManager.torRoutingTable.Set(
 			torControlMessage.CircuitID,
 			peer.TorRoutingEntry{
@@ -245,27 +236,22 @@ func (n *node) execTorControlMessage(msg types.Message, pkt transport.Packet) er
 				Data:      encryptedData,
 			}
 			err = n.SendTLSMessage(nextEntry.NextHop, torRelay)
-			if err != nil {
-				return err
-			}
-		} else {
-			transportMessage := transport.Message{
-				Payload: torControlMessage.Data,
-				Type:    types.TorServerHello{}.Name(),
-			}
-			var newMessage types.TorServerHello
-			err = n.conf.MessageRegistry.UnmarshalMessage(&transportMessage, &newMessage)
-			if err != nil {
-				return err
-			}
-			err = n.execTorServerHello(newMessage, torControlMessage.CircuitID)
-			if err != nil {
-				return err
-			}
+			return err
 		}
-
+		transportMessage := transport.Message{
+			Payload: torControlMessage.Data,
+			Type:    types.TorServerHello{}.Name(),
+		}
+		var newMessage types.TorServerHello
+		err = n.conf.MessageRegistry.UnmarshalMessage(&transportMessage, &newMessage)
+		if err != nil {
+			return err
+		}
+		err = n.execTorServerHello(newMessage, torControlMessage.CircuitID)
+		if err != nil {
+			return err
+		}
 	}
-
 	return nil
 }
 
