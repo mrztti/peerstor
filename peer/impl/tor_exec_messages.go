@@ -115,18 +115,18 @@ func (n *node) processRelayRequest(torRelayMessage *types.TorRelayMessage) error
 		}
 		err = n.SendTLSMessage(torRelayMessage.LastHop, sampleResponse)
 		return err
-	case types.HttpReq:
+	case types.HTTPReq:
 		transportMessage := transport.Message{
 			Payload: torRelayMessage.Data,
 			Type:    types.TorHTTPRequest{}.Name(),
 		}
-		var torHttpReq types.TorHTTPRequest
-		err = n.conf.MessageRegistry.UnmarshalMessage(&transportMessage, &torHttpReq)
+		var torHTTPReq types.TorHTTPRequest
+		err = n.conf.MessageRegistry.UnmarshalMessage(&transportMessage, &torHTTPReq)
 		if err != nil {
 			return err
 		}
 		go (func() {
-			err := n.processTorHttpReq(&torHttpReq, torRelayMessage)
+			err := n.processTorHTTPReq(&torHTTPReq, torRelayMessage)
 			if err != nil {
 				logr.Logger.Error().Err(err).Msgf("[%s] error processing http request on circ ID %s", n.addr, torRelayMessage.CircuitID)
 			}
@@ -135,13 +135,14 @@ func (n *node) processRelayRequest(torRelayMessage *types.TorRelayMessage) error
 	return err
 }
 
-func (n *node) processTorHttpReq(httpRequest *types.TorHTTPRequest, torRelayMessage *types.TorRelayMessage) error {
+func (n *node) processTorHTTPReq(httpRequest *types.TorHTTPRequest, torRelayMessage *types.TorRelayMessage) error {
 	var err error
 	var response []byte
 	switch httpRequest.Method {
 	case types.Get:
 		// Exec request on sender's behalf
-		resp, err := http.Get(httpRequest.Url)
+		resp, err := http.Get(httpRequest.URL)
+		defer resp.Body.Close()
 		if err != nil {
 			log.Fatalln(err)
 		}
@@ -152,7 +153,8 @@ func (n *node) processTorHttpReq(httpRequest *types.TorHTTPRequest, torRelayMess
 
 	case types.Post:
 		// Send post request on sender's behalf
-		resp, err := http.Post(httpRequest.Url, "application/json", bytes.NewBuffer([]byte(httpRequest.PostBody)))
+		resp, err := http.Post(httpRequest.URL, "application/json", bytes.NewBuffer([]byte(httpRequest.PostBody)))
+		defer resp.Body.Close()
 		if err != nil {
 			return err
 		}

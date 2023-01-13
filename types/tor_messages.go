@@ -9,7 +9,7 @@ import (
 type ControlCommand int
 type RelayCommand int
 type InnerMessageType int
-type HttpMethod int
+type HTTPMethod int
 
 const (
 	Create ControlCommand = iota
@@ -25,11 +25,11 @@ const (
 
 const (
 	Text InnerMessageType = iota
-	HttpReq
+	HTTPReq
 )
 
 const (
-	Get HttpMethod = iota
+	Get HTTPMethod = iota
 	Post
 )
 
@@ -114,8 +114,8 @@ type TorServerHello struct {
 
 type TorHTTPRequest struct {
 	Source   string
-	Method   HttpMethod // Currently 'GET' or 'POST'
-	Url      string
+	Method   HTTPMethod // Currently 'GET' or 'POST'
+	URL      string
 	PostBody string
 }
 

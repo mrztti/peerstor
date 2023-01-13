@@ -236,7 +236,7 @@ func (n *node) TorSendHTTPRequest(circID string, httpReq types.TorHTTPRequest) e
 		CircuitID:       circID,
 		Cmd:             types.RelayRequest,
 		Data:            encryptedPayload,
-		DataMessageType: types.HttpReq,
+		DataMessageType: types.HTTPReq,
 	}
 	nodeAdress, ok := n.torManager.myCircuits.Get(circID)
 	if !ok {
