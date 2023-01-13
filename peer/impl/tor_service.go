@@ -1,6 +1,7 @@
 package impl
 
 import (
+	"encoding/json"
 	"fmt"
 	"time"
 
@@ -205,10 +206,37 @@ func (n *node) TorRelayRequest(circID string, data []byte) error {
 		return err
 	}
 	msg := types.TorRelayMessage{
-		LastHop:   n.addr,
-		CircuitID: circID,
-		Cmd:       types.RelayRequest,
-		Data:      encryptedPayload,
+		LastHop:         n.addr,
+		CircuitID:       circID,
+		Cmd:             types.RelayRequest,
+		Data:            encryptedPayload,
+		DataMessageType: types.Text,
+	}
+	nodeAdress, ok := n.torManager.myCircuits.Get(circID)
+	if !ok {
+		logr.Logger.Err(err).Msgf("[%s]: Error getting nodesAdress from myCircuits", n.addr)
+		return err
+	}
+	return n.SendTLSMessage(nodeAdress[0], msg)
+}
+
+func (n *node) TorSendHTTPRequest(circID string, httpReq types.TorHTTPRequest) error {
+	data, err := json.Marshal(httpReq)
+	if err != nil {
+		logr.Logger.Err(err).Msgf("[%s]: Error marshalling httpReq to %s", n.addr, circID)
+		return err
+	}
+	encryptedPayload, err := n.TorEncrypt(circID, data)
+	if err != nil {
+		logr.Logger.Err(err).Msgf("[%s]: Error Encrypting TLSClientHello to %s", n.addr, circID)
+		return err
+	}
+	msg := types.TorRelayMessage{
+		LastHop:         n.addr,
+		CircuitID:       circID,
+		Cmd:             types.RelayRequest,
+		Data:            encryptedPayload,
+		DataMessageType: types.HttpReq,
 	}
 	nodeAdress, ok := n.torManager.myCircuits.Get(circID)
 	if !ok {
