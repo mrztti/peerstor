@@ -68,15 +68,32 @@ func (n *node) execTorRelayCmd(torRelayMessage *types.TorRelayMessage) error {
 			return err
 		}
 	case types.RelayRequest:
-		torRelayMessage.Data, err = n.tlsManager.DecryptSymmetricTor(
-			n.createTorEntryName(torRelayMessage.LastHop, torRelayMessage.CircuitID),
-			torRelayMessage.Data,
-		)
+		return n.processRelayRequest(torRelayMessage)
+	case types.RelayResponse:
+		torRelayMessage.Data, err = n.TorDecrypt(torRelayMessage.CircuitID, torRelayMessage.Data)
 		if err != nil {
 			return err
 		}
 		logr.Logger.Warn().
-			Msgf("[%s]: Received the following request: %s", n.addr, string(torRelayMessage.Data))
+			Msgf("[%s]: Received the following response: %s", n.addr, string(torRelayMessage.Data))
+	}
+	return err
+}
+
+func (n *node) processRelayRequest(torRelayMessage *types.TorRelayMessage) error {
+	var err error
+	torRelayMessage.Data, err = n.tlsManager.DecryptSymmetricTor(
+		n.createTorEntryName(torRelayMessage.LastHop, torRelayMessage.CircuitID),
+		torRelayMessage.Data,
+	)
+	if err != nil {
+		return err
+	}
+	logr.Logger.Warn().
+		Msgf("[%s]: Received the following request type: %d with content %s", n.addr, torRelayMessage.DataMessageType, string(torRelayMessage.Data))
+
+	switch torRelayMessage.DataMessageType {
+	case types.Text:
 		responseDataPlaintext := "wrapped response " + string(
 			torRelayMessage.Data,
 		) + " from " + n.addr
@@ -95,13 +112,8 @@ func (n *node) execTorRelayCmd(torRelayMessage *types.TorRelayMessage) error {
 		}
 		err = n.SendTLSMessage(torRelayMessage.LastHop, sampleResponse)
 		return err
-	case types.RelayResponse:
-		torRelayMessage.Data, err = n.TorDecrypt(torRelayMessage.CircuitID, torRelayMessage.Data)
-		if err != nil {
-			return err
-		}
-		logr.Logger.Warn().
-			Msgf("[%s]: Received the following response: %s", n.addr, string(torRelayMessage.Data))
+	case types.HttpReq:
+		return err
 	}
 	return err
 }

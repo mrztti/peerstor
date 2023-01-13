@@ -8,6 +8,7 @@ import (
 
 type ControlCommand int
 type RelayCommand int
+type InnerMessageType int
 
 const (
 	Create ControlCommand = iota
@@ -21,6 +22,11 @@ const (
 	RelayExtended
 )
 
+const (
+	Text InnerMessageType = iota
+	HttpReq
+)
+
 type TorControlMessage struct {
 	LastHop   string
 	CircuitID string
@@ -29,14 +35,15 @@ type TorControlMessage struct {
 }
 
 type TorRelayMessage struct {
-	LastHop   string
-	CircuitID string
-	Cmd       RelayCommand
-	Relay     string
-	StreamID  string
-	Digest    []byte
-	Len       uint
-	Data      []byte
+	LastHop         string
+	CircuitID       string
+	Cmd             RelayCommand
+	Relay           string
+	StreamID        string
+	Digest          []byte
+	Len             uint
+	Data            []byte
+	DataMessageType InnerMessageType
 }
 
 // -----------------------------------------------------------------------------
