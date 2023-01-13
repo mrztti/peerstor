@@ -1,8 +1,11 @@
 package impl
 
 import (
+	"bytes"
 	"fmt"
+	"io"
 	"log"
+	"net/http"
 
 	"go.dedis.ch/cs438/logr"
 	"go.dedis.ch/cs438/peer"
@@ -113,9 +116,70 @@ func (n *node) processRelayRequest(torRelayMessage *types.TorRelayMessage) error
 		err = n.SendTLSMessage(torRelayMessage.LastHop, sampleResponse)
 		return err
 	case types.HttpReq:
-		return err
+		transportMessage := transport.Message{
+			Payload: torRelayMessage.Data,
+			Type:    types.TorHTTPRequest{}.Name(),
+		}
+		var torHttpReq types.TorHTTPRequest
+		err = n.conf.MessageRegistry.UnmarshalMessage(&transportMessage, &torHttpReq)
+		if err != nil {
+			return err
+		}
+		go (func() {
+			err := n.processTorHttpReq(&torHttpReq, torRelayMessage)
+			if err != nil {
+				logr.Logger.Error().Err(err).Msgf("[%s] error processing http request on circ ID %s", n.addr, torRelayMessage.CircuitID)
+			}
+		})()
 	}
 	return err
+}
+
+func (n *node) processTorHttpReq(httpRequest *types.TorHTTPRequest, torRelayMessage *types.TorRelayMessage) error {
+	var err error
+	var response []byte
+	switch httpRequest.Method {
+	case types.Get:
+		// Exec request on sender's behalf
+		resp, err := http.Get(httpRequest.Url)
+		if err != nil {
+			log.Fatalln(err)
+		}
+		response, err = io.ReadAll(resp.Body)
+		if err != nil {
+			return err
+		}
+
+	case types.Post:
+		// Send post request on sender's behalf
+		resp, err := http.Post(httpRequest.Url, "application/json", bytes.NewBuffer([]byte(httpRequest.PostBody)))
+		if err != nil {
+			return err
+		}
+		response, err = io.ReadAll(resp.Body)
+		if err != nil {
+			return err
+		}
+	}
+
+	// Forward response by TOR
+	encryptedData, err := n.tlsManager.EncryptSymmetricTor(
+		n.createTorEntryName(torRelayMessage.LastHop, torRelayMessage.CircuitID),
+		response,
+	)
+	if err != nil {
+		return err
+	}
+
+	sampleResponse := types.TorRelayMessage{
+		LastHop:   n.addr,
+		CircuitID: torRelayMessage.CircuitID,
+		Cmd:       types.RelayResponse,
+		Data:      encryptedData,
+	}
+	err = n.SendTLSMessage(torRelayMessage.LastHop, sampleResponse)
+	return err
+
 }
 
 func (n *node) execTorRelayMessage(msg types.Message, pkt transport.Packet) error {
