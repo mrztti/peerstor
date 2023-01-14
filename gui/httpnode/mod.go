@@ -99,6 +99,8 @@ func NewHTTPNode(node peer.Peer, conf peer.Configuration) Proxy {
 	mux.Handle("/tor/createCircuit", http.HandlerFunc(torctrl.TorCicuitHandler()))
 	mux.Handle("/tor/getRouting", http.HandlerFunc(torctrl.TorRoutingTableHandler()))
 	mux.Handle("/tor/dhkeys", http.HandlerFunc(torctrl.TorDHKeyHandler()))
+	mux.Handle("/tor/curl", http.HandlerFunc(torctrl.TorCurlHandler()))
+
 	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "not authorized", http.StatusBadGateway)
 		log.Error().Msgf("wrong endpoint: %s", r.URL.Path)

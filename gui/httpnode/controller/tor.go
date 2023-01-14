@@ -8,6 +8,7 @@ import (
 	"github.com/rs/zerolog"
 	"go.dedis.ch/cs438/logr"
 	"go.dedis.ch/cs438/peer"
+	"go.dedis.ch/cs438/types"
 )
 
 func NewTor(node peer.Peer, log *zerolog.Logger) tor {
@@ -81,6 +82,41 @@ func (t tor) TorDHKeyHandler() http.HandlerFunc {
 	}
 }
 
+func (t tor) TorCurlHandler() http.HandlerFunc {
+	logr.Logger.Info().Msg("TorCurlHandler")
+	return func(w http.ResponseWriter, r *http.Request) {
+		switch r.Method {
+		case http.MethodGet:
+			t.curl(w, r)
+		case http.MethodOptions:
+			w.Header().Set("Access-Control-Allow-Origin", "*")
+			w.Header().Set("Access-Control-Allow-Headers", "*")
+		default:
+			http.Error(w, "forbidden method", http.StatusMethodNotAllowed)
+		}
+	}
+}
+
+func (t tor) curl(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Access-Control-Allow-Origin", "*")
+	url := r.URL.Query().Get("key")
+	circID := r.URL.Query().Get("val")
+
+	httpReq := types.TorHTTPRequest{
+		URL:    url,
+		Method: types.Get,
+	}
+	err := t.node.TorSendHTTPRequest(circID, httpReq)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	w.Header().Set("Access-Control-Allow-Headers", "*")
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	w.Write([]byte("{\"status\": \"ok\"}"))
+}
+
 func (t tor) creatCircuit(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Access-Control-Allow-Origin", "*")
 	finalDestination := r.URL.Query().Get("key")
@@ -106,8 +142,6 @@ func (t tor) getRoutingTable(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Access-Control-Allow-Origin", "*")
 
 	entries := t.node.GetTorRoutingEntries()
-	// enc := json.NewEncoder(w)
-	// enc.SetIndent("", "\t")
 	tmp := "["
 	i := 0
 	for k, v := range entries {
