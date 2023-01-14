@@ -1,4 +1,4 @@
-name: Go package
+name: Peerstor Tests
 
 on: [push]
 
@@ -17,5 +17,11 @@ jobs:
       - name: Build
         run: go build -v ./...
 
-      - name: Test
+      - name: Test TLS
+        run: make test_tls
+
+      - name: Test TOR
         run: make test_tor
+
+      - name: Test Trust
+        run: make test_trust
