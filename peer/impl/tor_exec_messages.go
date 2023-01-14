@@ -13,6 +13,8 @@ import (
 	"go.dedis.ch/cs438/types"
 )
 
+const IsDemo = true
+
 func (n *node) execTorRelayCmd(torRelayMessage *types.TorRelayMessage) error {
 	var err error
 	switch torRelayMessage.Cmd {
@@ -76,6 +78,9 @@ func (n *node) execTorRelayCmd(torRelayMessage *types.TorRelayMessage) error {
 		torRelayMessage.Data, err = n.TorDecrypt(torRelayMessage.CircuitID, torRelayMessage.Data)
 		if err != nil {
 			return err
+		}
+		if IsDemo {
+			n.torManager.responseChannel <- torRelayMessage.Data
 		}
 		logr.Logger.Warn().
 			Msgf("[%s]: Received the following response: %s", n.addr, string(torRelayMessage.Data))

@@ -22,12 +22,13 @@ type TrustServices interface {
 
 	GetPeerPublicKey(name string) (rsa.PublicKey, error)
 	TotalCertifiedPeers() uint
-	RegisterAsOnionNode() error
-	GetRandomOnionNode() (string, *rsa.PublicKey, error)
-	GetAllOnionNodes() (map[string](*rsa.PublicKey), error)
-
 	BroadcastCertificate() error
 
 	//Utils
 	GetSentMessagesByType(class types.Message) []*transport.Message
+}
+type TrustServicesOnion interface {
+	RegisterAsOnionNode() error
+	GetRandomOnionNode() (string, *rsa.PublicKey, error)
+	GetAllOnionNodes() (map[string](*rsa.PublicKey), error)
 }

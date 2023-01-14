@@ -62,7 +62,9 @@ func (n *node) execTLSMessageHello(msg types.Message, pkt transport.Packet) erro
 		logr.Logger.Err(err).Msgf("[%s]: execTLSMessageHello failed", n.addr)
 		return err
 	}
+
 	decryptedMessage, err := n.tlsManager.DecryptPublic(TLSMessageHello)
+	logr.Logger.Info().Msgf("[%s]: decryptedMessage: %v", n.addr, decryptedMessage.Payload)
 	// log.Default().Println("decryptedMessage", decryptedMessage.Payload)
 	if err != nil {
 		return err
@@ -70,8 +72,7 @@ func (n *node) execTLSMessageHello(msg types.Message, pkt transport.Packet) erro
 	return n.processDecryptedTLSMessage(decryptedMessage, pkt)
 }
 
-func (n *node) CreateDHSymmetricKey(addr string) error {
-	logr.Logger.Info().Msgf("[%s]: Sending TLSClientHello to %s", n.addr, addr)
+func (n *node) EstablishTLSConnection(addr string) error {
 
 	dhManager, err := n.DHfirstStep()
 
@@ -93,6 +94,7 @@ func (n *node) CreateDHSymmetricKey(addr string) error {
 		logr.Logger.Err(err).Msgf("[%s]: Error marshaling TLSClientHello to %s", n.addr, addr)
 		return err
 	}
+	logr.Logger.Info().Msgf("[%s]: Sending TLSClientHello to %s, %v", n.addr, addr, msg)
 	encryptedMessage, err := n.tlsManager.EncryptPublic(addr, transportMessage)
 	if err != nil {
 		logr.Logger.Err(err).Msgf("[%s]: Error Encrypting TLSClientHello to %s", n.addr, addr)
@@ -118,7 +120,7 @@ func (n *node) execTLSClientHello(msg types.Message, pkt transport.Packet) error
 		logr.Logger.Err(err).Msgf("[%s]: execTLSClientHello failed", n.addr)
 		return err
 	}
-
+	logr.Logger.Info().Msgf("[%s]: Received TLSClientHello from %s, %v", n.addr, TLSClientHello.Source, TLSClientHello)
 	dhManager, err := n.DHfirstStepWithParams(TLSClientHello.PrimeDH, TLSClientHello.GroupDH)
 	if err != nil {
 		return err
@@ -138,24 +140,24 @@ func (n *node) execTLSClientHello(msg types.Message, pkt transport.Packet) error
 			Msgf("[%s]: Error marshaling TLSServerHello to %s", n.addr, pkt.Header.Source)
 		return err
 	}
-	encryptedMessage, err := n.tlsManager.EncryptPublic(pkt.Header.Source, transportMessage)
+	encryptedMessage, err := n.tlsManager.EncryptPublic(TLSClientHello.Source, transportMessage)
 	if err != nil {
 		logr.Logger.Err(err).
-			Msgf("[%s]: Error Encrypting TLSServerHello to %s", n.addr, pkt.Header.Source)
+			Msgf("[%s]: Error Encrypting TLSServerHello to %s", n.addr, TLSClientHello.Source)
 		return err
 	}
 	tlsTransportMessage, err := n.conf.MessageRegistry.MarshalMessage(&encryptedMessage)
 
 	if err != nil {
 		logr.Logger.Err(err).
-			Msgf("[%s]: Error marshaling TLSServerHello to %s", n.addr, pkt.Header.Source)
+			Msgf("[%s]: Error marshaling TLSServerHello to %s", n.addr, TLSClientHello.Source)
 		return err
 	}
 
 	err = n.Unicast(TLSClientHello.Source, tlsTransportMessage)
 	if err != nil {
 		logr.Logger.Err(err).
-			Msgf("[%s]: Error sending TLSServerHello to %s", n.addr, pkt.Header.Source)
+			Msgf("[%s]: Error sending TLSServerHello to %s", n.addr, TLSClientHello.Source)
 		return err
 	}
 
@@ -179,6 +181,7 @@ func (n *node) execTLSServerHello(msg types.Message, pkt transport.Packet) error
 		logr.Logger.Err(err).Msgf("[%s]: execTLSServerHello failed", n.addr)
 		return err
 	}
+	logr.Logger.Info().Msgf("[%s]: Received TLSServerHello from %s, %v", n.addr, TLSServerHello.Source, TLSServerHello)
 	dhManager := n.tlsManager.GetDHManagerEntry(TLSServerHello.Source)
 	if dhManager == nil {
 		logr.Logger.Err(err).Msgf("[%s]: execTLSServerHello dhManager.Get failed!", n.addr)
@@ -229,6 +232,12 @@ func (n *node) SendTLSMessage(peerIP string, message types.Message) error {
 		logr.Logger.Err(err).Msgf("[%s]: Error encrypting TLSMessage to %s", n.addr, peerIP)
 		return err
 	}
-	n.BroadcastPrivatelyInParallel(peerIP, encryptedMessage)
+	// n.BroadcastPrivatelyInParallel(peerIP, encryptedMessage)
+	msg, err := n.conf.MessageRegistry.MarshalMessage(&encryptedMessage)
+	if err != nil {
+		logr.Logger.Err(err).Msgf("[%s]: Error marshaling TLSMessage to %s", n.addr, peerIP)
+		return err
+	}
+	err = n.Unicast(peerIP, msg)
 	return err
 }

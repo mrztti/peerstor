@@ -239,6 +239,11 @@ func (n *node) TorSendHTTPRequest(circID string, httpReq types.TorHTTPRequest) e
 		DataMessageType: types.HTTPReq,
 	}
 	nodeAdress, ok := n.torManager.myCircuits.Get(circID)
+	logr.Logger.Info().Msgf("[%s]: CURL circuit ID %s", n.addr, circID)
+	logr.Logger.Info().Msgf("[%s]: CURL URL %s", n.addr, httpReq.URL)
+	circuits := n.torManager.myCircuits.GetKeys()
+	logr.Logger.Info().Msgf("[%s]: CURL Nodes circuits %s", n.addr, circuits)
+
 	if !ok {
 		logr.Logger.Err(err).Msgf("[%s]: Error getting nodesAdress from myCircuits", n.addr)
 		return err

@@ -8,8 +8,9 @@ import (
 )
 
 type KeyExchangeServices interface {
-	CreateDHSymmetricKey(addr string) error
+	EstablishTLSConnection(addr string) error
 	GetSymKey(addr string) []byte
+	GetSymKeys() map[string][]byte
 	EncryptSymmetric(peerIP string, message transport.Message) (types.TLSMessage, error)
 	DecryptSymmetric(message *types.TLSMessage) (transport.Message, error)
 	GetPublicKey() crypto.PublicKey

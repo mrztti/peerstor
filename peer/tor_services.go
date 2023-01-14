@@ -24,4 +24,5 @@ type TorEncryptServices interface {
 	EncryptSymmetricTor(torID string, plaintext []byte) ([]byte, error)
 	DecryptSymmetricTor(torID string, cipherText []byte) ([]byte, error)
 	GetSymKeys() map[string][]byte
+	AwaitDemoResponse() []byte
 }

@@ -252,9 +252,9 @@ func Test_TLS_Message_Is_Received_Injected_Keys(t *testing.T) {
 	node1.SetRoutingEntry(node3.GetAddr(), node2.GetAddr())
 	node3.SetRoutingEntry(node1.GetAddr(), node2.GetAddr())
 
-	node1.CreateDHSymmetricKey(node2.GetAddr())
-	node3.CreateDHSymmetricKey(node2.GetAddr())
-	node1.CreateDHSymmetricKey(node3.GetAddr())
+	node1.EstablishTLSConnection(node2.GetAddr())
+	node3.EstablishTLSConnection(node2.GetAddr())
+	node1.EstablishTLSConnection(node3.GetAddr())
 
 	time.Sleep(time.Second)
 
@@ -320,9 +320,9 @@ func Test_TLS_Message_Is_Received_CA_Keys(t *testing.T) {
 
 	time.Sleep(time.Second * 1)
 
-	node1.CreateDHSymmetricKey(node2.GetAddr())
-	node3.CreateDHSymmetricKey(node2.GetAddr())
-	node1.CreateDHSymmetricKey(node3.GetAddr())
+	node1.EstablishTLSConnection(node2.GetAddr())
+	node3.EstablishTLSConnection(node2.GetAddr())
+	node1.EstablishTLSConnection(node3.GetAddr())
 
 	time.Sleep(time.Second)
 
@@ -393,7 +393,7 @@ func Test_TLS_Message_Is_Reliably_Delivered_Injected_Keys(t *testing.T) {
 	node1.AddPeer(node3.GetAddr())
 	node3.AddPeer(node1.GetAddr())
 
-	node1.CreateDHSymmetricKey(node3.GetAddr())
+	node1.EstablishTLSConnection(node3.GetAddr())
 	time.Sleep(time.Second)
 
 	// Ensure that TLS message is reliably delivered even when intermediate node is down while it is sent
@@ -476,7 +476,7 @@ func Test_TLS_Message_Is_Reliably_Delivered_CA_Keys(t *testing.T) {
 
 	time.Sleep(time.Second)
 
-	node1.CreateDHSymmetricKey(node3.GetAddr())
+	node1.EstablishTLSConnection(node3.GetAddr())
 
 	time.Sleep(time.Second)
 
@@ -541,7 +541,7 @@ func Test_TLS_SymmetricEncryption_Simple_CA_Keys(t *testing.T) {
 	node1.AddPeer(node2.GetAddr())
 	time.Sleep(time.Second)
 
-	node1.CreateDHSymmetricKey(node2.GetAddr())
+	node1.EstablishTLSConnection(node2.GetAddr())
 
 	time.Sleep(time.Second)
 	require.Equal(t, node1.GetSymKey(node2.GetAddr()), node2.GetSymKey(node1.GetAddr()))
@@ -592,7 +592,7 @@ func Test_TLS_SymmetricEncryption_Simple_Injected_Keys(t *testing.T) {
 
 	node1.SetAsmKey(node2.GetAddr(), publicKeyN2)
 	node2.SetAsmKey(node1.GetAddr(), publicKeyN1)
-	node1.CreateDHSymmetricKey(node2.GetAddr())
+	node1.EstablishTLSConnection(node2.GetAddr())
 
 	time.Sleep(time.Second)
 	require.Equal(t, node1.GetSymKey(node2.GetAddr()), node2.GetSymKey(node1.GetAddr()))
@@ -641,7 +641,7 @@ func Test_TLS_SymmetricEncryption_BreakSign_CA_Keys(t *testing.T) {
 	node1.AddPeer(node2.GetAddr())
 	time.Sleep(time.Second)
 
-	node1.CreateDHSymmetricKey(node2.GetAddr())
+	node1.EstablishTLSConnection(node2.GetAddr())
 
 	time.Sleep(time.Second)
 	require.Equal(t, node1.GetSymKey(node2.GetAddr()), node2.GetSymKey(node1.GetAddr()))
@@ -699,7 +699,7 @@ func Test_TLS_SymmetricEncryption_BreakSign_Injected_Keys(t *testing.T) {
 
 	node1.SetAsmKey(node2.GetAddr(), publicKeyN2)
 	node2.SetAsmKey(node1.GetAddr(), publicKeyN1)
-	node1.CreateDHSymmetricKey(node2.GetAddr())
+	node1.EstablishTLSConnection(node2.GetAddr())
 
 	time.Sleep(time.Second)
 	require.Equal(t, node1.GetSymKey(node2.GetAddr()), node2.GetSymKey(node1.GetAddr()))

@@ -39,7 +39,7 @@ func Test_Tor_Circuit_Create_Inject(t *testing.T) {
 	require.Equal(t, node2.GetPublicKey(), publicKeyN2)
 
 	addr := node2.GetAddr()
-	err := node1.CreateDHSymmetricKey(addr)
+	err := node1.EstablishTLSConnection(addr)
 	require.NoError(t, err)
 	time.Sleep(time.Second)
 
@@ -77,7 +77,7 @@ func Test_Tor_Circuit_Create(t *testing.T) {
 	time.Sleep(time.Second)
 
 	addr := node2.GetAddr()
-	err := node1.CreateDHSymmetricKey(addr)
+	err := node1.EstablishTLSConnection(addr)
 	require.NoError(t, err)
 	time.Sleep(time.Second)
 
@@ -121,7 +121,7 @@ func Test_Tor_Circuit_Routing_Simple_Inject(t *testing.T) {
 	node2.SetAsmKey(node1.GetAddr(), publicKeyN1)
 
 	addr := node2.GetAddr()
-	err := node1.CreateDHSymmetricKey(addr)
+	err := node1.EstablishTLSConnection(addr)
 	require.NoError(t, err)
 	time.Sleep(time.Second)
 
@@ -166,7 +166,7 @@ func Test_Tor_Circuit_Routing_Simple(t *testing.T) {
 	time.Sleep(time.Second)
 
 	addr := node2.GetAddr()
-	err := node1.CreateDHSymmetricKey(addr)
+	err := node1.EstablishTLSConnection(addr)
 	require.NoError(t, err)
 	time.Sleep(time.Second)
 
@@ -255,7 +255,7 @@ func Test_Tor_Circuit_Symmetric_Encryption(t *testing.T) {
 
 	//node1 <-> node2
 
-	node1.CreateDHSymmetricKey(node2.GetAddr())
+	node1.EstablishTLSConnection(node2.GetAddr())
 
 	time.Sleep(time.Second)
 
@@ -320,9 +320,9 @@ func Test_Tor_Circuit_Extend_Inject(t *testing.T) {
 	alice.SetRoutingEntry(charlie.GetAddr(), bob.GetAddr())
 	charlie.SetRoutingEntry(alice.GetAddr(), bob.GetAddr())
 
-	alice.CreateDHSymmetricKey(bob.GetAddr())
-	charlie.CreateDHSymmetricKey(bob.GetAddr())
-	alice.CreateDHSymmetricKey(charlie.GetAddr())
+	alice.EstablishTLSConnection(bob.GetAddr())
+	charlie.EstablishTLSConnection(bob.GetAddr())
+	alice.EstablishTLSConnection(charlie.GetAddr())
 
 	time.Sleep(time.Second)
 
@@ -400,9 +400,9 @@ func Test_Tor_Circuit_Extend(t *testing.T) {
 	alice.SetRoutingEntry(charlie.GetAddr(), bob.GetAddr())
 	charlie.SetRoutingEntry(alice.GetAddr(), bob.GetAddr())
 
-	alice.CreateDHSymmetricKey(bob.GetAddr())
-	charlie.CreateDHSymmetricKey(bob.GetAddr())
-	alice.CreateDHSymmetricKey(charlie.GetAddr())
+	alice.EstablishTLSConnection(bob.GetAddr())
+	charlie.EstablishTLSConnection(bob.GetAddr())
+	alice.EstablishTLSConnection(charlie.GetAddr())
 
 	time.Sleep(time.Second)
 
@@ -507,12 +507,12 @@ func Test_Tor_Circuit_Extend_Extend_Inject(t *testing.T) {
 	detlef.SetRoutingEntry(alice.GetAddr(), charlie.GetAddr())
 	detlef.SetRoutingEntry(bob.GetAddr(), charlie.GetAddr())
 
-	alice.CreateDHSymmetricKey(bob.GetAddr())
-	charlie.CreateDHSymmetricKey(bob.GetAddr())
-	alice.CreateDHSymmetricKey(charlie.GetAddr())
-	detlef.CreateDHSymmetricKey(charlie.GetAddr())
-	detlef.CreateDHSymmetricKey(bob.GetAddr())
-	detlef.CreateDHSymmetricKey(alice.GetAddr())
+	alice.EstablishTLSConnection(bob.GetAddr())
+	charlie.EstablishTLSConnection(bob.GetAddr())
+	alice.EstablishTLSConnection(charlie.GetAddr())
+	detlef.EstablishTLSConnection(charlie.GetAddr())
+	detlef.EstablishTLSConnection(bob.GetAddr())
+	detlef.EstablishTLSConnection(alice.GetAddr())
 
 	time.Sleep(time.Second)
 
@@ -642,12 +642,12 @@ func Test_Tor_Circuit_Extend_Extend(t *testing.T) {
 	detlef.SetRoutingEntry(alice.GetAddr(), charlie.GetAddr())
 	detlef.SetRoutingEntry(bob.GetAddr(), charlie.GetAddr())
 
-	alice.CreateDHSymmetricKey(bob.GetAddr())
-	charlie.CreateDHSymmetricKey(bob.GetAddr())
-	alice.CreateDHSymmetricKey(charlie.GetAddr())
-	detlef.CreateDHSymmetricKey(charlie.GetAddr())
-	detlef.CreateDHSymmetricKey(bob.GetAddr())
-	detlef.CreateDHSymmetricKey(alice.GetAddr())
+	alice.EstablishTLSConnection(bob.GetAddr())
+	charlie.EstablishTLSConnection(bob.GetAddr())
+	alice.EstablishTLSConnection(charlie.GetAddr())
+	detlef.EstablishTLSConnection(charlie.GetAddr())
+	detlef.EstablishTLSConnection(bob.GetAddr())
+	detlef.EstablishTLSConnection(alice.GetAddr())
 
 	time.Sleep(time.Second)
 
@@ -817,16 +817,16 @@ func Test_Tor_Circuit_Extend_Extend(t *testing.T) {
 	eliska.SetRoutingEntry(bob.GetAddr(), detlef.GetAddr())
 	eliska.SetRoutingEntry(charlie.GetAddr(), detlef.GetAddr())
 
-	alice.CreateDHSymmetricKey(bob.GetAddr())
-	alice.CreateDHSymmetricKey(charlie.GetAddr())
-	charlie.CreateDHSymmetricKey(bob.GetAddr())
-	detlef.CreateDHSymmetricKey(charlie.GetAddr())
-	detlef.CreateDHSymmetricKey(bob.GetAddr())
-	detlef.CreateDHSymmetricKey(alice.GetAddr())
-	eliska.CreateDHSymmetricKey(detlef.GetAddr())
-	eliska.CreateDHSymmetricKey(charlie.GetAddr())
-	eliska.CreateDHSymmetricKey(bob.GetAddr())
-	eliska.CreateDHSymmetricKey(alice.GetAddr())
+	alice.EstablishTLSConnection(bob.GetAddr())
+	alice.EstablishTLSConnection(charlie.GetAddr())
+	charlie.EstablishTLSConnection(bob.GetAddr())
+	detlef.EstablishTLSConnection(charlie.GetAddr())
+	detlef.EstablishTLSConnection(bob.GetAddr())
+	detlef.EstablishTLSConnection(alice.GetAddr())
+	eliska.EstablishTLSConnection(detlef.GetAddr())
+	eliska.EstablishTLSConnection(charlie.GetAddr())
+	eliska.EstablishTLSConnection(bob.GetAddr())
+	eliska.EstablishTLSConnection(alice.GetAddr())
 
 	time.Sleep(time.Second)
 
@@ -992,16 +992,16 @@ func Test_Tor_Circuit_Extend_Extend_Extend(t *testing.T) {
 	eliska.SetRoutingEntry(bob.GetAddr(), detlef.GetAddr())
 	eliska.SetRoutingEntry(charlie.GetAddr(), detlef.GetAddr())
 
-	alice.CreateDHSymmetricKey(bob.GetAddr())
-	alice.CreateDHSymmetricKey(charlie.GetAddr())
-	charlie.CreateDHSymmetricKey(bob.GetAddr())
-	detlef.CreateDHSymmetricKey(charlie.GetAddr())
-	detlef.CreateDHSymmetricKey(bob.GetAddr())
-	detlef.CreateDHSymmetricKey(alice.GetAddr())
-	eliska.CreateDHSymmetricKey(detlef.GetAddr())
-	eliska.CreateDHSymmetricKey(charlie.GetAddr())
-	eliska.CreateDHSymmetricKey(bob.GetAddr())
-	eliska.CreateDHSymmetricKey(alice.GetAddr())
+	alice.EstablishTLSConnection(bob.GetAddr())
+	alice.EstablishTLSConnection(charlie.GetAddr())
+	charlie.EstablishTLSConnection(bob.GetAddr())
+	detlef.EstablishTLSConnection(charlie.GetAddr())
+	detlef.EstablishTLSConnection(bob.GetAddr())
+	detlef.EstablishTLSConnection(alice.GetAddr())
+	eliska.EstablishTLSConnection(detlef.GetAddr())
+	eliska.EstablishTLSConnection(charlie.GetAddr())
+	eliska.EstablishTLSConnection(bob.GetAddr())
+	eliska.EstablishTLSConnection(alice.GetAddr())
 
 	time.Sleep(time.Second)
 
@@ -1201,16 +1201,16 @@ func Test_Tor_Circuit_Extend_Extend_Extend(t *testing.T) {
 	eliska.SetRoutingEntry(bob.GetAddr(), detlef.GetAddr())
 	eliska.SetRoutingEntry(charlie.GetAddr(), detlef.GetAddr())
 
-	alice.CreateDHSymmetricKey(bob.GetAddr())
-	alice.CreateDHSymmetricKey(charlie.GetAddr())
-	charlie.CreateDHSymmetricKey(bob.GetAddr())
-	detlef.CreateDHSymmetricKey(charlie.GetAddr())
-	detlef.CreateDHSymmetricKey(bob.GetAddr())
-	detlef.CreateDHSymmetricKey(alice.GetAddr())
-	eliska.CreateDHSymmetricKey(detlef.GetAddr())
-	eliska.CreateDHSymmetricKey(charlie.GetAddr())
-	eliska.CreateDHSymmetricKey(bob.GetAddr())
-	eliska.CreateDHSymmetricKey(alice.GetAddr())
+	alice.EstablishTLSConnection(bob.GetAddr())
+	alice.EstablishTLSConnection(charlie.GetAddr())
+	charlie.EstablishTLSConnection(bob.GetAddr())
+	detlef.EstablishTLSConnection(charlie.GetAddr())
+	detlef.EstablishTLSConnection(bob.GetAddr())
+	detlef.EstablishTLSConnection(alice.GetAddr())
+	eliska.EstablishTLSConnection(detlef.GetAddr())
+	eliska.EstablishTLSConnection(charlie.GetAddr())
+	eliska.EstablishTLSConnection(bob.GetAddr())
+	eliska.EstablishTLSConnection(alice.GetAddr())
 
 	time.Sleep(5 * time.Second)
 
@@ -1372,16 +1372,16 @@ func Test_Tor_Circuit_Extend_Circuit_Establish(t *testing.T) {
 	eliska.SetRoutingEntry(bob.GetAddr(), detlef.GetAddr())
 	eliska.SetRoutingEntry(charlie.GetAddr(), detlef.GetAddr())
 
-	alice.CreateDHSymmetricKey(bob.GetAddr())
-	alice.CreateDHSymmetricKey(charlie.GetAddr())
-	charlie.CreateDHSymmetricKey(bob.GetAddr())
-	detlef.CreateDHSymmetricKey(charlie.GetAddr())
-	detlef.CreateDHSymmetricKey(bob.GetAddr())
-	detlef.CreateDHSymmetricKey(alice.GetAddr())
-	eliska.CreateDHSymmetricKey(detlef.GetAddr())
-	eliska.CreateDHSymmetricKey(charlie.GetAddr())
-	eliska.CreateDHSymmetricKey(bob.GetAddr())
-	eliska.CreateDHSymmetricKey(alice.GetAddr())
+	alice.EstablishTLSConnection(bob.GetAddr())
+	alice.EstablishTLSConnection(charlie.GetAddr())
+	charlie.EstablishTLSConnection(bob.GetAddr())
+	detlef.EstablishTLSConnection(charlie.GetAddr())
+	detlef.EstablishTLSConnection(bob.GetAddr())
+	detlef.EstablishTLSConnection(alice.GetAddr())
+	eliska.EstablishTLSConnection(detlef.GetAddr())
+	eliska.EstablishTLSConnection(charlie.GetAddr())
+	eliska.EstablishTLSConnection(bob.GetAddr())
+	eliska.EstablishTLSConnection(alice.GetAddr())
 
 	time.Sleep(time.Second)
 
