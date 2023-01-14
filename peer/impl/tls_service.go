@@ -72,7 +72,7 @@ func (n *node) execTLSMessageHello(msg types.Message, pkt transport.Packet) erro
 	return n.processDecryptedTLSMessage(decryptedMessage, pkt)
 }
 
-func (n *node) CreateDHSymmetricKey(addr string) error {
+func (n *node) EstablishTLSConnection(addr string) error {
 
 	dhManager, err := n.DHfirstStep()
 

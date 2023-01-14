@@ -303,7 +303,7 @@ func (n *node) HandleCertificateBroadcastMessage(msg types.Message, pkt transpor
 		n.ExecRegisterAsOnion()
 		/* s := n.GetSymKey(certificateBroadcastMessage.Addr)
 		if s == nil {
-			err = n.CreateDHSymmetricKey(certificateBroadcastMessage.Addr)
+			err = n.EstablishTLSConnection(certificateBroadcastMessage.Addr)
 			if err != nil {
 				logr.Logger.Error().Err(err).Msg("failed to create DH symmetric key")
 			}
@@ -331,7 +331,7 @@ func (n *node) ExecDHKeyExchange(addr string) {
 		logr.Logger.Error().Err(err).Msg("failed to get port from address")
 	}
 	if ourPort > theirPort {
-		err = n.CreateDHSymmetricKey(addr)
+		err = n.EstablishTLSConnection(addr)
 		if err != nil {
 			logr.Logger.Error().Err(err).Msg("failed to create DH symmetric key")
 		}
@@ -399,7 +399,7 @@ func (n *node) AwaitCertificateVerification(init *types.CertificateBroadcastMess
 		}
 		/* s := n.GetSymKey(target)
 		if s == nil {
-			err = n.CreateDHSymmetricKey(target)
+			err = n.EstablishTLSConnection(target)
 			if err != nil {
 				logr.Logger.Error().Err(err).Msg("failed to create DH symmetric key")
 			}

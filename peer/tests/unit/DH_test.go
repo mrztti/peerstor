@@ -26,7 +26,7 @@ func Test_DH_TwoNodeSetupFail(t *testing.T) {
 	node2.AddPeer(node1.GetAddr())
 
 	addr := node2.GetAddr()
-	err := node1.CreateDHSymmetricKey(addr)
+	err := node1.EstablishTLSConnection(addr)
 	time.Sleep(time.Second)
 
 	require.Error(t, err)
@@ -59,7 +59,7 @@ func Test_DH_TwoNodeSetup_Inject(t *testing.T) {
 	require.Equal(t, node2.GetPublicKey(), publicKeyN2)
 
 	addr := node2.GetAddr()
-	err := node1.CreateDHSymmetricKey(addr)
+	err := node1.EstablishTLSConnection(addr)
 	require.NoError(t, err)
 	time.Sleep(time.Second)
 
@@ -94,7 +94,7 @@ func Test_DH_TwoNodeSetup(t *testing.T) {
 	time.Sleep(time.Second)
 
 	addr := node2.GetAddr()
-	err := node1.CreateDHSymmetricKey(addr)
+	err := node1.EstablishTLSConnection(addr)
 	require.NoError(t, err)
 	time.Sleep(time.Second)
 
@@ -143,9 +143,9 @@ func Test_DH_ThreeNodeSetup_Inject_Keys(t *testing.T) {
 	node1.SetRoutingEntry(node3.GetAddr(), node2.GetAddr())
 	node3.SetRoutingEntry(node1.GetAddr(), node2.GetAddr())
 
-	node1.CreateDHSymmetricKey(node2.GetAddr())
-	node3.CreateDHSymmetricKey(node2.GetAddr())
-	node1.CreateDHSymmetricKey(node3.GetAddr())
+	node1.EstablishTLSConnection(node2.GetAddr())
+	node3.EstablishTLSConnection(node2.GetAddr())
+	node1.EstablishTLSConnection(node3.GetAddr())
 
 	time.Sleep(time.Second)
 
@@ -189,9 +189,9 @@ func Test_DH_ThreeNodeSetup_CA_Keys(t *testing.T) {
 	node1.SetRoutingEntry(node3.GetAddr(), node2.GetAddr())
 	node3.SetRoutingEntry(node1.GetAddr(), node2.GetAddr())
 
-	node1.CreateDHSymmetricKey(node2.GetAddr())
-	node3.CreateDHSymmetricKey(node2.GetAddr())
-	node1.CreateDHSymmetricKey(node3.GetAddr())
+	node1.EstablishTLSConnection(node2.GetAddr())
+	node3.EstablishTLSConnection(node2.GetAddr())
+	node1.EstablishTLSConnection(node3.GetAddr())
 
 	time.Sleep(time.Second)
 
