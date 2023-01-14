@@ -50,7 +50,7 @@ func (n *node) TorEstablishCircuit(finalDestination string, desiredCircLen int) 
 				return err
 			}
 		case <-time.After(5 * time.Second):
-			// TODO: Handle this better (tear down the circuit)
+			// Preferrably tear down the circuit here
 			return fmt.Errorf("timeout while establishing circuit")
 		}
 	}

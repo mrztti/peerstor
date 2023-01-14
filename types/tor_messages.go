@@ -113,7 +113,6 @@ type TorServerHello struct {
 }
 
 type TorHTTPRequest struct {
-	Source   string
 	Method   HTTPMethod // Currently 'GET' or 'POST'
 	URL      string
 	PostBody string
@@ -181,7 +180,7 @@ func (t TorHTTPRequest) Name() string {
 
 // String implements types.Message.
 func (t TorHTTPRequest) String() string {
-	return fmt.Sprintf("TorHTTPRequest{source:%s}", t.Source)
+	return fmt.Sprintf("TorHTTPRequest{method:%d, url:%s}", t.Method, t.URL)
 }
 
 // HTML implements types.Message.

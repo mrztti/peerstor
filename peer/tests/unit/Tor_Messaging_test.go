@@ -1,14 +1,27 @@
 package unit
 
 import (
+	"encoding/json"
 	"log"
+	"net/http"
+	"net/http/httptest"
+	"strings"
 	"testing"
 	"time"
 
 	"github.com/stretchr/testify/require"
 	z "go.dedis.ch/cs438/internal/testing"
 	"go.dedis.ch/cs438/transport/channel"
+	"go.dedis.ch/cs438/types"
 )
+
+func mockFetchDataEndpoint(w http.ResponseWriter, r *http.Request, responseMessage map[string]interface{}) {
+	statusCode := http.StatusOK
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(statusCode)
+	json.NewEncoder(w).Encode(responseMessage)
+}
 
 func Test_Tor_Messaging_Simple_Injected_Keys(t *testing.T) {
 	transp := channel.NewTransport()
@@ -189,4 +202,116 @@ func Test_Tor_Messaging_Simple_CA_Keys(t *testing.T) {
 			log.Default().Printf("MSG: %s", m.Name())
 		}
 	}
+}
+func Test_Tor_HTTP_Request_CA_Keys(t *testing.T) {
+	transp := channel.NewTransport()
+	alice := z.NewTestNode(t, peerFac, transp, "127.0.0.1:0", z.WithAntiEntropy(time.Millisecond*50))
+	defer alice.Stop()
+	bob := z.NewTestNode(t, peerFac, transp, "127.0.0.1:0", z.WithAntiEntropy(time.Millisecond*50))
+	defer bob.Stop()
+	charlie := z.NewTestNode(t, peerFac, transp, "127.0.0.1:0", z.WithAntiEntropy(time.Millisecond*50))
+	defer charlie.Stop()
+	detlef := z.NewTestNode(t, peerFac, transp, "127.0.0.1:0", z.WithAntiEntropy(time.Millisecond*50))
+	defer detlef.Stop()
+	eliska := z.NewTestNode(t, peerFac, transp, "127.0.0.1:0", z.WithAntiEntropy(time.Millisecond*50))
+	defer eliska.Stop()
+
+	peers := []z.TestNode{alice, bob, charlie, detlef, eliska}
+	for _, p := range peers {
+		for _, p2 := range peers {
+			if p.GetAddr() != p2.GetAddr() {
+				p.AddPeer(p2.GetAddr())
+			}
+		}
+	}
+
+	time.Sleep(2 * time.Second)
+
+	alice.CreateDHSymmetricKey(bob.GetAddr())
+	alice.CreateDHSymmetricKey(charlie.GetAddr())
+	charlie.CreateDHSymmetricKey(bob.GetAddr())
+	detlef.CreateDHSymmetricKey(charlie.GetAddr())
+	detlef.CreateDHSymmetricKey(bob.GetAddr())
+	detlef.CreateDHSymmetricKey(alice.GetAddr())
+	eliska.CreateDHSymmetricKey(detlef.GetAddr())
+	eliska.CreateDHSymmetricKey(charlie.GetAddr())
+	eliska.CreateDHSymmetricKey(bob.GetAddr())
+	eliska.CreateDHSymmetricKey(alice.GetAddr())
+
+	time.Sleep(2 * time.Second)
+
+	err := alice.TorCreate(bob.GetAddr(), "somethingrandom")
+	require.NoError(t, err)
+	time.Sleep(time.Second)
+	err = alice.TorExtend(charlie.GetAddr(), alice.GetCircuitIDs()[0])
+	require.NoError(t, err)
+	time.Sleep(time.Second)
+	err = alice.TorExtend(detlef.GetAddr(), alice.GetCircuitIDs()[0])
+	require.NoError(t, err)
+	time.Sleep(time.Second)
+	alice.TorExtend(eliska.GetAddr(), alice.GetCircuitIDs()[0])
+	time.Sleep(time.Second)
+
+	mockServerResponse := make(map[string]interface{})
+	mockServerResponse["id"] = "mock"
+	mockServerResponse["name"] = "mock"
+
+	mockServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch strings.TrimSpace(r.URL.Path) {
+		case "/":
+			log.Default().Printf("Request received")
+			mockFetchDataEndpoint(w, r, mockServerResponse)
+		default:
+			http.NotFoundHandler().ServeHTTP(w, r)
+		}
+	}))
+
+	requestUrl := mockServer.URL + "/"
+	torHttpRequest := types.TorHTTPRequest{
+		Method: types.Get,
+		URL:    requestUrl,
+	}
+
+	alice.TorSendHTTPRequest(alice.GetCircuitIDs()[0], torHttpRequest)
+	time.Sleep(2 * time.Second)
+
+	expectedMessageReceived := false
+	eliskaMsg := eliska.GetRegistry().GetMessages()
+	for _, m := range eliskaMsg {
+		if m.Name() == "TorRelayMessage" {
+			torRelayMsg, ok := m.(*types.TorRelayMessage)
+			if !ok {
+				t.Fatal("Could not cast to TorRelayMessage")
+			}
+			if torRelayMsg.DataMessageType == types.HTTPReq {
+				var torHTTPReq types.TorHTTPRequest
+				err = json.Unmarshal(torRelayMsg.Data, &torHTTPReq)
+				require.NoError(t, err)
+				require.Equal(t, torHTTPReq.Method, types.Get)
+				require.Equal(t, torHTTPReq.URL, requestUrl)
+				expectedMessageReceived = true
+			}
+		}
+	}
+
+	require.True(t, expectedMessageReceived)
+	expectedMessageReceived = false
+
+	aliceMsg := alice.GetRegistry().GetMessages()
+	for _, m := range aliceMsg {
+		if m.Name() == "TorRelayMessage" {
+			torRelayMsg, ok := m.(*types.TorRelayMessage)
+			if !ok {
+				t.Fatal("Could not cast to TorRelayMessage")
+			}
+			if torRelayMsg.DataMessageType == types.HTTPReq {
+				expectedResponse, err := json.Marshal(mockServerResponse)
+				require.NoError(t, err)
+				require.Equal(t, string(expectedResponse)+"\n", string(torRelayMsg.Data))
+				expectedMessageReceived = true
+			}
+		}
+	}
+	require.True(t, expectedMessageReceived)
+
 }

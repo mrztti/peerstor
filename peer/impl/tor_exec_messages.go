@@ -173,13 +173,14 @@ func (n *node) processTorHTTPReq(httpRequest *types.TorHTTPRequest, torRelayMess
 		return err
 	}
 
-	sampleResponse := types.TorRelayMessage{
-		LastHop:   n.addr,
-		CircuitID: torRelayMessage.CircuitID,
-		Cmd:       types.RelayResponse,
-		Data:      encryptedData,
+	torHTTPResponse := types.TorRelayMessage{
+		LastHop:         n.addr,
+		CircuitID:       torRelayMessage.CircuitID,
+		Cmd:             types.RelayResponse,
+		Data:            encryptedData,
+		DataMessageType: types.HTTPReq,
 	}
-	err = n.SendTLSMessage(torRelayMessage.LastHop, sampleResponse)
+	err = n.SendTLSMessage(torRelayMessage.LastHop, torHTTPResponse)
 	return err
 
 }
