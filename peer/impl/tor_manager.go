@@ -19,6 +19,8 @@ type TorManager struct {
 	torRoutingTable peer.ConcurrentMap[peer.TorRoutingEntry]
 	myCircuits      peer.ConcurrentMap[[]string]
 	torChannels     peer.ConcurrentMap[chan int]
+	// For Demo purposes only(!)
+	responseChannel chan []byte
 }
 
 func CreateTorManager(addr string) *TorManager {
@@ -27,6 +29,7 @@ func CreateTorManager(addr string) *TorManager {
 		torRoutingTable: peer.CreateConcurrentMap[peer.TorRoutingEntry](),
 		myCircuits:      peer.CreateConcurrentMap[[]string](),
 		torChannels:     peer.CreateConcurrentMap[chan int](),
+		responseChannel: make(chan []byte),
 	}
 }
 
@@ -211,4 +214,8 @@ func (n *node) createTorEntryName(peerIP, circuitID string) string {
 
 func (n *node) GetSymKeys() map[string][]byte {
 	return n.tlsManager.symmKeyStore.GetCopy()
+}
+
+func (n *node) AwaitDemoResponse() []byte {
+	return <-n.torManager.responseChannel
 }

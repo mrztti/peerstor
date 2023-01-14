@@ -111,6 +111,8 @@ func (t tor) curl(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
+	response := t.node.AwaitDemoResponse()
+	logr.Logger.Info().Msgf("Response: %s", response)
 	w.Header().Set("Access-Control-Allow-Headers", "*")
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
