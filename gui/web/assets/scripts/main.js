@@ -836,12 +836,34 @@ class Naming extends BaseElement {
 
 class Tor extends BaseElement {
     static get targets() {
-        return ["finalDestination", "table"];
+        return ["finalDestination", "table", "value", "dhTable"];
     }
     initialize() {
         this.update();
+        this.dhUpdate();
     }
+    async dhUpdate() {
+        const addr = this.peerInfo.getAPIURL("/tor/dhkeys");
 
+        try {
+            const resp = await this.fetch(addr);
+            const data = await resp.json();
+
+            this.dhTableTarget.innerHTML = "";
+            console.log(resp);
+            data.forEach((obj) => {
+                const el = document.createElement("tr");
+
+                el.innerHTML = `<td>${obj.Peer.substr(0, 17)}</td><td>${obj.Key.substring(0, 21)}</td>`;
+                this.dhTableTarget.appendChild(el);
+            });
+            console.log(data);
+            this.flash.printSuccess("Routing table updated");
+
+        } catch (e) {
+            this.flash.printError("Failed to fetch routing: " + e);
+        }
+    }
     async update() {
         const addr = this.peerInfo.getAPIURL("/tor/getRouting");
 
@@ -850,14 +872,13 @@ class Tor extends BaseElement {
             const data = await resp.json();
 
             this.tableTarget.innerHTML = "";
-
-            for (const [origin, relay] of Object.entries(data)) {
+            data.forEach((obj) => {
                 const el = document.createElement("tr");
 
-                el.innerHTML = `<td>${origin}</td><td>${relay}</td>`;
+                el.innerHTML = `<td>${obj.CircuitID.substr(0, 17)}</td><td>${obj.NextHop}</td>`;
                 this.tableTarget.appendChild(el);
-            }
-
+            });
+            console.log(data);
             this.flash.printSuccess("Routing table updated");
 
         } catch (e) {
@@ -866,8 +887,9 @@ class Tor extends BaseElement {
     }
     async create() {
         const finalDestination = this.finalDestinationTarget.value;
+        const val = this.valueTarget.value;
 
-        const addr = this.peerInfo.getAPIURL("/tor/createCircuit?key=" + finalDestination);
+        const addr = this.peerInfo.getAPIURL("/tor/createCircuit?key=" + finalDestination + "&value=" + val);
 
         try {
             const resp = await this.fetch(addr);

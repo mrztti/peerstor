@@ -1,7 +1,9 @@
 package controller
 
 import (
+	"encoding/hex"
 	"net/http"
+	"strconv"
 
 	"github.com/rs/zerolog"
 	"go.dedis.ch/cs438/logr"
@@ -64,10 +66,31 @@ func (t tor) TorRoutingTableHandler() http.HandlerFunc {
 	}
 }
 
+func (t tor) TorDHKeyHandler() http.HandlerFunc {
+	logr.Logger.Info().Msg("TorDHKeyHandler")
+	return func(w http.ResponseWriter, r *http.Request) {
+		switch r.Method {
+		case http.MethodGet:
+			t.getDHKey(w, r)
+		case http.MethodOptions:
+			w.Header().Set("Access-Control-Allow-Origin", "*")
+			w.Header().Set("Access-Control-Allow-Headers", "*")
+		default:
+			http.Error(w, "forbidden method", http.StatusMethodNotAllowed)
+		}
+	}
+}
+
 func (t tor) creatCircuit(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Access-Control-Allow-Origin", "*")
 	finalDestination := r.URL.Query().Get("key")
-	err := t.node.TorEstablishCircuit(finalDestination, 3)
+	val := r.URL.Query().Get("value")
+	i, err := strconv.Atoi(val)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	err = t.node.TorEstablishCircuit(finalDestination, i)
 	logr.Logger.Err(err).Msgf("Error establishing circuit to %s", finalDestination)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -76,6 +99,7 @@ func (t tor) creatCircuit(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Access-Control-Allow-Headers", "*")
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
+	w.Write([]byte("{\"status\": \"ok\"}"))
 }
 
 func (t tor) getRoutingTable(w http.ResponseWriter, r *http.Request) {
@@ -85,22 +109,42 @@ func (t tor) getRoutingTable(w http.ResponseWriter, r *http.Request) {
 	// enc := json.NewEncoder(w)
 	// enc.SetIndent("", "\t")
 	tmp := "["
+	i := 0
 	for k, v := range entries {
-		tmp += "{ \"CircuitID\": \"" + k + "\", \"NextHop\": \"" + v.NextHop + "\"},"
+		tmp += "{ \"CircuitID\": \"" + k + "\", \"NextHop\": \"" + v.NextHop + "\"}"
+		if i != len(entries)-1 {
+			tmp += ","
+		}
+		i++
 	}
 	tmp += "]"
-	// var dat map[string]interface{}
-	// err := json.Unmarshal([]byte(tmp), &dat)
-	// if err != nil {
-	// 	http.Error(w, err.Error(), http.StatusInternalServerError)
-	// 	return
-	// }
+
 	w.Write([]byte(tmp))
-	// err = enc.Encode(&dat)
-	// if err != nil {
-	// 	http.Error(w, err.Error(), http.StatusInternalServerError)
-	// 	return
-	// }
+	w.Header().Set("Access-Control-Allow-Headers", "*")
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+}
+
+func (t tor) getDHKey(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Access-Control-Allow-Origin", "*")
+
+	keys := t.node.GetSymKeys()
+	// enc := json.NewEncoder(w)
+	// enc.SetIndent("", "\t")
+	tmp := "["
+	i := 0
+	logr.Logger.Info().Msgf("keys: %v", keys)
+	for k, v := range keys {
+		vStr := hex.EncodeToString(v)
+		tmp += "{ \"Peer\": \"" + k + "\", \"Key\": \"" + vStr + "\"}"
+		if i != len(keys)-1 {
+			tmp += ","
+		}
+		i++
+	}
+	tmp += "]"
+	logr.Logger.Info().Msgf("tmp: %v", tmp)
+	w.Write([]byte(tmp))
 	w.Header().Set("Access-Control-Allow-Headers", "*")
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
