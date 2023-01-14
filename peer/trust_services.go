@@ -26,6 +26,8 @@ type TrustServices interface {
 	GetRandomOnionNode() (string, *rsa.PublicKey, error)
 	GetAllOnionNodes() (map[string](*rsa.PublicKey), error)
 
+	BroadcastCertificate() error
+
 	//Utils
 	GetSentMessagesByType(class types.Message) []*transport.Message
 }

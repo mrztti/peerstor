@@ -17,7 +17,6 @@ import (
 	"encoding/pem"
 	"errors"
 	"math/big"
-	"strconv"
 	"sync"
 	"time"
 
@@ -226,8 +225,6 @@ func (n *node) TotalCertifiedPeers() uint {
 	n.certificateCatalog.lock.Lock()
 	defer n.certificateCatalog.lock.Unlock()
 
-	// Filter catalog by trusted peers
-
 	return uint(len(n.certificateCatalog.catalog))
 
 }
@@ -236,23 +233,29 @@ func (n *node) TotalCertifiedPeers() uint {
 // Pack the CertificateBroadcastMessage inside a RumorsMessage and broadcast it across the network
 func (n *node) BroadcastCertificate() error {
 	// Create the CertificateBroadcastMessage
-	certificateBroadcastMessage := types.CertificateBroadcastMessage{
-		Addr: n.conf.Socket.GetAddress(),
-		PEM:  n.certificateStore.GetPublicKeyPEM(),
-	}
+	msg := n.CreateCertificateBroadcastMessage()
 
-	// Marshall the CertificateBroadcastMessage
-	msg, err := n.conf.MessageRegistry.MarshalMessage(&certificateBroadcastMessage)
+	// Marshal the message
+	msgBytes, err := n.conf.MessageRegistry.MarshalMessage(msg)
 	if err != nil {
 		return err
 	}
 
-	err = n.Broadcast(msg)
+	err = n.Broadcast(msgBytes)
 	if err != nil {
 		return err
 	}
 
 	return nil
+}
+
+// CreateCertificateBroadcastMessage: Creates a CertificateBroadcastMessage
+func (n *node) CreateCertificateBroadcastMessage() *types.CertificateBroadcastMessage {
+	certificateBroadcastMessage := types.CertificateBroadcastMessage{
+		Addr: n.conf.Socket.GetAddress(),
+		PEM:  n.certificateStore.GetPublicKeyPEM(),
+	}
+	return &certificateBroadcastMessage
 }
 
 // HandleCertificateBroadcastMessage: Handles a CertificateBroadcastMessage
@@ -265,6 +268,7 @@ func (n *node) HandleCertificateBroadcastMessage(msg types.Message, pkt transpor
 
 	// SECURITY MECHANISM: Check if this is a certificate forgery attempt
 	// If the message address is this nodes address, then the certificate must be the same as the local one
+
 	rule2_1 := certificateBroadcastMessage.Addr == n.conf.Socket.GetAddress()
 	rule2_2 := bytes.Equal(certificateBroadcastMessage.PEM, n.certificateStore.GetPublicKeyPEM())
 
@@ -281,7 +285,7 @@ func (n *node) HandleCertificateBroadcastMessage(msg types.Message, pkt transpor
 	}
 
 	if n.conf.VerifyCertificates {
-		go n.AwaitCertificateVerification(certificateBroadcastMessage)
+		go n.AwaitCertificateVerification(certificateBroadcastMessage, 5)
 	} else {
 		// Add the certificate to the catalog
 		err := n.certificateCatalog.AddCertificate(certificateBroadcastMessage.Addr, certificateBroadcastMessage.PEM)
@@ -311,11 +315,11 @@ func (n *node) HandleCertificateBroadcastMessage(msg types.Message, pkt transpor
 }
 
 // AwaitCertificateVerification: async await for the certificate verification
-func (n *node) AwaitCertificateVerification(init *types.CertificateBroadcastMessage) {
+func (n *node) AwaitCertificateVerification(init *types.CertificateBroadcastMessage, ctr uint) {
 
 	target := init.Addr
 	// Create the challenge
-	challenge := "CHALLENGE::" + strconv.FormatInt(time.Now().UnixNano(), 10)
+	challenge := "CHALLENGE::" + n.addr + "::" + target
 
 	// Create the CertificateVerifyMessage
 	certificateVerifyMessage := types.CertificateVerifyMessage{
@@ -343,10 +347,15 @@ func (n *node) AwaitCertificateVerification(init *types.CertificateBroadcastMess
 	select {
 	case <-timer.C:
 		logr.Logger.Warn().Msgf("[%s] certificate verification timed out for: %s ", n.addr, target)
+		if ctr > 0 {
+			logr.Logger.Warn().Msgf("[%s] retrying certificate verification for: %s ", n.addr, target)
+			close(res)
+			go n.AwaitCertificateVerification(init, ctr-1)
+		}
 		return
 	case r := <-res:
 
-		hashed := sha256.Sum256([]byte(challenge + "::" + target))
+		hashed := sha256.Sum256([]byte(challenge))
 		err = rsa.VerifyPKCS1v15(pk, crypto.SHA256, hashed[:], r[:])
 		if err != nil {
 			logr.Logger.Error().Err(err).Msg("failed to verify certificate")
@@ -376,6 +385,27 @@ func (n *node) AwaitCertificateVerification(init *types.CertificateBroadcastMess
 				logr.Logger.Error().Err(err).Msg("failed to create DH symmetric key")
 			}
 		} */
+
+		n.CatchupBanTLC(target)
+		return
+	}
+}
+
+// CatchupBanTLC: catch up with the TLC
+func (n *node) CatchupBanTLC(target string) {
+	// Get all caught TLCs
+	caughtTLCs, ok := n.TLCCatchup.Get(target)
+	if !ok {
+		return
+	}
+
+	// Re-execute the TLCs
+	for _, tlc := range caughtTLCs {
+		// Execute the TLC
+		err := n.conf.MessageRegistry.ProcessPacket(*tlc)
+		if err != nil {
+			logr.Logger.Error().Err(err).Msg("failed to catchup TLC")
+		}
 	}
 }
 
@@ -391,7 +421,7 @@ func (n *node) handleCertificateVerifyMessage(msg types.Message, pkt transport.P
 
 	// Get private key
 	pk := n.certificateStore.GetPrivateKey()
-	full := string(certificateVerifyMessage.Challenge) + "::" + n.addr
+	full := string(certificateVerifyMessage.Challenge)
 	hashed := sha256.Sum256([]byte(full))
 	// Sign the challenge
 	response, err := rsa.SignPKCS1v15(rand.Reader, &pk, crypto.SHA256, hashed[:])
@@ -406,7 +436,7 @@ func (n *node) handleCertificateVerifyMessage(msg types.Message, pkt transport.P
 	}
 
 	// Send the message
-	n.BroadcastPrivatelyInParallel(
+	go n.BroadcastPrivatelyInParallel(
 		certificateVerifyMessage.Source,
 		certificateVerifyResponseMessage,
 	)
@@ -427,12 +457,11 @@ func (n *node) handleCertificateVerifyResponseMessage(
 
 	ch, ok := n.certificateVerifications.Get(certificateVerifyResponseMessage.Source)
 	if !ok {
-		log.Info().Msg("received certificate verification response from unknown source")
+		logr.Logger.Error().Msg("received certificate verification response from unknown source")
 		return nil
 	}
 
 	ch <- certificateVerifyResponseMessage.Response
-	n.certificateVerifications.Remove(certificateVerifyResponseMessage.Source)
 
 	return nil
 }
