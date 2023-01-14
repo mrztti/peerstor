@@ -163,7 +163,7 @@ func (n *node) execEmptyMessage(msg types.Message, pkt transport.Packet) error {
 		logr.Logger.Err(localErr).Msgf("[%s]: execEmptyMessage failed", n.addr)
 		return localErr
 	}
-	logr.Logger.Info().
+	logr.Logger.Trace().
 		Msgf("[%s]: Sending to inner channel: empty message from %s", n.addr, pkt.Header.Source)
 	return nil
 }
@@ -526,6 +526,21 @@ func (n *node) execBanTLCMessage(msg types.Message, pkt transport.Packet) error 
 		logr.Logger.Err(localErr).Msgf("[%s]: execTLCMessage failed", n.addr)
 		return localErr
 	}
+
+	// Check if we have the certificate for this TLC
+	_, err := n.GetPeerPublicKey(TLC.Source)
+	if err != nil {
+		logr.Logger.Warn().Msgf("[%s]: TLC from %s has been stored because we don't have the certificate for this peer (yet).", n.addr, TLC.Source)
+		curr, has := n.TLCCatchup.Get(TLC.Source)
+		if has {
+			curr = append(curr, &pkt)
+			n.TLCCatchup.Set(TLC.Source, curr)
+		} else {
+			n.TLCCatchup.Set(TLC.Source, []*transport.Packet{&pkt})
+		}
+		return nil
+	}
+
 	go func() {
 		logr.Logger.Trace().
 			Msgf("[%s]: Sending to inner channel: TLC from %s with contents %#v", n.addr, pkt.Header.Source, TLC)

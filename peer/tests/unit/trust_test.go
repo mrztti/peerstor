@@ -360,3 +360,56 @@ func Test_Trust_Resist_Forced_Ban(t *testing.T) {
 		require.False(t, n.HasSharedBan(node1.GetAddr()))
 	}
 }
+
+// Test if a node joining after a network wide ban catches up to the ban
+func Test_Trust_Catchup(t *testing.T) {
+	transp := channel.NewTransport()
+	numNodes := 4
+	nodes := make([]z.TestNode, numNodes)
+	for i := range nodes {
+		node := z.NewTestNode(t, peerFac, transp, "127.0.0.1:0", z.WithAntiEntropy(time.Millisecond*50),
+			z.WithPaxosID(uint(i)), z.WithCertificateVerification())
+		defer node.Stop()
+		nodes[i] = node
+	}
+
+	for i := range nodes {
+		node := nodes[i]
+		for j := range nodes {
+			if i == j {
+				continue
+			}
+			node.AddPeer(nodes[j].GetAddr())
+		}
+	}
+
+	time.Sleep(3 * time.Second)
+
+	// 3 nodes ban the 4th node
+	for i := 0; i < numNodes-1; i++ {
+		nodes[i].Ban(nodes[numNodes-1].GetAddr())
+	}
+
+	time.Sleep(10 * time.Second)
+
+	// Check ban
+	for i := 0; i < numNodes; i++ {
+		require.True(t, nodes[i].HasSharedBan(nodes[numNodes-1].GetAddr()))
+	}
+
+	// A new node joins the network
+	newNode := z.NewTestNode(t, peerFac, transp, "127.0.0.1:0", z.WithAntiEntropy(time.Millisecond*50),
+		z.WithPaxosID(uint(numNodes)), z.WithCertificateVerification())
+
+	newNode.AddPeer(nodes[0].GetAddr())
+	newNode.AddPeer(nodes[1].GetAddr())
+
+	time.Sleep(15 * time.Second)
+
+	// The new node should have all certificates
+	require.Equal(t, uint(numNodes+1), newNode.TotalCertifiedPeers())
+
+	// The new node should also have the ban
+	require.True(t, newNode.HasSharedBan(nodes[numNodes-1].GetAddr()))
+
+}
