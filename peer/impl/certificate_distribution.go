@@ -24,6 +24,7 @@ import (
 
 	"github.com/rs/zerolog/log"
 	"go.dedis.ch/cs438/logr"
+	"go.dedis.ch/cs438/peer"
 	"go.dedis.ch/cs438/transport"
 	"go.dedis.ch/cs438/types"
 )
@@ -38,7 +39,7 @@ type CertificateStore struct {
 }
 
 // NewCertificateStore: Creates a new CertificateStore
-func GenerateCertificateStore(bits int) (*CertificateStore, error) {
+func GenerateCertificateStore(bits int, conf peer.Configuration) (*CertificateStore, error) {
 
 	// Generate the public and private keys using the crypto/rsa package
 	privateKey, err := rsa.GenerateKey(rand.Reader, bits)
@@ -57,6 +58,21 @@ func GenerateCertificateStore(bits int) (*CertificateStore, error) {
 			Bytes: x509.MarshalPKCS1PublicKey(&publicKey),
 		},
 	)
+
+	if conf.PublicKey != nil && conf.PrivateKey != nil {
+		log.Warn().Msg("injected certificate")
+		pk, ok := conf.PublicKey.(rsa.PublicKey)
+		if !ok {
+			goto SKIP
+		}
+		sk, ok := conf.PrivateKey.(rsa.PrivateKey)
+		if !ok {
+			goto SKIP
+		}
+		publicKey = pk
+		privateKey = &sk
+	}
+SKIP:
 
 	// Create a new CertificateStore
 	certificateStore := &CertificateStore{
@@ -279,8 +295,10 @@ func (n *node) HandleCertificateBroadcastMessage(msg types.Message, pkt transpor
 		if err != nil {
 			return err
 		}
-		n.tlsManager.SetAsymmetricKey(certificateBroadcastMessage.Addr, key)
-		// get port from address
+		if n.tlsManager.GetAsymmetricKey(certificateBroadcastMessage.Addr) == nil {
+			n.tlsManager.SetAsymmetricKey(certificateBroadcastMessage.Addr, key)
+		}
+
 		ourPort, err := strconv.Atoi(strings.Split(n.addr, ":")[1])
 		if err != nil {
 			logr.Logger.Error().Err(err).Msg("failed to get port from address")
@@ -293,10 +311,6 @@ func (n *node) HandleCertificateBroadcastMessage(msg types.Message, pkt transpor
 			err = n.CreateDHSymmetricKey(certificateBroadcastMessage.Addr)
 			if err != nil {
 				logr.Logger.Error().Err(err).Msg("failed to create DH symmetric key")
-			}
-		}
-		if !n.isOnionNode {
-			n.RegisterAsOnionNode()
 		}
 	}
 
@@ -330,12 +344,13 @@ func (n *node) AwaitCertificateVerification(init *types.CertificateBroadcastMess
 	logr.Logger.Info().Msgf("[%s] sent certificate verification to %s", n.addr, target)
 
 	// Start timer
-	timer := time.NewTimer(20 * time.Second)
+	timer := time.NewTimer(10 * time.Second)
 	defer timer.Stop()
 
 	select {
 	case <-timer.C:
-		logr.Logger.Warn().Msg("certificate verification timed out for " + target)
+		logr.Logger.Warn().Msgf("[%s] certificate verification timed out for: %s ", n.addr, target)
+		return
 	case r := <-res:
 
 		hashed := sha256.Sum256([]byte(challenge + "::" + target))
@@ -358,10 +373,15 @@ func (n *node) AwaitCertificateVerification(init *types.CertificateBroadcastMess
 		if err != nil {
 			logr.Logger.Error().Err(err).Msg("failed to get certificate from catalog")
 		}
-		n.tlsManager.SetAsymmetricKey(target, key)
-		/* err = n.CreateDHSymmetricKey(target)
-		if err != nil {
-			logr.Logger.Error().Err(err).Msg("failed to create DH symmetric key")
+		if n.tlsManager.GetAsymmetricKey(target) == nil {
+			n.tlsManager.SetAsymmetricKey(target, key)
+		}
+		/* s := n.GetSymKey(target)
+		if s == nil {
+			err = n.CreateDHSymmetricKey(target)
+			if err != nil {
+				logr.Logger.Error().Err(err).Msg("failed to create DH symmetric key")
+			}
 		} */
 	}
 }

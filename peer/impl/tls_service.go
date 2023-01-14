@@ -2,6 +2,7 @@ package impl
 
 import (
 	"crypto"
+	"crypto/rsa"
 	"fmt"
 
 	"go.dedis.ch/cs438/logr"
@@ -167,7 +168,9 @@ func (n *node) execTLSClientHello(msg types.Message, pkt transport.Packet) error
 	if err != nil {
 		return err
 	}
-	n.tlsManager.SetSymmKey(pkt.Header.Source, ck)
+	if n.GetSymKey(pkt.Header.Source) == nil {
+		n.tlsManager.SetSymmKey(pkt.Header.Source, ck)
+	}
 	return nil
 }
 
@@ -190,7 +193,9 @@ func (n *node) execTLSServerHello(msg types.Message, pkt transport.Packet) error
 		logr.Logger.Err(err).Msgf("[%s]: execTLSServerHello ComputeKey failed!", n.addr)
 		return err
 	}
-	n.tlsManager.SetSymmKey(TLSServerHello.Source, ck)
+	if n.GetSymKey(TLSServerHello.Source) == nil {
+		n.tlsManager.SetSymmKey(TLSServerHello.Source, ck)
+	}
 	return nil
 }
 
@@ -204,6 +209,12 @@ func (n *node) GetPrivateKey() crypto.PrivateKey {
 
 func (n *node) SetAsmKey(addr string, publicKey crypto.PublicKey) {
 	n.tlsManager.SetAsymmetricKey(addr, publicKey)
+	// Cast to rsa.PublicKey
+	rsaPublicKey, ok := publicKey.(rsa.PublicKey)
+	if ok {
+		n.certificateCatalog.catalog[addr] = rsaPublicKey
+		logr.Logger.Info().Msgf("[%s]: SetAsmKey (HARD): %s", n.addr, addr)
+	}
 }
 
 func (n *node) GetPublicKeyFromAddr(addr string) crypto.PublicKey {
