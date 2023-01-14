@@ -20,6 +20,7 @@ type Peer interface {
 	TorRoutingServices
 	TorEncryptServices
 	TrustServices
+	TrustServicesOnion
 	Malicious
 }
 
