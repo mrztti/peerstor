@@ -298,23 +298,44 @@ func (n *node) HandleCertificateBroadcastMessage(msg types.Message, pkt transpor
 		if n.tlsManager.GetAsymmetricKey(certificateBroadcastMessage.Addr) == nil {
 			n.tlsManager.SetAsymmetricKey(certificateBroadcastMessage.Addr, key)
 		}
-
-		ourPort, err := strconv.Atoi(strings.Split(n.addr, ":")[1])
-		if err != nil {
-			logr.Logger.Error().Err(err).Msg("failed to get port from address")
-		}
-		theirPort, err := strconv.Atoi(strings.Split(certificateBroadcastMessage.Addr, ":")[1])
-		if err != nil {
-			logr.Logger.Error().Err(err).Msg("failed to get port from address")
-		}
-		if ourPort > theirPort {
+		// get port from address
+		n.ExecDHKeyExchange(certificateBroadcastMessage.Addr)
+		n.ExecRegisterAsOnion()
+		/* s := n.GetSymKey(certificateBroadcastMessage.Addr)
+		if s == nil {
 			err = n.CreateDHSymmetricKey(certificateBroadcastMessage.Addr)
 			if err != nil {
 				logr.Logger.Error().Err(err).Msg("failed to create DH symmetric key")
-		}
+			}
+		} */
 	}
 
 	return nil
+}
+
+func (n *node) ExecRegisterAsOnion() {
+	if !n.isOnionNode {
+		err := n.RegisterAsOnionNode()
+		if err != nil {
+			logr.Logger.Error().Err(err).Msg("failed to register as onion node")
+		}
+	}
+}
+func (n *node) ExecDHKeyExchange(addr string) {
+	ourPort, err := strconv.Atoi(strings.Split(n.addr, ":")[1])
+	if err != nil {
+		logr.Logger.Error().Err(err).Msg("failed to get port from address")
+	}
+	theirPort, err := strconv.Atoi(strings.Split(addr, ":")[1])
+	if err != nil {
+		logr.Logger.Error().Err(err).Msg("failed to get port from address")
+	}
+	if ourPort > theirPort {
+		err = n.CreateDHSymmetricKey(addr)
+		if err != nil {
+			logr.Logger.Error().Err(err).Msg("failed to create DH symmetric key")
+		}
+	}
 }
 
 // AwaitCertificateVerification: async await for the certificate verification
