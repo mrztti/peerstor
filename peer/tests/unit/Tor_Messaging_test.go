@@ -155,7 +155,7 @@ func Test_Tor_Messaging_Simple_CA_Keys(t *testing.T) {
 
 	time.Sleep(5 * time.Second)
 
-	/* alice.SetRoutingEntry(charlie.GetAddr(), bob.GetAddr())
+	alice.SetRoutingEntry(charlie.GetAddr(), bob.GetAddr())
 	alice.SetRoutingEntry(detlef.GetAddr(), bob.GetAddr())
 	alice.SetRoutingEntry(eliska.GetAddr(), bob.GetAddr())
 	bob.SetRoutingEntry(detlef.GetAddr(), charlie.GetAddr())
@@ -166,7 +166,7 @@ func Test_Tor_Messaging_Simple_CA_Keys(t *testing.T) {
 	detlef.SetRoutingEntry(bob.GetAddr(), charlie.GetAddr())
 	eliska.SetRoutingEntry(alice.GetAddr(), detlef.GetAddr())
 	eliska.SetRoutingEntry(bob.GetAddr(), detlef.GetAddr())
-	eliska.SetRoutingEntry(charlie.GetAddr(), detlef.GetAddr()) */
+	eliska.SetRoutingEntry(charlie.GetAddr(), detlef.GetAddr())
 
 	alice.CreateDHSymmetricKey(bob.GetAddr())
 	alice.CreateDHSymmetricKey(charlie.GetAddr())
