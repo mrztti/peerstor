@@ -266,13 +266,13 @@ func Test_Tor_HTTP_Request_CA_Keys(t *testing.T) {
 		}
 	}))
 
-	requestUrl := mockServer.URL + "/"
-	torHttpRequest := types.TorHTTPRequest{
+	requestURL := mockServer.URL + "/"
+	torHTTPRequest := types.TorHTTPRequest{
 		Method: types.Get,
-		URL:    requestUrl,
+		URL:    requestURL,
 	}
 
-	alice.TorSendHTTPRequest(alice.GetCircuitIDs()[0], torHttpRequest)
+	alice.TorSendHTTPRequest(alice.GetCircuitIDs()[0], torHTTPRequest)
 	time.Sleep(2 * time.Second)
 
 	expectedMessageReceived := false
@@ -288,7 +288,7 @@ func Test_Tor_HTTP_Request_CA_Keys(t *testing.T) {
 				err = json.Unmarshal(torRelayMsg.Data, &torHTTPReq)
 				require.NoError(t, err)
 				require.Equal(t, torHTTPReq.Method, types.Get)
-				require.Equal(t, torHTTPReq.URL, requestUrl)
+				require.Equal(t, torHTTPReq.URL, requestURL)
 				expectedMessageReceived = true
 			}
 		}
