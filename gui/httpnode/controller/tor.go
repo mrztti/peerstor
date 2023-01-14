@@ -49,6 +49,21 @@ func (t tor) TorCicuitHandler() http.HandlerFunc {
 	}
 }
 
+func (t tor) TorRoutingTableHandler() http.HandlerFunc {
+	logr.Logger.Info().Msg("TorCicuitHandler")
+	return func(w http.ResponseWriter, r *http.Request) {
+		switch r.Method {
+		case http.MethodGet:
+			t.getRoutingTable(w, r)
+		case http.MethodOptions:
+			w.Header().Set("Access-Control-Allow-Origin", "*")
+			w.Header().Set("Access-Control-Allow-Headers", "*")
+		default:
+			http.Error(w, "forbidden method", http.StatusMethodNotAllowed)
+		}
+	}
+}
+
 func (t tor) creatCircuit(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Access-Control-Allow-Origin", "*")
 	finalDestination := r.URL.Query().Get("key")
@@ -58,6 +73,34 @@ func (t tor) creatCircuit(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
+	w.Header().Set("Access-Control-Allow-Headers", "*")
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+}
+
+func (t tor) getRoutingTable(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Access-Control-Allow-Origin", "*")
+
+	entries := t.node.GetTorRoutingEntries()
+	// enc := json.NewEncoder(w)
+	// enc.SetIndent("", "\t")
+	tmp := "["
+	for k, v := range entries {
+		tmp += "{ \"CircuitID\": \"" + k + "\", \"NextHop\": \"" + v.NextHop + "\"},"
+	}
+	tmp += "]"
+	// var dat map[string]interface{}
+	// err := json.Unmarshal([]byte(tmp), &dat)
+	// if err != nil {
+	// 	http.Error(w, err.Error(), http.StatusInternalServerError)
+	// 	return
+	// }
+	w.Write([]byte(tmp))
+	// err = enc.Encode(&dat)
+	// if err != nil {
+	// 	http.Error(w, err.Error(), http.StatusInternalServerError)
+	// 	return
+	// }
 	w.Header().Set("Access-Control-Allow-Headers", "*")
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)

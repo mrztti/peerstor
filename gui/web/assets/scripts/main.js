@@ -836,9 +836,34 @@ class Naming extends BaseElement {
 
 class Tor extends BaseElement {
     static get targets() {
-        return ["finalDestination"];
+        return ["finalDestination", "table"];
+    }
+    initialize() {
+        this.update();
     }
 
+    async update() {
+        const addr = this.peerInfo.getAPIURL("/tor/getRouting");
+
+        try {
+            const resp = await this.fetch(addr);
+            const data = await resp.json();
+
+            this.tableTarget.innerHTML = "";
+
+            for (const [origin, relay] of Object.entries(data)) {
+                const el = document.createElement("tr");
+
+                el.innerHTML = `<td>${origin}</td><td>${relay}</td>`;
+                this.tableTarget.appendChild(el);
+            }
+
+            this.flash.printSuccess("Routing table updated");
+
+        } catch (e) {
+            this.flash.printError("Failed to fetch routing: " + e);
+        }
+    }
     async create() {
         const finalDestination = this.finalDestinationTarget.value;
 
