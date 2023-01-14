@@ -238,7 +238,7 @@ func Test_Tor_HTTP_Request_CA_Keys(t *testing.T) {
 	eliska.CreateDHSymmetricKey(bob.GetAddr())
 	eliska.CreateDHSymmetricKey(alice.GetAddr())
 
-	time.Sleep(2 * time.Second)
+	time.Sleep(10 * time.Second)
 
 	err := alice.TorCreate(bob.GetAddr(), "somethingrandom")
 	require.NoError(t, err)
