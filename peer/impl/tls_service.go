@@ -165,7 +165,9 @@ func (n *node) execTLSClientHello(msg types.Message, pkt transport.Packet) error
 	if err != nil {
 		return err
 	}
-	n.tlsManager.SetSymmKey(pkt.Header.Source, ck)
+	if n.GetSymKey(pkt.Header.Source) == nil {
+		n.tlsManager.SetSymmKey(pkt.Header.Source, ck)
+	}
 	return nil
 }
 
@@ -187,7 +189,9 @@ func (n *node) execTLSServerHello(msg types.Message, pkt transport.Packet) error
 		logr.Logger.Err(err).Msgf("[%s]: execTLSServerHello ComputeKey failed!", n.addr)
 		return err
 	}
-	n.tlsManager.SetSymmKey(TLSServerHello.Source, ck)
+	if n.GetSymKey(TLSServerHello.Source) == nil {
+		n.tlsManager.SetSymmKey(TLSServerHello.Source, ck)
+	}
 	return nil
 }
 

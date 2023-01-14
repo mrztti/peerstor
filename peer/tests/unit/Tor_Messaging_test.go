@@ -225,7 +225,7 @@ func Test_Tor_HTTP_Request_CA_Keys(t *testing.T) {
 		}
 	}
 
-	time.Sleep(2 * time.Second)
+	time.Sleep(5 * time.Second)
 
 	alice.CreateDHSymmetricKey(bob.GetAddr())
 	alice.CreateDHSymmetricKey(charlie.GetAddr())
