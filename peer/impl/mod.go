@@ -43,6 +43,7 @@ func NewPeer(conf peer.Configuration) peer.Peer {
 		certificateStore:            certificateStore,
 		certificateVerifications:    peer.CreateConcurrentMap[chan []byte](),
 		trustBanHook:                make(chan string),
+		TLCCatchup:                  peer.CreateConcurrentMap[[]*transport.Packet](),
 		isOnionNode:                 false,
 		tlsManager:                  tlsManager,
 		torManager:                  CreateTorManager(myAddr),
@@ -100,6 +101,7 @@ type node struct {
 	trustCatalog                *TrustCatalog
 	trustBanHook                chan string
 	banPaxos                    *MultiPaxos
+	TLCCatchup                  peer.ConcurrentMap[[]*transport.Packet]
 	nodeCatalog                 *NodeCatalog
 	isOnionNode                 bool
 	tlsManager                  *TLSManager
