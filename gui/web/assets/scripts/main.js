@@ -885,6 +885,7 @@ class Tor extends BaseElement {
       "dhTable",
       "circuitID",
       "url",
+      "textbox",
     ];
   }
   initialize() {
@@ -955,15 +956,17 @@ class Tor extends BaseElement {
   }
   async curl() {
     const circID = this.circuitIDTarget.value;
+    console.log(circID);
     const url = this.urlTarget.value;
 
     const addr = this.peerInfo.getAPIURL(
-      "/tor/curl?key=" + url + "&value=" + circID
+      "/tor/curl?url=" + url + "&circid=" + circID
     );
+    console.log(addr);
     try {
       const resp = await this.fetch(addr);
       const data = await resp.json();
-
+      this.textboxTarget.value = JSON.stringify(data, undefined, 4);
       this.flash.printSuccess("Curl successfully sent!");
     } catch (e) {
       this.flash.printError("Failed to create circuit: " + e);

@@ -99,8 +99,8 @@ func (t tor) TorCurlHandler() http.HandlerFunc {
 
 func (t tor) curl(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Access-Control-Allow-Origin", "*")
-	url := r.URL.Query().Get("key")
-	circID := r.URL.Query().Get("val")
+	url := r.URL.Query().Get("url")
+	circID := r.URL.Query().Get("circid")
 
 	httpReq := types.TorHTTPRequest{
 		URL:    url,
@@ -116,7 +116,7 @@ func (t tor) curl(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Access-Control-Allow-Headers", "*")
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
-	w.Write([]byte("{\"status\": \"ok\"}"))
+	w.Write(response)
 }
 
 func (t tor) creatCircuit(w http.ResponseWriter, r *http.Request) {

@@ -337,7 +337,7 @@
 
             <h3>CURL</h3>
             <input data-tor-target="url" type="text" placeholder="URL" />
-            <input data-tor-target="circuitID" name="value" type="text" placeholder="#Tor Nodes" />
+            <input data-tor-target="circuitID" name="value" type="text" placeholder="CircuitID" />
             <button data-action="click->tor#curl">
                 <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24">
                     <path
@@ -346,6 +346,7 @@
                 </svg>
                 CURL
             </button>
+            <textarea data-tor-target="textbox" readonly placeholder="response will be written here"></textarea>
         </div>
     </div>
     <div data-controller="packets" class="packets-holder">
