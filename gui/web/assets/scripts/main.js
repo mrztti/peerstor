@@ -413,11 +413,9 @@ class Packets extends BaseElement {
       }
 
       // note that this is not secure and prone to XSS attack.
-      el.innerHTML = `<div><p class="msg">${
-        pkt.Msg.Payload.Message
-      }</p><p class="details">from ${
-        pkt.Header.Source
-      } at ${date.getHours()}:${date.getMinutes()}:${date.getSeconds()}</p></div>`;
+      el.innerHTML = `<div><p class="msg">${pkt.Msg.Payload.Message
+        }</p><p class="details">from ${pkt.Header.Source
+        } at ${date.getHours()}:${date.getMinutes()}:${date.getSeconds()}</p></div>`;
 
       this.messagingController.addMsg(el);
     }
@@ -928,9 +926,8 @@ class Tor extends BaseElement {
       data.forEach((obj) => {
         const el = document.createElement("tr");
 
-        el.innerHTML = `<td>${obj.CircuitID.substr(0, 17)}</td><td>${
-          obj.NextHop
-        }</td>`;
+        el.innerHTML = `<td>${obj.CircuitID.substr(0, 17)}</td><td>${obj.NextHop
+          }</td>`;
         this.tableTarget.appendChild(el);
       });
       console.log(data);
@@ -957,11 +954,11 @@ class Tor extends BaseElement {
     }
   }
   async curl() {
-    const circID = this.circuitID.value;
-    const url = this.url.value;
+    const circID = this.circuitIDTarget.value;
+    const url = this.urlTarget.value;
 
     const addr = this.peerInfo.getAPIURL(
-      "/tor/curl?key=" + finalDestination + "&value=" + val
+      "/tor/curl?key=" + url + "&value=" + circID
     );
     try {
       const resp = await this.fetch(addr);
