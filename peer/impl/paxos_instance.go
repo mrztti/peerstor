@@ -20,7 +20,7 @@ type PaxosInstance struct {
 	proposerRetryTime  time.Duration
 	consensusThreshold int
 	proposingPhase     string
-	lastUsedPaxosID    uint
+	lastUsedPaxosID    AtomicCounter
 	proposedValue      *types.PaxosValue
 	phase1Responses    []types.Message
 	phase2Responses    peer.ConcurrentMap[*AtomicCounter]
@@ -41,7 +41,7 @@ func CreatePaxosInstance(myAddr string, conf peer.Configuration) *PaxosInstance 
 		proposerRetryTime:  conf.PaxosProposerRetry,
 		consensusThreshold: conf.PaxosThreshold(conf.TotalPeers),
 		proposingPhase:     "none",
-		lastUsedPaxosID:    0,
+		lastUsedPaxosID:    AtomicCounter{count: 0},
 		proposedValue:      nil,
 		phase1Responses:    make([]types.Message, 0),
 		phase2Responses:    peer.CreateConcurrentMap[*AtomicCounter](),
@@ -64,7 +64,7 @@ func (p *PaxosInstance) Reset() {
 	p.acceptedID = AtomicCounter{count: 0}
 	p.acceptedValue = nil
 	p.proposingPhase = "none"
-	p.lastUsedPaxosID = 0
+	p.lastUsedPaxosID = AtomicCounter{count: 0}
 	p.proposedValue = nil
 	p.phase1Responses = make([]types.Message, 0)
 	p.phase2Responses = peer.CreateConcurrentMap[*AtomicCounter]()
@@ -72,10 +72,11 @@ func (p *PaxosInstance) Reset() {
 }
 
 func (p *PaxosInstance) getNextPaxosID() uint {
-	if p.lastUsedPaxosID == 0 {
-		p.lastUsedPaxosID = p.myPaxosID
+	last := p.lastUsedPaxosID.Get()
+	if last == 0 {
+		p.lastUsedPaxosID.Set(p.myPaxosID)
 	} else {
-		p.lastUsedPaxosID += p.totalNodeCount
+		p.lastUsedPaxosID.Set(last + p.totalNodeCount)
 	}
-	return p.lastUsedPaxosID
+	return p.lastUsedPaxosID.Get()
 }

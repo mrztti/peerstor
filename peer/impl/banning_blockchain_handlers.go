@@ -204,7 +204,7 @@ func (n *node) handleBanPromiseMessage(promiseMessage *types.BanPaxosPromiseMess
 		return
 	}
 	// Ignore messages that do not match our proposal ID
-	if myProposedID != promiseMessage.ID {
+	if myProposedID.Get() != promiseMessage.ID {
 		logr.Logger.Trace().
 			Msgf("[%s]: Ignoring PROMISE message (ID mismatch). Current ID: %d, promiseMessage.ID: %d",
 				n.addr, myProposedID, promiseMessage.ID)
@@ -282,7 +282,7 @@ func (n *node) InitializeBanPhase2(promiseMessage *types.BanPaxosPromiseMessage)
 
 	proposeMessage := types.BanPaxosProposeMessage{
 		Step:  currentStep,
-		ID:    myProposedID,
+		ID:    myProposedID.Get(),
 		Value: *valueToSend,
 	}
 	go n.BroadcastTypesInParallel(proposeMessage)
