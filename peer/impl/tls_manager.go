@@ -55,7 +55,6 @@ func (t *TLSManager) SetOwnKeys(publicKey crypto.PublicKey, privateKey crypto.Pr
 func (t *TLSManager) GetSymmKey(peerIP string) []byte {
 	val, ok := t.symmKeyStore.Get(peerIP)
 	if !ok {
-		logr.Logger.Warn().Msgf("[%s]: Symmetric key for %s does not exist", t.addr, peerIP)
 		return nil
 	}
 	return val

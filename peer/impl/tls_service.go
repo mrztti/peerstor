@@ -2,6 +2,7 @@ package impl
 
 import (
 	"crypto"
+	"crypto/rsa"
 	"fmt"
 
 	"go.dedis.ch/cs438/logr"
@@ -205,6 +206,12 @@ func (n *node) GetPrivateKey() crypto.PrivateKey {
 
 func (n *node) SetAsmKey(addr string, publicKey crypto.PublicKey) {
 	n.tlsManager.SetAsymmetricKey(addr, publicKey)
+	// Cast to rsa.PublicKey
+	rsaPublicKey, ok := publicKey.(rsa.PublicKey)
+	if ok {
+		n.certificateCatalog.catalog[addr] = rsaPublicKey
+		logr.Logger.Info().Msgf("[%s]: SetAsmKey (HARD): %s", n.addr, addr)
+	}
 }
 
 func (n *node) GetPublicKeyFromAddr(addr string) crypto.PublicKey {

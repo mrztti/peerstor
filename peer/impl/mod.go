@@ -20,7 +20,7 @@ func NewPeer(conf peer.Configuration) peer.Peer {
 	logr.Logger.Info().Msgf("[%s]: New peer", myAddr)
 	// Generate certificate information
 	tlsManager := CreateTLSManager(myAddr)
-	certificateStore, err := GenerateCertificateStore(2048)
+	certificateStore, err := GenerateCertificateStore(2048, conf)
 	tlsManager.SetOwnKeys(certificateStore.GetPublicKey(), certificateStore.GetPrivateKey())
 	if err != nil {
 		logr.Logger.Error().Msgf("[%s]: Failed to generate certificate store", myAddr)
