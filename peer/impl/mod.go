@@ -136,13 +136,13 @@ func (n *node) Start() error {
 		logr.Logger.Error().Msgf("[%s]: Failed to broadcast certificate", n.addr)
 	}
 
-	if n.conf.IsOnionNode {
-		err := n.RegisterAsOnionNode()
-		if err != nil {
-			logr.Logger.Error().Msgf("[%s]: Failed to add our node as onion", myAddr)
-			return err
-		}
-	}
+	// if n.conf.IsOnionNode {
+	// 	err := n.RegisterAsOnionNode()
+	// 	if err != nil {
+	// 		logr.Logger.Error().Msgf("[%s]: Failed to add our node as onion", myAddr)
+	// 		return err
+	// 	}
+	// }
 
 	return nil
 }

@@ -198,7 +198,7 @@ func newConfigTemplate() configTemplate {
 
 		VerifyCertificates: true,
 
-		IsOnionNode: false,
+		IsOnionNode: true,
 	}
 }
 

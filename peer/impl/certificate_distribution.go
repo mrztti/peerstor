@@ -18,6 +18,7 @@ import (
 	"errors"
 	"math/big"
 	"strconv"
+	"strings"
 	"sync"
 	"time"
 
@@ -279,10 +280,23 @@ func (n *node) HandleCertificateBroadcastMessage(msg types.Message, pkt transpor
 			return err
 		}
 		n.tlsManager.SetAsymmetricKey(certificateBroadcastMessage.Addr, key)
-
-		err = n.CreateDHSymmetricKey(certificateBroadcastMessage.Addr)
+		// get port from address
+		ourPort, err := strconv.Atoi(strings.Split(n.addr, ":")[1])
 		if err != nil {
-			logr.Logger.Error().Err(err).Msg("failed to create DH symmetric key")
+			logr.Logger.Error().Err(err).Msg("failed to get port from address")
+		}
+		theirPort, err := strconv.Atoi(strings.Split(certificateBroadcastMessage.Addr, ":")[1])
+		if err != nil {
+			logr.Logger.Error().Err(err).Msg("failed to get port from address")
+		}
+		if ourPort > theirPort {
+			err = n.CreateDHSymmetricKey(certificateBroadcastMessage.Addr)
+			if err != nil {
+				logr.Logger.Error().Err(err).Msg("failed to create DH symmetric key")
+			}
+		}
+		if !n.isOnionNode {
+			n.RegisterAsOnionNode()
 		}
 	}
 

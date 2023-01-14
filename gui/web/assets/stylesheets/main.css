@@ -9,6 +9,7 @@
 @import "data.css";
 @import "search.css";
 @import "naming.css";
+@import "tor.css";
 
 body {
     background-color: #fff;
@@ -39,7 +40,7 @@ button {
 }
 
 button:hover {
-    background: rgb(6,137,243);
+    background: rgb(6, 137, 243);
     color: #fff;
 }
 

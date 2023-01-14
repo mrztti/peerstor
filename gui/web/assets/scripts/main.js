@@ -23,6 +23,7 @@ const main = function () {
     application.register("dataSharing", DataSharing);
     application.register("search", Search);
     application.register("naming", Naming);
+    application.register("tor", Tor);
 
     initCollapsible();
 };
@@ -829,6 +830,27 @@ class Naming extends BaseElement {
             this.flash.printSuccess("tagging done");
         } catch (e) {
             this.flash.printError("failed to tag filename: " + e);
+        }
+    }
+}
+
+class Tor extends BaseElement {
+    static get targets() {
+        return ["finalDestination"];
+    }
+
+    async create() {
+        const finalDestination = this.finalDestinationTarget.value;
+
+        const addr = this.peerInfo.getAPIURL("/tor/createCircuit?key=" + finalDestination);
+
+        try {
+            const resp = await this.fetch(addr);
+            const data = await resp.json();
+
+            this.flash.printSuccess("Catalog updated");
+        } catch (e) {
+            this.flash.printError("Failed to fetch catalog: " + e);
         }
     }
 }

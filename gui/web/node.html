@@ -1,10 +1,12 @@
- <!DOCTYPE html>
+<!DOCTYPE html>
 <html>
+
 <head>
     <title>CS438 - Peerster</title>
     <link rel="stylesheet" href="assets/stylesheets/main.css">
     <meta charset="UTF-8">
 </head>
+
 <body>
 
     <div data-controller="flash" id="flash" class="flash">
@@ -14,8 +16,14 @@
 
     <h1>Peerster <sup>EPFL - DEDIS - CS438</sup></h1>
     <table data-controller="peerInfo" id="peerInfo" class="peer-info">
-        <tr><td>Proxy address</td><td data-peerInfo-target="peerAddr"></td></tr>
-        <tr><td>Peer address</td><td data-peerInfo-target="socketAddr"></td></tr>
+        <tr>
+            <td>Proxy address</td>
+            <td data-peerInfo-target="peerAddr"></td>
+        </tr>
+        <tr>
+            <td>Peer address</td>
+            <td data-peerInfo-target="socketAddr"></td>
+        </tr>
     </table>
 
     <div data-controller="messaging" id="messaging" class="messaging">
@@ -34,12 +42,17 @@
             <h3>ChatMessage</h3>
 
             <div class="unicast-chat-form">
-                <textarea data-unicast-target="message" name="message" placeholder="write your message here..."></textarea>
+                <textarea data-unicast-target="message" name="message"
+                    placeholder="write your message here..."></textarea>
 
                 <div class="message">
-                    <input data-unicast-target="destination" name="destination" type="text" placeholder="127.0.0.1:0 (destination)"/>
+                    <input data-unicast-target="destination" name="destination" type="text"
+                        placeholder="127.0.0.1:0 (destination)" />
                     <button data-action="click->unicast#send">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"><path d="M24 0l-6 22-8.129-7.239 7.802-8.234-10.458 7.227-7.215-1.754 24-12zm-15 16.668v7.332l3.258-4.431-3.258-2.901z"/></svg>
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24">
+                            <path
+                                d="M24 0l-6 22-8.129-7.239 7.802-8.234-10.458 7.227-7.215-1.754 24-12zm-15 16.668v7.332l3.258-4.431-3.258-2.901z" />
+                        </svg>
                         Send
                     </button>
                 </div>
@@ -55,10 +68,14 @@
                 <h3>ChatMessage</h3>
 
                 <div class="broadcast-chat-form">
-                    <textarea data-broadcast-target="chatMessage" name="message" placeholder="write your message here..."></textarea>
+                    <textarea data-broadcast-target="chatMessage" name="message"
+                        placeholder="write your message here..."></textarea>
 
                     <button data-action="click->broadcast#sendChat">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"><path d="M24 0l-6 22-8.129-7.239 7.802-8.234-10.458 7.227-7.215-1.754 24-12zm-15 16.668v7.332l3.258-4.431-3.258-2.901z"/></svg>
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24">
+                            <path
+                                d="M24 0l-6 22-8.129-7.239 7.802-8.234-10.458 7.227-7.215-1.754 24-12zm-15 16.668v7.332l3.258-4.431-3.258-2.901z" />
+                        </svg>
                         Send
                     </button>
                 </div>
@@ -68,12 +85,17 @@
                 <h3>Private message</h3>
 
                 <div class="broadcast-chat-form">
-                    <textarea data-broadcast-target="privateMessage" name="message" placeholder="write your message here..."></textarea>
+                    <textarea data-broadcast-target="privateMessage" name="message"
+                        placeholder="write your message here..."></textarea>
 
                     <div class="message">
-                        <input data-broadcast-target="privateRecipients" name="recipients" type="text" placeholder="127.0.0.1:0,127.0.0.1:1,..."/>
+                        <input data-broadcast-target="privateRecipients" name="recipients" type="text"
+                            placeholder="127.0.0.1:0,127.0.0.1:1,..." />
                         <button data-action="click->broadcast#sendPrivate">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"><path d="M24 0l-6 22-8.129-7.239 7.802-8.234-10.458 7.227-7.215-1.754 24-12zm-15 16.668v7.332l3.258-4.431-3.258-2.901z"/></svg>
+                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24">
+                                <path
+                                    d="M24 0l-6 22-8.129-7.239 7.802-8.234-10.458 7.227-7.215-1.754 24-12zm-15 16.668v7.332l3.258-4.431-3.258-2.901z" />
+                            </svg>
                             Send
                         </button>
                     </div>
@@ -99,25 +121,33 @@
             <div data-routing-target="graphviz" class="graphviz"></div>
 
             <button data-action="click->routing#update">
-                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"><path d="M13.5 2c-5.621 0-10.211 4.443-10.475 10h-3.025l5 6.625 5-6.625h-2.975c.257-3.351 3.06-6 6.475-6 3.584 0 6.5 2.916 6.5 6.5s-2.916 6.5-6.5 6.5c-1.863 0-3.542-.793-4.728-2.053l-2.427 3.216c1.877 1.754 4.389 2.837 7.155 2.837 5.79 0 10.5-4.71 10.5-10.5s-4.71-10.5-10.5-10.5z"/></svg>
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24">
+                    <path
+                        d="M13.5 2c-5.621 0-10.211 4.443-10.475 10h-3.025l5 6.625 5-6.625h-2.975c.257-3.351 3.06-6 6.475-6 3.584 0 6.5 2.916 6.5 6.5s-2.916 6.5-6.5 6.5c-1.863 0-3.542-.793-4.728-2.053l-2.427 3.216c1.877 1.754 4.389 2.837 7.155 2.837 5.79 0 10.5-4.71 10.5-10.5s-4.71-10.5-10.5-10.5z" />
+                </svg>
                 Update routing
             </button>
 
             <h3>Add peer</h3>
             <div class="add-peer">
-                <input data-routing-target="peer" name="peer" type="text" placeholder="127.0.0.1:0"/>
+                <input data-routing-target="peer" name="peer" type="text" placeholder="127.0.0.1:0" />
                 <button data-action="click->routing#addPeer">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"><path d="M24 10h-10v-10h-4v10h-10v4h10v10h4v-10h10z"/></svg>
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24">
+                        <path d="M24 10h-10v-10h-4v10h-10v4h10v10h4v-10h10z" />
+                    </svg>
                     Add peer
                 </button>
             </div>
 
             <h3>Set trouting entry</h3>
             <div class="set-entry">
-                <input data-routing-target="origin" name="origin" type="text" placeholder="127.0.0.1:0 (origin)"/>
-                <input data-routing-target="relay" name="relay" type="text" placeholder="127.0.0.1:0 (relay)"/>
+                <input data-routing-target="origin" name="origin" type="text" placeholder="127.0.0.1:0 (origin)" />
+                <input data-routing-target="relay" name="relay" type="text" placeholder="127.0.0.1:0 (relay)" />
                 <button data-action="click->routing#setEntry">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"><path d="M23 12c0 1.042-.154 2.045-.425 3h-2.101c.335-.94.526-1.947.526-3 0-4.962-4.037-9-9-9-1.706 0-3.296.484-4.654 1.314l1.857 2.686h-6.994l2.152-7 1.85 2.673c1.683-1.049 3.658-1.673 5.789-1.673 6.074 0 11 4.925 11 11zm-6.354 7.692c-1.357.826-2.944 1.308-4.646 1.308-4.963 0-9-4.038-9-9 0-1.053.191-2.06.525-3h-2.1c-.271.955-.425 1.958-.425 3 0 6.075 4.925 11 11 11 2.127 0 4.099-.621 5.78-1.667l1.853 2.667 2.152-6.989h-6.994l1.855 2.681zm.354-10.283l-1.421-1.409-5.105 5.183-2.078-2.183-1.396 1.435 3.5 3.565 6.5-6.591z"/></svg>
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24">
+                        <path
+                            d="M23 12c0 1.042-.154 2.045-.425 3h-2.101c.335-.94.526-1.947.526-3 0-4.962-4.037-9-9-9-1.706 0-3.296.484-4.654 1.314l1.857 2.686h-6.994l2.152-7 1.85 2.673c1.683-1.049 3.658-1.673 5.789-1.673 6.074 0 11 4.925 11 11zm-6.354 7.692c-1.357.826-2.944 1.308-4.646 1.308-4.963 0-9-4.038-9-9 0-1.053.191-2.06.525-3h-2.1c-.271.955-.425 1.958-.425 3 0 6.075 4.925 11 11 11 2.127 0 4.099-.621 5.78-1.667l1.853 2.667 2.152-6.989h-6.994l1.855 2.681zm.354-10.283l-1.421-1.409-5.105 5.183-2.078-2.183-1.396 1.435 3.5 3.565 6.5-6.591z" />
+                    </svg>
                     Set entry
                 </button>
             </div>
@@ -131,16 +161,21 @@
             <div data-catalog-target="content" class="content">
             </div>
             <button data-action="click->catalog#update">
-                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"><path d="M13.5 2c-5.621 0-10.211 4.443-10.475 10h-3.025l5 6.625 5-6.625h-2.975c.257-3.351 3.06-6 6.475-6 3.584 0 6.5 2.916 6.5 6.5s-2.916 6.5-6.5 6.5c-1.863 0-3.542-.793-4.728-2.053l-2.427 3.216c1.877 1.754 4.389 2.837 7.155 2.837 5.79 0 10.5-4.71 10.5-10.5s-4.71-10.5-10.5-10.5z"/></svg>
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24">
+                    <path
+                        d="M13.5 2c-5.621 0-10.211 4.443-10.475 10h-3.025l5 6.625 5-6.625h-2.975c.257-3.351 3.06-6 6.475-6 3.584 0 6.5 2.916 6.5 6.5s-2.916 6.5-6.5 6.5c-1.863 0-3.542-.793-4.728-2.053l-2.427 3.216c1.877 1.754 4.389 2.837 7.155 2.837 5.79 0 10.5-4.71 10.5-10.5s-4.71-10.5-10.5-10.5z" />
+                </svg>
                 Update catalog
             </button>
 
             <h3>Add catalog entry</h3>
             <div class="add-catalog-entry">
-                <input data-catalog-target="key" name="key" type="text" placeholder="aef123..."/>
-                <input data-catalog-target="value" name="value" type="text" placeholder="127.0.0.1:0"/>
+                <input data-catalog-target="key" name="key" type="text" placeholder="aef123..." />
+                <input data-catalog-target="value" name="value" type="text" placeholder="127.0.0.1:0" />
                 <button data-action="click->catalog#add">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"><path d="M24 10h-10v-10h-4v10h-10v4h10v10h4v-10h10z"/></svg>
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24">
+                        <path d="M24 10h-10v-10h-4v10h-10v4h10v10h4v-10h10z" />
+                    </svg>
                     Add catalog entry
                 </button>
             </div>
@@ -155,14 +190,18 @@
             <div data-dataSharing-target="uploadResult" class="upload-result"></div>
             <input data-dataSharing-target="fileUpload" type="file">
             <button data-action="click->dataSharing#upload">
-                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"><path d="M24 10h-10v-10h-4v10h-10v4h10v10h4v-10h10z"/></svg>
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24">
+                    <path d="M24 10h-10v-10h-4v10h-10v4h10v10h4v-10h10z" />
+                </svg>
                 Upload data
             </button>
 
             <h3>Download</h3>
             <input data-dataSharing-target="downloadMetahash" type="text" placeholder="metahash">
             <button data-action="click->dataSharing#download">
-                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"><path d="M24 10h-10v-10h-4v10h-10v4h10v10h4v-10h10z"/></svg>
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24">
+                    <path d="M24 10h-10v-10h-4v10h-10v4h10v10h4v-10h10z" />
+                </svg>
                 Download data
             </button>
         </div>
@@ -179,20 +218,25 @@
             <input data-search-target="searchAllTimeout" name="timeout" type="type" placeholder="timeout (1s)">
 
             <button data-action="click->search#searchAll">
-                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"><path d="M24 10h-10v-10h-4v10h-10v4h10v10h4v-10h10z"/></svg>
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24">
+                    <path d="M24 10h-10v-10h-4v10h-10v4h10v10h4v-10h10z" />
+                </svg>
                 Search all
             </button>
 
             <h3>Search first</h3>
             <div data-search-target="searchFirstResult" class="search-first-result"></div>
             <input data-search-target="searchFirstPattern" name="pattern" type="type" placeholder="pattern (.*)">
-            <input data-search-target="searchFirstInitialBudget" name="budget" type="number" placeholder="initial budget (1)">
+            <input data-search-target="searchFirstInitialBudget" name="budget" type="number"
+                placeholder="initial budget (1)">
             <input data-search-target="searchFirstFactor" name="factor" type="number" placeholder="factor (2)">
             <input data-search-target="searchFirstRetry" name="retry" type="number" placeholder="retry (5)">
             <input data-search-target="searchFirstTimeout" name="timeout" type="type" placeholder="timeout (1s)">
 
             <button data-action="click->search#searchFirst">
-                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"><path d="M24 10h-10v-10h-4v10h-10v4h10v10h4v-10h10z"/></svg>
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24">
+                    <path d="M24 10h-10v-10h-4v10h-10v4h10v10h4v-10h10z" />
+                </svg>
                 Search first
             </button>
         </div>
@@ -204,22 +248,76 @@
         <div>
             <h3>Resolve a filename</h3>
             <div data-naming-target="resolveResult" class="result"></div>
-            <input data-naming-target="resolveFilename" name="filename" type="text" placeholder="filename"/>
+            <input data-naming-target="resolveFilename" name="filename" type="text" placeholder="filename" />
             <button data-action="click->naming#resolve">
-                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"><path d="M13.5 2c-5.621 0-10.211 4.443-10.475 10h-3.025l5 6.625 5-6.625h-2.975c.257-3.351 3.06-6 6.475-6 3.584 0 6.5 2.916 6.5 6.5s-2.916 6.5-6.5 6.5c-1.863 0-3.542-.793-4.728-2.053l-2.427 3.216c1.877 1.754 4.389 2.837 7.155 2.837 5.79 0 10.5-4.71 10.5-10.5s-4.71-10.5-10.5-10.5z"/></svg>
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24">
+                    <path
+                        d="M13.5 2c-5.621 0-10.211 4.443-10.475 10h-3.025l5 6.625 5-6.625h-2.975c.257-3.351 3.06-6 6.475-6 3.584 0 6.5 2.916 6.5 6.5s-2.916 6.5-6.5 6.5c-1.863 0-3.542-.793-4.728-2.053l-2.427 3.216c1.877 1.754 4.389 2.837 7.155 2.837 5.79 0 10.5-4.71 10.5-10.5s-4.71-10.5-10.5-10.5z" />
+                </svg>
                 Resolve
             </button>
 
             <h3>Tag a file</h3>
-            <input data-naming-target="tagFilename" name="filename" type="text" placeholder="filename"/>
-            <input data-naming-target="tagMetahash" name="metahash" type="text" placeholder="metahash (aef123...)"/>
+            <input data-naming-target="tagFilename" name="filename" type="text" placeholder="filename" />
+            <input data-naming-target="tagMetahash" name="metahash" type="text" placeholder="metahash (aef123...)" />
             <button data-action="click->naming#tag">
-                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"><path d="M24 10h-10v-10h-4v10h-10v4h10v10h4v-10h10z"/></svg>
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24">
+                    <path d="M24 10h-10v-10h-4v10h-10v4h10v10h4v-10h10z" />
+                </svg>
                 Tag file
             </button>
         </div>
     </div>
+    <!--Tor-->
+    <div data-controller="tor" class="tor">
+        <h2 class="collapsible">Tor</h2>
+        <div>
+            <h3>Create Tor Circuit</h3>
+            <input data-tor-target="finalDestination" type="text" placeholder="finalDestination">
+            <button data-action="click->tor#create">
+                <svg version="1.1" id="Layer_1" xmlns="http://www.w3.org/2000/svg"
+                    xmlns:xlink="http://www.w3.org/1999/xlink" x="0px" y="0px" viewBox="0 0 512 512"
+                    style="enable-background:new 0 0 512 512;" xml:space="preserve">
+                    <g>
+                        <path d="M375,260.2c-16.3-14.8-36.7-26.7-57.7-38.6c-9.5-5.2-38.7-28.1-28.6-60.5l-18.2-7.7c28.6-44.3,65.8-88.2,111.5-129.2
+		c-36.7,12.3-69.1,31.4-93.4,65.2C303,59.6,326.3,30,352.1,0c-35.2,25.2-65.7,53.8-84.8,92l13.3-53.4
+		c-19.1,34.3-32.4,69.2-37.7,103.9l-28.1-11.4l-4.7,3.8c24.7,44.3,11.9,67.7-0.5,75.8c-24.8,16.7-60.5,38.1-78.7,56.7
+		c-34.3,35.3-44.3,68.7-41,113c3.3,56.8,44.8,103.9,99.7,122.5c24.3,8.2,46.7,9.1,71.5,9.1c40,0,81-10.5,111.1-35.7
+		c31.9-26.5,50.4-65.7,50.5-107.2C422.8,327.7,405.5,288.2,375,260.2L375,260.2z M299.2,449.6c-1.9,8.6-8.1,19.1-15.7,28.6
+		c2.8-5.2,5.2-10.5,6.7-16.2c11.9-42.4,17.2-61.9,11.4-108.7c-0.9-4.8-2.8-20-10-36.7c-10-25.3-25.2-49.2-27.2-54.4
+		c-3.3-8.1-8.1-42.4-8.6-65.7c0.5,20,1.9,56.7,7.2,71c1.4,4.8,15.2,26.3,25.2,52.4c6.7,18.2,8.1,34.8,9.5,39.6
+		c4.8,21.5-0.9,57.7-8.5,92c-2.4,12.4-9.1,26.7-17.7,37.7c4.7-6.7,8.6-15.2,11.4-25.2c5.7-20,8.1-45.7,7.6-62
+		c-0.4-9.5-4.8-30-11.9-48.6c-4.3-10-10.5-20.5-14.7-27.7c-4.8-7.2-4.8-22.8-6.7-41c0.4,19.6-1.4,29.6,3.3,43.4
+		c2.8,8.1,13.3,19.5,16.2,30.5c4.3,14.8,8.6,31,8.2,41c0,11.4-0.5,32.4-5.7,55.3c-3.3,17.1-11,31.9-23.3,41.4
+		c5.2-6.7,8.1-13.3,9.5-20c1.9-10,2.4-19.6,3.3-31.5c1-12.3,0.2-24.7-2.3-36.7c-3.8-17.2-10-34.3-12.9-46.3
+		c0.5,13.3,5.7,30,8.2,47.7c1.8,12.9,0.9,25.7,0.4,37.2c-0.4,13.3-4.7,36.7-10.5,48.2c-5.7-2.4-7.6-5.7-11.4-10.5
+		c-4.8-6.2-7.7-12.8-10.5-20.5c-2.7-6.3-4.8-12.8-6.3-19.5c-2.3-16.7,2.1-33.6,11.9-47.2c10-14.3,12-15.2,15.2-31.9
+		c-4.7,14.8-8.1,16.2-18.6,28.6c-11.9,13.8-13.7,33.8-13.7,50.1c0,6.7,2.8,14.3,5.2,21.5c2.8,7.6,5.7,15.2,9.5,20.9
+		c2.8,4.7,6.7,8.1,10,10.5c-12.4-3.3-25.2-8.1-33.3-14.7c-20-17.2-37.7-46.3-40.1-72c-1.9-21,17.2-51.5,44.3-66.7
+		c22.9-13.3,28.2-28.2,32.9-52.5c-6.7,21-13.3,39.2-35.3,50.1c-31.4,17.2-47.7,44.8-46.2,71.5c2.3,33.8,15.7,57.2,42.9,75.8
+		c6.2,4.3,14.8,8.6,23.8,11.9c-33.9-8.1-38.2-12.8-49.6-26.2l-2.9-3.3c-15.2-17.2-34.2-46.8-41-73.9c-2.3-9.5-4.7-19.5-1.8-29.1
+		c12.3-44.8,39.5-62,66.7-80.5c6.7-4.8,13.4-9.1,19.6-13.8c15.2-12,19.1-42.9,22.4-60.6c-6.2,21.5-12.9,48.2-24.8,56.7
+		c-6.2,4.7-13.8,8.6-20,12.8c-28.1,19.1-56.2,37.2-69.1,83.4c-2.9,12-1,20.6,1.8,32c7.2,28.1,26.2,58.6,42.5,76.7l2.8,2.8
+		c7.2,8.2,16.2,14.3,27.2,18.6c-9.6-2.2-18.8-5.6-27.7-10c-44.3-21.4-73.8-67.7-75.7-105.3c-3.8-76.7,32.9-99.2,67.2-127.3
+		c19.1-15.7,45.8-23.3,61.1-51.4c2.8-6.3,4.7-19.6,0.9-33.9c-1.4-4.7-8.6-21.9-11.4-25.7l42.4,18.7c-0.9,20-1.4,36.2,2.3,51
+		c4.3,16.2,25.3,39.5,33.9,66.7C315.5,329.9,311.2,397.1,299.2,449.6L299.2,449.6z" />
+                    </g>
+                </svg>
+                Create Circuit
+            </button>
 
+            <h3>CURL</h3>
+            <input data-tor-target="finalDestination" type="text" placeholder="URL">
+            <button data-action="click->broadcast#sendPrivate">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24">
+                    <path
+                        d="M24 0l-6 22-8.129-7.239 7.802-8.234-10.458 7.227-7.215-1.754 24-12zm-15 16.668v7.332l3.258-4.431-3.258-2.901z">
+                    </path>
+                </svg>
+                CURL
+            </button>
+        </div>
+    </div>
     <div data-controller="packets" class="packets-holder">
         <h2 class="active collapsible">Packets history</h2>
 
@@ -239,6 +337,7 @@
         </div>
     </div>
 
+
     <script src="assets/scripts/stimulus.js"></script>
     <script src="assets/scripts/viz.js"></script>
     <script src="assets/scripts/viz.lite.render.js"></script>
@@ -247,4 +346,5 @@
         main() // launch javascript when ready
     </script>
 </body>
+
 </html>
