@@ -182,7 +182,7 @@ func (n *node) handleBanProposePhase1Message(phase1Message *BanProposePhase1Mess
 func (n *node) handleBanPromiseMessage(promiseMessage *types.BanPaxosPromiseMessage) {
 	currentPaxosInstance := n.banPaxos.currentPaxosInstance
 	currentStep := uint(n.banPaxos.currentStep.Get())
-	myProposedID := currentPaxosInstance.lastUsedPaxosID
+	myProposedID := currentPaxosInstance.lastUsedPaxosID.Get()
 	logr.Logger.Trace().
 		Msgf(`[%s]: Starting to handle promise message. Current step is: %d, our proposed id is %d
 	we so far have %d reponses. Received message: %#v`,
@@ -244,7 +244,7 @@ func (n *node) handleBanPromiseMessage(promiseMessage *types.BanPaxosPromiseMess
 func (n *node) InitializeBanPhase2(promiseMessage *types.BanPaxosPromiseMessage) {
 	currentPaxosInstance := n.banPaxos.currentPaxosInstance
 	currentStep := uint(n.banPaxos.currentStep.Get())
-	myProposedID := currentPaxosInstance.lastUsedPaxosID
+	myProposedID := currentPaxosInstance.lastUsedPaxosID.Get()
 	n.banPaxos.skipNextResendTick.Set(true)
 	// *PART 3:* We passed threshold. Init phase 2
 

@@ -355,7 +355,6 @@ func Test_Trust_Resist_Forced_Ban(t *testing.T) {
 	// If the nodes do not check the proof of the messages, they will succumb to this attack
 	attacker.ForceBan(node1.GetAddr())
 	time.Sleep(7 * time.Second)
-	attacker.Stop()
 
 	for _, n := range nodes {
 		require.False(t, n.HasSharedBan(node1.GetAddr()))

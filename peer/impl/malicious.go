@@ -103,7 +103,7 @@ func (n *node) ForceBan(target string) error {
 		msg := types.BanPaxosAcceptMessage{
 			Source: n.addr,
 			Step:   n.banPaxos.currentStep.Get(),
-			ID:     n.banPaxos.currentPaxosInstance.lastUsedPaxosID + uint(i),
+			ID:     n.banPaxos.currentPaxosInstance.getNextPaxosID() + uint(i),
 			Proof:  pf,
 			Value:  pv,
 		}

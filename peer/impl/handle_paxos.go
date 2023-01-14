@@ -100,7 +100,7 @@ func (n *node) handleProposePhase1Message(phase1Message *ProposePhase1Message) {
 func (n *node) handlePromiseMessage(promiseMessage *types.PaxosPromiseMessage) {
 	currentPaxosInstance := n.paxos.currentPaxosInstance
 	currentStep := uint(n.paxos.currentStep.Get())
-	myProposedID := currentPaxosInstance.lastUsedPaxosID
+	myProposedID := currentPaxosInstance.lastUsedPaxosID.Get()
 	logr.Logger.Info().
 		Msgf(`[%s]: Starting to handle promise message. Current step is: %d, our proposed id is %d
 	we so far have %d reponses. Received message: %#v`,
@@ -145,7 +145,7 @@ func (n *node) handlePromiseMessage(promiseMessage *types.PaxosPromiseMessage) {
 func (n *node) InitializePhase2(promiseMessage *types.PaxosPromiseMessage) {
 	currentPaxosInstance := n.paxos.currentPaxosInstance
 	currentStep := uint(n.paxos.currentStep.Get())
-	myProposedID := currentPaxosInstance.lastUsedPaxosID
+	myProposedID := currentPaxosInstance.lastUsedPaxosID.Get()
 	n.paxos.skipNextResendTick.Set(true)
 	// *PART 3:* We passed threshold. Init phase 2
 
