@@ -232,6 +232,12 @@ func (n *node) SendTLSMessage(peerIP string, message types.Message) error {
 		logr.Logger.Err(err).Msgf("[%s]: Error encrypting TLSMessage to %s", n.addr, peerIP)
 		return err
 	}
-	n.BroadcastPrivatelyInParallel(peerIP, encryptedMessage)
+	// n.BroadcastPrivatelyInParallel(peerIP, encryptedMessage)
+	msg, err := n.conf.MessageRegistry.MarshalMessage(&encryptedMessage)
+	if err != nil {
+		logr.Logger.Err(err).Msgf("[%s]: Error marshaling TLSMessage to %s", n.addr, peerIP)
+		return err
+	}
+	err = n.Unicast(peerIP, msg)
 	return err
 }
