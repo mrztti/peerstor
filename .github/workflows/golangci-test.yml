@@ -24,4 +24,4 @@ jobs:
         run: make test_tor
 
       - name: Test Trust
-        run: make test_trust
+        run: make test_unit_trust
