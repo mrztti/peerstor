@@ -8,6 +8,8 @@ import (
 
 type ControlCommand int
 type RelayCommand int
+type InnerMessageType int
+type HTTPMethod int
 
 const (
 	Create ControlCommand = iota
@@ -21,6 +23,16 @@ const (
 	RelayExtended
 )
 
+const (
+	Text InnerMessageType = iota
+	HTTPReq
+)
+
+const (
+	Get HTTPMethod = iota
+	Post
+)
+
 type TorControlMessage struct {
 	LastHop   string
 	CircuitID string
@@ -29,14 +41,15 @@ type TorControlMessage struct {
 }
 
 type TorRelayMessage struct {
-	LastHop   string
-	CircuitID string
-	Cmd       RelayCommand
-	Relay     string
-	StreamID  string
-	Digest    []byte
-	Len       uint
-	Data      []byte
+	LastHop         string
+	CircuitID       string
+	Cmd             RelayCommand
+	Relay           string
+	StreamID        string
+	Digest          []byte
+	Len             uint
+	Data            []byte
+	DataMessageType InnerMessageType
 }
 
 // -----------------------------------------------------------------------------
@@ -99,6 +112,12 @@ type TorServerHello struct {
 	Source            string
 }
 
+type TorHTTPRequest struct {
+	Method   HTTPMethod // Currently 'GET' or 'POST'
+	URL      string
+	PostBody string
+}
+
 // -----------------------------------------------------------------------------
 // TorClientHello
 
@@ -125,6 +144,9 @@ func (t TorClientHello) HTML() string {
 	return t.String()
 }
 
+// -----------------------------------------------------------------------------
+// TorServerHello
+
 func (t TorServerHello) NewEmpty() Message {
 	return &TorServerHello{}
 }
@@ -136,10 +158,32 @@ func (t TorServerHello) Name() string {
 
 // String implements types.Message.
 func (t TorServerHello) String() string {
-	return fmt.Sprintf("TorClientHello{presecret:%d}", t.ServerPresecretDH)
+	return fmt.Sprintf("TorServerHello{presecret:%d}", t.ServerPresecretDH)
 }
 
 // HTML implements types.Message.
 func (t TorServerHello) HTML() string {
+	return t.String()
+}
+
+// -----------------------------------------------------------------------------
+// TorServerHello
+
+func (t TorHTTPRequest) NewEmpty() Message {
+	return &TorHTTPRequest{}
+}
+
+// Name implements types.Message.
+func (t TorHTTPRequest) Name() string {
+	return "TorHTTPRequest"
+}
+
+// String implements types.Message.
+func (t TorHTTPRequest) String() string {
+	return fmt.Sprintf("TorHTTPRequest{method:%d, url:%s}", t.Method, t.URL)
+}
+
+// HTML implements types.Message.
+func (t TorHTTPRequest) HTML() string {
 	return t.String()
 }

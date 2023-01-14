@@ -1,8 +1,11 @@
 package impl
 
 import (
+	"bytes"
 	"fmt"
+	"io"
 	"log"
+	"net/http"
 
 	"go.dedis.ch/cs438/logr"
 	"go.dedis.ch/cs438/peer"
@@ -68,15 +71,32 @@ func (n *node) execTorRelayCmd(torRelayMessage *types.TorRelayMessage) error {
 			return err
 		}
 	case types.RelayRequest:
-		torRelayMessage.Data, err = n.tlsManager.DecryptSymmetricTor(
-			n.createTorEntryName(torRelayMessage.LastHop, torRelayMessage.CircuitID),
-			torRelayMessage.Data,
-		)
+		return n.processRelayRequest(torRelayMessage)
+	case types.RelayResponse:
+		torRelayMessage.Data, err = n.TorDecrypt(torRelayMessage.CircuitID, torRelayMessage.Data)
 		if err != nil {
 			return err
 		}
 		logr.Logger.Warn().
-			Msgf("[%s]: Received the following request: %s", n.addr, string(torRelayMessage.Data))
+			Msgf("[%s]: Received the following response: %s", n.addr, string(torRelayMessage.Data))
+	}
+	return err
+}
+
+func (n *node) processRelayRequest(torRelayMessage *types.TorRelayMessage) error {
+	var err error
+	torRelayMessage.Data, err = n.tlsManager.DecryptSymmetricTor(
+		n.createTorEntryName(torRelayMessage.LastHop, torRelayMessage.CircuitID),
+		torRelayMessage.Data,
+	)
+	if err != nil {
+		return err
+	}
+	logr.Logger.Warn().
+		Msgf("[%s]: Received the following request type: %d with content %s", n.addr, torRelayMessage.DataMessageType, string(torRelayMessage.Data))
+
+	switch torRelayMessage.DataMessageType {
+	case types.Text:
 		responseDataPlaintext := "wrapped response " + string(
 			torRelayMessage.Data,
 		) + " from " + n.addr
@@ -95,15 +115,74 @@ func (n *node) execTorRelayCmd(torRelayMessage *types.TorRelayMessage) error {
 		}
 		err = n.SendTLSMessage(torRelayMessage.LastHop, sampleResponse)
 		return err
-	case types.RelayResponse:
-		torRelayMessage.Data, err = n.TorDecrypt(torRelayMessage.CircuitID, torRelayMessage.Data)
+	case types.HTTPReq:
+		transportMessage := transport.Message{
+			Payload: torRelayMessage.Data,
+			Type:    types.TorHTTPRequest{}.Name(),
+		}
+		var torHTTPReq types.TorHTTPRequest
+		err = n.conf.MessageRegistry.UnmarshalMessage(&transportMessage, &torHTTPReq)
 		if err != nil {
 			return err
 		}
-		logr.Logger.Warn().
-			Msgf("[%s]: Received the following response: %s", n.addr, string(torRelayMessage.Data))
+		go (func() {
+			err := n.processTorHTTPReq(&torHTTPReq, torRelayMessage)
+			if err != nil {
+				logr.Logger.Error().Err(err).Msgf("[%s] error processing http request on circ ID %s", n.addr, torRelayMessage.CircuitID)
+			}
+		})()
 	}
 	return err
+}
+
+func (n *node) processTorHTTPReq(httpRequest *types.TorHTTPRequest, torRelayMessage *types.TorRelayMessage) error {
+	var err error
+	var response []byte
+	switch httpRequest.Method {
+	case types.Get:
+		// Exec request on sender's behalf
+		resp, err := http.Get(httpRequest.URL)
+		defer resp.Body.Close()
+		if err != nil {
+			log.Fatalln(err)
+		}
+		response, err = io.ReadAll(resp.Body)
+		if err != nil {
+			return err
+		}
+
+	case types.Post:
+		// Send post request on sender's behalf
+		resp, err := http.Post(httpRequest.URL, "application/json", bytes.NewBuffer([]byte(httpRequest.PostBody)))
+		defer resp.Body.Close()
+		if err != nil {
+			return err
+		}
+		response, err = io.ReadAll(resp.Body)
+		if err != nil {
+			return err
+		}
+	}
+
+	// Forward response by TOR
+	encryptedData, err := n.tlsManager.EncryptSymmetricTor(
+		n.createTorEntryName(torRelayMessage.LastHop, torRelayMessage.CircuitID),
+		response,
+	)
+	if err != nil {
+		return err
+	}
+
+	torHTTPResponse := types.TorRelayMessage{
+		LastHop:         n.addr,
+		CircuitID:       torRelayMessage.CircuitID,
+		Cmd:             types.RelayResponse,
+		Data:            encryptedData,
+		DataMessageType: types.HTTPReq,
+	}
+	err = n.SendTLSMessage(torRelayMessage.LastHop, torHTTPResponse)
+	return err
+
 }
 
 func (n *node) execTorRelayMessage(msg types.Message, pkt transport.Packet) error {

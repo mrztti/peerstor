@@ -1,5 +1,7 @@
 package peer
 
+import "go.dedis.ch/cs438/types"
+
 type TorRoutingEntry struct {
 	CircuitID string
 	NextHop   string
@@ -13,6 +15,7 @@ type TorRoutingServices interface {
 	GetCircuitIDs() []string
 	TorExtend(addr string, circID string) error
 	TorRelayRequest(circID string, data []byte) error
+	TorSendHTTPRequest(circID string, httpReq types.TorHTTPRequest) error
 	TorEstablishCircuit(finalDestination string, circuitLen int) error
 }
 type TorEncryptServices interface {
