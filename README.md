@@ -4,7 +4,7 @@ TLDR: Peerstor adds authenticity, message integrity, and confidentiality to Peer
 
 ## Run it
 
-Note to build please execute: go build -v ./...
+Note to build please execute: `go build -v ./...`
 ### Pre-requisites
 Install go >= 1.19.
 
