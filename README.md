@@ -2,13 +2,6 @@
 
 TLDR: Peerstor adds authenticity, message integrity, and confidentiality to Peerster by implenting a simplified version of TLS and the [Tor](https://www.torproject.org/) onion routing protocol.
 
-
-Provided by the DEDIS lab at EPFL.
-
-## Run the tests
-
-To run all our added tests, run `make test_tor`.
-
 ## Run it
 
 ### Pre-requisites
@@ -55,3 +48,7 @@ You can follow the circuit by just updating Tor Routing Entries for every node a
 
 4. Follow the circuit
 <img src="docs/assets/circuit.png" width="500px">
+
+## Run the tests
+
+To run all our added tests, run `make test_tor`.
